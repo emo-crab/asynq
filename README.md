@@ -38,7 +38,7 @@ Add to your `Cargo.toml`:
 [dependencies]
 asynq = { version = "0.1", features = ["json"] }
 ## or dev channel
-rmcp = { git = "https://github.com/emo-crab/asynq", branch = "main" }
+#asynq = { git = "https://github.com/emo-crab/asynq", branch = "main" }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 ```

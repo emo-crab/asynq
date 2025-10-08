@@ -38,7 +38,7 @@ Asynq 是一个用 Rust 编写的简单、可靠、高效的分布式任务队�
 [dependencies]
 asynq = { version = "0.1", features = ["json"] }
 ## or dev channel
-rmcp = { git = "https://github.com/emo-crab/asynq", branch = "main" }
+#asynq = { git = "https://github.com/emo-crab/asynq", branch = "main" }
 tokio = { version = "1.0", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 ```
