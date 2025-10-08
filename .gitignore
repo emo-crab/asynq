@@ -1,0 +1,46 @@
+# Rust 编译产物
+/target
+**/*.rs.bk
+Cargo.lock
+/go_test/
+# IDE 文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS 生成的文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 日志文件
+*.log
+
+# 临时文件
+*.tmp
+*.temp
+
+# 环境变量文件
+.env
+.env.local
+.env.*.local
+
+# 测试覆盖率
+coverage/
+*.profraw
+
+# Benchmark 结果
+criterion/
+
+# 文档生成
+/doc
+
+# Protocol Buffers 生成的文件已包含在代码中
+# 如需重新生成，取消注释下一行
+# /src/proto.rs
