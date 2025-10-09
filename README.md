@@ -27,6 +27,7 @@ Asynq is a simple, reliable, and efficient distributed task queue library writte
 - 🏠 **High availability** - Support for Redis Cluster
 - 🖥️ **Web UI** - Web-based management interface for queues and tasks
 - 🔄 **Go compatible** - Fully compatible with Go version asynq, can be deployed together
+- 🎯 **Macro support** - Attribute macros for easy handler registration (optional feature)
 
 ## 🚀 Quick Start
 
@@ -37,6 +38,8 @@ Add to your `Cargo.toml`:
 ```toml
 [dependencies]
 asynq = { version = "0.1", features = ["json"] }
+## Enable macro support (optional)
+# asynq = { version = "0.1", features = ["json", "macros"] }
 ## or dev channel
 #asynq = { git = "https://github.com/emo-crab/asynq", branch = "main" }
 tokio = { version = "1.0", features = ["full"] }
@@ -203,6 +206,70 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 - 📝 Clean API, easy to use
 
 See `examples/servemux_example.rs` for more examples.
+
+### Task Handler Macros (Optional Feature)
+
+When the `macros` feature is enabled, you can use attribute macros similar to actix-web's routing macros for cleaner handler definition:
+
+```rust
+use asynq::{
+    serve_mux::ServeMux, 
+    task::Task, 
+    task_handler, 
+    task_handler_async,
+    register_handlers,
+    register_async_handlers,
+    redis::RedisConfig, 
+    config::ServerConfig, 
+    server::ServerBuilder
+};
+use std::collections::HashMap;
+
+// Define handlers with attribute macros
+#[task_handler("email:send")]
+fn handle_email(task: Task) -> asynq::error::Result<()> {
+    println!("Processing email:send");
+    Ok(())
+}
+
+#[task_handler_async("image:resize")]
+async fn handle_image(task: Task) -> asynq::error::Result<()> {
+    println!("Processing image:resize");
+    Ok(())
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let redis_config = RedisConfig::from_url("redis://127.0.0.1:6379")?;
+    
+    // Create ServeMux and register handlers with convenience macros
+    let mut mux = ServeMux::new();
+    register_handlers!(mux, handle_email);
+    register_async_handlers!(mux, handle_image);
+    
+    // Configure and run server
+    let mut queues = HashMap::new();
+    queues.insert("default".to_string(), 3);
+    let config = ServerConfig::new().concurrency(4).queues(queues);
+    
+    let mut server = ServerBuilder::new()
+        .redis_config(redis_config)
+        .server_config(config)
+        .build()
+        .await?;
+    
+    server.run(mux).await?;
+    Ok(())
+}
+```
+
+**Macro Features:**
+- 🎯 **Declarative syntax**: Define handlers with clean attribute syntax
+- 📝 **Reduced boilerplate**: Pattern strings are stored with the function
+- 🔧 **Convenient registration**: Use `register_handlers!` and `register_async_handlers!` macros
+- 🌐 **Familiar pattern**: Similar to actix-web's `#[get("/path")]` routing macros
+
+See `examples/macro_example.rs` for a complete example.
 
 ## 📚 Advanced Usage
 
