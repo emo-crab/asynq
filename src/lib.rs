@@ -87,3 +87,74 @@ pub mod scheduler;
 pub mod serve_mux;
 pub mod server;
 pub mod task;
+
+// Macro support (feature-gated)
+#[cfg(feature = "macros")]
+pub mod macros;
+
+// Re-export macros when the feature is enabled
+#[cfg(feature = "macros")]
+pub use asynq_macros::{task_handler, task_handler_async};
+
+/// Helper macro for registering synchronous task handlers with ServeMux
+///
+/// This macro simplifies the registration of handlers that were annotated
+/// with `#[task_handler]` attributes.
+///
+/// # Examples
+///
+/// ```ignore
+/// use asynq::{serve_mux::ServeMux, register_handlers};
+///
+/// let mut mux = ServeMux::new();
+/// register_handlers!(mux, 
+///     handle_email_send,
+///     handle_report
+/// );
+/// ```
+#[cfg(feature = "macros")]
+#[macro_export]
+macro_rules! register_handlers {
+    ($mux:expr, $($handler:ident),+ $(,)?) => {
+        $(
+            $crate::__private::paste::paste! {
+                $mux.handle_func([<__ $handler _PATTERN>], $handler);
+            }
+        )+
+    };
+}
+
+/// Helper macro for registering asynchronous task handlers with ServeMux
+///
+/// This macro simplifies the registration of handlers that were annotated
+/// with `#[task_handler_async]` attributes.
+///
+/// # Examples
+///
+/// ```ignore
+/// use asynq::{serve_mux::ServeMux, register_async_handlers};
+///
+/// let mut mux = ServeMux::new();
+/// register_async_handlers!(mux, 
+///     handle_image_resize,
+///     handle_payment
+/// );
+/// ```
+#[cfg(feature = "macros")]
+#[macro_export]
+macro_rules! register_async_handlers {
+    ($mux:expr, $($handler:ident),+ $(,)?) => {
+        $(
+            $crate::__private::paste::paste! {
+                $mux.handle_async_func([<__ $handler _PATTERN>], $handler);
+            }
+        )+
+    };
+}
+
+// Internal module for macro infrastructure (hidden from docs)
+#[doc(hidden)]
+#[cfg(feature = "macros")]
+pub mod __private {
+    pub use paste;
+}
