@@ -3,6 +3,46 @@
 //!
 //! 提供基于任务类型的路由功能，类似于 Go 版本的 servemux.go
 //! Provides task type-based routing functionality, similar to Go's servemux.go
+//!
+//! ## Pattern Matching / 模式匹配
+//!
+//! ServeMux supports wildcard pattern matching for flexible task routing:
+//! ServeMux 支持通配符模式匹配，实现灵活的任务路由：
+//!
+//! - Exact match / 精确匹配: `"email:send"` matches only "email:send"
+//! - Prefix wildcard / 前缀通配符: `"email:*"` matches all tasks starting with "email:"
+//! - Suffix wildcard / 后缀通配符: `"*:send"` matches all tasks ending with ":send"
+//! - Combined wildcards / 组合通配符: `"email:*:done"` matches tasks with specific prefix and suffix
+//! - Catch-all / 捕获所有: `"*"` matches any task type
+//!
+//! ## Examples / 示例
+//!
+//! ```rust,no_run
+//! use asynq::{serve_mux::ServeMux, task::Task, error::Result};
+//!
+//! # async fn example() -> Result<()> {
+//! let mut mux = ServeMux::new();
+//!
+//! // Handle all email tasks / 处理所有邮件任务
+//! mux.handle_func("email:*", |task: Task| {
+//!     println!("Processing email task: {}", task.get_type());
+//!     Ok(())
+//! });
+//!
+//! // Handle all urgent tasks / 处理所有紧急任务
+//! mux.handle_func("*:urgent", |task: Task| {
+//!     println!("Processing urgent task: {}", task.get_type());
+//!     Ok(())
+//! });
+//!
+//! // Catch-all handler / 捕获所有处理器
+//! mux.handle_async_func("*", |task: Task| async move {
+//!     println!("Default handler for: {}", task.get_type());
+//!     Ok(())
+//! });
+//! # Ok(())
+//! # }
+//! ```
 
 use crate::error::{Error, Result};
 use crate::server::Handler;
@@ -79,8 +119,16 @@ fn pattern_matches(pattern: &str, task_type: &str) -> bool {
 /// ServeMux - 任务路由多路复用器
 /// ServeMux - Task routing multiplexer
 ///
-/// ServeMux 根据任务类型将任务路由到对应的处理器
-/// ServeMux routes tasks to corresponding handlers based on task type
+/// ServeMux 根据任务类型将任务路由到对应的处理器，支持通配符模式匹配
+/// ServeMux routes tasks to corresponding handlers based on task type, with wildcard pattern matching support
+///
+/// # Pattern Matching / 模式匹配
+///
+/// - `"email:send"` - Exact match / 精确匹配
+/// - `"email:*"` - Prefix wildcard / 前缀通配符
+/// - `"*:send"` - Suffix wildcard / 后缀通配符
+/// - `"email:*:done"` - Combined wildcards / 组合通配符
+/// - `"*"` - Catch-all / 捕获所有
 ///
 /// # Examples
 ///
@@ -90,13 +138,19 @@ fn pattern_matches(pattern: &str, task_type: &str) -> bool {
 /// # async fn example() -> Result<()> {
 /// let mut mux = ServeMux::new();
 ///
-/// // 注册同步处理器
+/// // 注册同步处理器 / Register sync handler
 /// mux.handle_func("email:send", |task: Task| {
 ///     println!("Processing email:send task");
 ///     Ok(())
 /// });
 ///
-/// // 注册异步处理器
+/// // 使用通配符匹配所有邮件任务 / Use wildcard to match all email tasks
+/// mux.handle_func("email:*", |task: Task| {
+///     println!("Processing email task: {}", task.get_type());
+///     Ok(())
+/// });
+///
+/// // 注册异步处理器 / Register async handler
 /// mux.handle_async_func("image:resize", |task: Task| async move {
 ///     println!("Processing image:resize task");
 ///     Ok(())

@@ -89,4 +89,53 @@ mod tests {
         assert_eq!(__test_sync_handler2_PATTERN, "test:sync2");
         assert_eq!(__test_async_handler2_PATTERN, "test:async2");
     }
+
+    // Test handlers with wildcard patterns
+    #[task_handler("email:*")]
+    fn handle_all_emails(task: Task) -> Result<()> {
+        assert!(task.get_type().starts_with("email:"));
+        Ok(())
+    }
+
+    #[task_handler("*:urgent")]
+    fn handle_urgent(task: Task) -> Result<()> {
+        assert!(task.get_type().ends_with(":urgent"));
+        Ok(())
+    }
+
+    #[task_handler("*")]
+    fn handle_catchall(_task: Task) -> Result<()> {
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_wildcard_patterns_with_macros() {
+        let mut mux = ServeMux::new();
+
+        // Register handlers with wildcard patterns
+        register_handlers!(
+            mux,
+            handle_all_emails,
+            handle_urgent,
+            handle_catchall
+        );
+
+        // Test prefix wildcard - email:*
+        let task1 = Task::new("email:send", b"test").unwrap();
+        assert!(mux.process_task(task1).await.is_ok());
+
+        let task2 = Task::new("email:deliver", b"test").unwrap();
+        assert!(mux.process_task(task2).await.is_ok());
+
+        // Test suffix wildcard - *:urgent
+        let task3 = Task::new("payment:urgent", b"test").unwrap();
+        assert!(mux.process_task(task3).await.is_ok());
+
+        let task4 = Task::new("notification:urgent", b"test").unwrap();
+        assert!(mux.process_task(task4).await.is_ok());
+
+        // Test catch-all - *
+        let task5 = Task::new("any:random:task", b"test").unwrap();
+        assert!(mux.process_task(task5).await.is_ok());
+    }
 }
