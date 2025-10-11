@@ -182,5 +182,6 @@ register_async_handlers!(mux, handle_image);
 
 - The macros create compile-time constants for pattern strings
 - Pattern constants are named as `__<function_name>_PATTERN`
-- The registration macros use the `paste` crate to generate the correct constant names
+- The registration macros use procedural macros to generate the correct constant names at compile time
 - No runtime overhead - all pattern associations are resolved at compile time
+- No external dependencies beyond the standard `quote` crate used for proc macros
