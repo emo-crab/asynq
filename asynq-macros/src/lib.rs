@@ -54,6 +54,9 @@ pub fn task_handler(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Create a doc comment indicating this is a task handler
     let doc_comment = format!("Task handler for pattern: `{}`", pattern_str);
     
+    // Generate the pattern constant name directly
+    let pattern_const = quote::format_ident!("__{}_PATTERN", fn_name);
+    
     // Generate the handler function with added metadata
     let expanded = quote! {
         #[doc = #doc_comment]
@@ -61,10 +64,8 @@ pub fn task_handler(attr: TokenStream, item: TokenStream) -> TokenStream {
         #input_fn
         
         // Create a const string to store the pattern
-        ::asynq::__private::paste::paste! {
-            #[doc(hidden)]
-            pub const [<__ #fn_name _PATTERN>]: &str = #pattern;
-        }
+        #[doc(hidden)]
+        pub const #pattern_const: &str = #pattern;
     };
     
     TokenStream::from(expanded)
@@ -102,6 +103,9 @@ pub fn task_handler_async(attr: TokenStream, item: TokenStream) -> TokenStream {
     // Create a doc comment indicating this is a task handler
     let doc_comment = format!("Async task handler for pattern: `{}`", pattern_str);
     
+    // Generate the pattern constant name directly
+    let pattern_const = quote::format_ident!("__{}_PATTERN", fn_name);
+    
     // Generate the handler function with added metadata
     let expanded = quote! {
         #[doc = #doc_comment]
@@ -109,16 +113,14 @@ pub fn task_handler_async(attr: TokenStream, item: TokenStream) -> TokenStream {
         #input_fn
         
         // Create a const string to store the pattern
-        ::asynq::__private::paste::paste! {
-            #[doc(hidden)]
-            pub const [<__ #fn_name _PATTERN>]: &str = #pattern;
-        }
+        #[doc(hidden)]
+        pub const #pattern_const: &str = #pattern;
     };
     
     TokenStream::from(expanded)
 }
 
-/// Macro for automatically registering handlers with ServeMux
+/// Macro for automatically registering synchronous handlers with ServeMux
 ///
 /// This macro collects all handlers defined in the current scope and registers them
 /// with a ServeMux instance.
@@ -150,22 +152,59 @@ pub fn register_handlers(input: TokenStream) -> TokenStream {
         .iter()
         .map(|handler_name| {
             let handler_ident: proc_macro2::TokenStream = handler_name.parse().unwrap();
-            let pattern_const: proc_macro2::TokenStream = 
-                format!("__{}_PATTERN", handler_name).parse().unwrap();
+            // Generate the pattern constant name directly
+            let pattern_const = quote::format_ident!("__{}_PATTERN", handler_name);
             
             quote! {
-                {
-                    // Try to register as async first, fall back to sync
-                    let pattern = #pattern_const;
-                    // Detect if the function is async by checking if it returns a Future
-                    use ::std::future::Future;
-                    if ::std::any::TypeId::of::<()>() != ::std::any::TypeId::of::<()>() {
-                        // This is a compile-time check placeholder
-                        #mux_ident.handle_async_func(pattern, #handler_ident);
-                    } else {
-                        #mux_ident.handle_func(pattern, #handler_ident);
-                    }
-                }
+                #mux_ident.handle_func(#pattern_const, #handler_ident);
+            }
+        })
+        .collect();
+    
+    TokenStream::from(quote! {
+        {
+            #(#registrations)*
+        }
+    })
+}
+
+/// Macro for automatically registering asynchronous handlers with ServeMux
+///
+/// This macro collects all handlers defined in the current scope and registers them
+/// with a ServeMux instance.
+///
+/// # Examples
+///
+/// ```ignore
+/// use asynq::register_async_handlers;
+/// use asynq::serve_mux::ServeMux;
+///
+/// let mut mux = ServeMux::new();
+/// register_async_handlers!(mux, handle_image, handle_payment);
+/// ```
+#[proc_macro]
+pub fn register_async_handlers(input: TokenStream) -> TokenStream {
+    let input_str = input.to_string();
+    let parts: Vec<&str> = input_str.split(',').map(|s| s.trim()).collect();
+    
+    if parts.is_empty() {
+        return TokenStream::from(quote! {
+            compile_error!("register_async_handlers! requires at least a mux variable and one handler");
+        });
+    }
+    
+    let mux_var = parts[0];
+    let mux_ident: proc_macro2::TokenStream = mux_var.parse().unwrap();
+    
+    let registrations: Vec<proc_macro2::TokenStream> = parts[1..]
+        .iter()
+        .map(|handler_name| {
+            let handler_ident: proc_macro2::TokenStream = handler_name.parse().unwrap();
+            // Generate the pattern constant name directly
+            let pattern_const = quote::format_ident!("__{}_PATTERN", handler_name);
+            
+            quote! {
+                #mux_ident.handle_async_func(#pattern_const, #handler_ident);
             }
         })
         .collect();
