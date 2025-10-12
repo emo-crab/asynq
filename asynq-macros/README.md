@@ -21,7 +21,7 @@ asynq = { version = "0.1", features = ["macros"] }
 Then use the macros to define your task handlers:
 
 ```rust
-use asynq::{Task, error::Result, task_handler, task_handler_async};
+use asynq::{task::Task, error::Result, task_handler, task_handler_async};
 
 // Define a synchronous task handler
 #[task_handler("email:send")]
@@ -59,11 +59,3 @@ register_async_handlers!(mux, handle_image_resize);
 - **Type safety**: Pattern strings are validated at compile time
 - **Reduced boilerplate**: Automatic pattern association with handlers
 - **Similar to web frameworks**: Familiar pattern for developers coming from actix-web or similar frameworks
-
-## Example
-
-See the `examples/macro_example.rs` file for a complete working example.
-
-## License
-
-MIT

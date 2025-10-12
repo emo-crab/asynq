@@ -9,7 +9,7 @@
 //!
 //! ```ignore
 //! use asynq_macros::task_handler;
-//! use asynq::{Task, error::Result};
+//! use asynq::{task::Task, error::Result};
 //!
 //! #[task_handler("email:send")]
 //! fn handle_email(task: Task) -> Result<()> {
@@ -35,7 +35,7 @@ use syn::{parse_macro_input, ItemFn, LitStr};
 ///
 /// ```ignore
 /// use asynq_macros::task_handler;
-/// use asynq::{Task, error::Result};
+/// use asynq::{task::Task, error::Result};
 ///
 /// #[task_handler("email:send")]
 /// fn handle_email(task: Task) -> Result<()> {
@@ -84,7 +84,7 @@ pub fn task_handler(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///
 /// ```ignore
 /// use asynq_macros::task_handler_async;
-/// use asynq::{Task, error::Result};
+/// use asynq::{task::Task, error::Result};
 ///
 /// #[task_handler_async("image:resize")]
 /// async fn handle_image_resize(task: Task) -> Result<()> {

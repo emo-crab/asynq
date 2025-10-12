@@ -1,9 +1,10 @@
 [package]
 name = "asynq-macros"
 version = "0.1.0"
-edition = "2021"
-license = "MIT"
-authors = ["Kali-Team <root@kali-team.cn>"]
+license.workspace = true
+edition.workspace = true
+authors.workspace = true
+
 description = "Procedural macros for asynq task handler registration"
 readme = "README.md"
 repository = "https://github.com/emo-crab/asynq"
