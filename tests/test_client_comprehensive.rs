@@ -3,11 +3,7 @@
 //! This module contains thorough test coverage for client functionality,
 //! ensuring full compatibility with the Go asynq client behavior.
 
-use asynq::{
-  redis::RedisConfig,
-  task::{ Task},
-  client::Client,inspector::Inspector,
-};
+use asynq::{client::Client, inspector::Inspector, redis::RedisConfig, task::Task};
 use chrono::Utc;
 use std::time::Duration;
 
@@ -25,8 +21,8 @@ fn create_test_task(task_type: &str, payload: &[u8]) -> Task {
 
 #[cfg(test)]
 mod client_comprehensive_tests {
-  use asynq::rdb::option::RetryPolicy;
   use super::*;
+  use asynq::rdb::option::RetryPolicy;
 
   /// Test client enqueue with ProcessAt option (mirrors Go TestClientEnqueueWithProcessAtOption)
   #[tokio::test]

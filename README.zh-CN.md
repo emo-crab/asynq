@@ -27,16 +27,19 @@ Asynq 是一个用 Rust 编写的简单、可靠、高效的分布式任务队�
 - 🏠 **高可用性** - 支持 Redis Cluster
 - 🖥️ **Web UI** - 提供队列和任务的 Web 管理界面
 - 🔄 **Go 兼容** - 与 Go 版本 asynq 完全兼容，可混合部署
+- 🎯 **宏支持** - 提供类似 actix-web 的属性宏，方便注册处理器（可选功能）
 
 ## 🚀 快速开始
 
 ### 添加依赖
 
-在你的 `Cargo.toml` 中添加：
+在你的 `Cargo.toml`中添加：
 
 ```toml
 [dependencies]
 asynq = { version = "0.1", features = ["json"] }
+## 启用宏支持（可选）
+# asynq = { version = "0.1", features = ["json", "macros"] }
 ## or dev channel
 #asynq = { git = "https://github.com/emo-crab/asynq", branch = "main" }
 tokio = { version = "1.0", features = ["full"] }
@@ -203,6 +206,70 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 - 📝 简洁的 API，易于使用
 
 更多示例请参考 `examples/servemux_example.rs`。
+
+### 任务处理器宏（可选功能）
+
+启用 `macros` 功能后，可以使用类似 actix-web 路由宏的属性宏，更简洁地定义处理器：
+
+```rust
+use asynq::{
+    serve_mux::ServeMux, 
+    task::Task, 
+    task_handler, 
+    task_handler_async,
+    register_handlers,
+    register_async_handlers,
+    redis::RedisConfig, 
+    config::ServerConfig, 
+    server::ServerBuilder
+};
+use std::collections::HashMap;
+
+// 使用属性宏定义处理器
+#[task_handler("email:send")]
+fn handle_email(task: Task) -> asynq::error::Result<()> {
+    println!("Processing email:send");
+    Ok(())
+}
+
+#[task_handler_async("image:resize")]
+async fn handle_image(task: Task) -> asynq::error::Result<()> {
+    println!("Processing image:resize");
+    Ok(())
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let redis_config = RedisConfig::from_url("redis://127.0.0.1:6379")?;
+    
+    // 创建 ServeMux 并使用便捷宏注册处理器
+    let mut mux = ServeMux::new();
+    register_handlers!(mux, handle_email);
+    register_async_handlers!(mux, handle_image);
+    
+    // 配置并运行服务器
+    let mut queues = HashMap::new();
+    queues.insert("default".to_string(), 3);
+    let config = ServerConfig::new().concurrency(4).queues(queues);
+    
+    let mut server = ServerBuilder::new()
+        .redis_config(redis_config)
+        .server_config(config)
+        .build()
+        .await?;
+    
+    server.run(mux).await?;
+    Ok(())
+}
+```
+
+**宏特性:**
+- 🎯 **声明式语法**: 使用简洁的属性语法定义处理器
+- 📝 **减少样板代码**: 模式字符串与函数自动关联
+- 🔧 **便捷注册**: 使用 `register_handlers!` 和 `register_async_handlers!` 宏
+- 🌐 **熟悉的模式**: 类似 actix-web 的 `#[get("/path")]` 路由宏
+
+完整示例请参考 `examples/macro_example.rs`。
 
 ## 📚 高级用法
 
@@ -466,7 +533,7 @@ cargo test --features integration-tests
 
 ## 📝 许可证
 
-本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+本项目采用[MIT License](LICENSE-MIT) OR [GPL License](LICENSE-GPL)。
 
 ## 🙏 致谢
 

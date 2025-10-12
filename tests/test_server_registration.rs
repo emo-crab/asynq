@@ -10,8 +10,8 @@ use std::time::Duration;
 use uuid::Uuid;
 
 use asynq::base::{keys, Broker};
-use asynq::{rdb::RedisBroker, redis::RedisConfig};
 use asynq::proto::ServerInfo;
+use asynq::{rdb::RedisBroker, redis::RedisConfig};
 
 #[tokio::test]
 async fn test_server_registration() -> Result<(), Box<dyn std::error::Error>> {
@@ -68,7 +68,13 @@ async fn test_server_registration() -> Result<(), Box<dyn std::error::Error>> {
   assert_eq!(found_server.concurrency, 10);
 
   // Test get_server_info (should return specific server info)
-  let retrieved_info = broker.get_server_info(&keys::server_info_key(&found_server.host,found_server.pid,&found_server.server_id)).await?;
+  let retrieved_info = broker
+    .get_server_info(&keys::server_info_key(
+      &found_server.host,
+      found_server.pid,
+      &found_server.server_id,
+    ))
+    .await?;
   assert!(
     retrieved_info.is_some(),
     "Server info should be retrievable"

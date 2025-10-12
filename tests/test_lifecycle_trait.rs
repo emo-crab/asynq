@@ -9,10 +9,10 @@ use asynq::components::forwarder::{Forwarder, ForwarderConfig};
 use asynq::components::healthcheck::{Healthcheck, HealthcheckConfig};
 use asynq::components::heartbeat::{Heartbeat, HeartbeatMeta};
 use asynq::components::janitor::{Janitor, JanitorConfig};
-use asynq::components::ComponentLifecycle;
 use asynq::components::periodic_task_manager::{PeriodicTaskManager, PeriodicTaskManagerConfig};
 use asynq::components::recoverer::{Recoverer, RecovererConfig};
 use asynq::components::subscriber::{Subscriber, SubscriberConfig};
+use asynq::components::ComponentLifecycle;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
@@ -50,10 +50,7 @@ async fn test_lifecycle_trait_usage() {
     // Recoverer
     Arc::new(Recoverer::new(broker.clone(), RecovererConfig::default())),
     // Subscriber
-    Arc::new(Subscriber::new(
-      broker.clone(),
-      SubscriberConfig::default(),
-    )),
+    Arc::new(Subscriber::new(broker.clone(), SubscriberConfig::default())),
     // PeriodicTaskManager
     Arc::new(PeriodicTaskManager::new(
       client.clone(),
@@ -119,7 +116,8 @@ async fn test_janitor_lifecycle() {
   let redis_config = RedisConfig::from_url("redis://localhost:6379").unwrap();
   let broker = Arc::new(RedisBroker::new(redis_config).unwrap());
 
-  let janitor: Arc<dyn ComponentLifecycle> = Arc::new(Janitor::new(broker, JanitorConfig::default()));
+  let janitor: Arc<dyn ComponentLifecycle> =
+    Arc::new(Janitor::new(broker, JanitorConfig::default()));
 
   // 测试初始状态
   // Test initial state
@@ -172,15 +170,11 @@ async fn test_generic_component_management() {
 
   // 使用相同的函数管理不同的组件
   // Use the same function to manage different components
-  let forwarder: Arc<dyn ComponentLifecycle> = Arc::new(Forwarder::new(
-    broker.clone(),
-    ForwarderConfig::default(),
-  ));
+  let forwarder: Arc<dyn ComponentLifecycle> =
+    Arc::new(Forwarder::new(broker.clone(), ForwarderConfig::default()));
   manage_component(forwarder, Duration::from_millis(50)).await;
 
-  let recoverer: Arc<dyn ComponentLifecycle> = Arc::new(Recoverer::new(
-    broker.clone(),
-    RecovererConfig::default(),
-  ));
+  let recoverer: Arc<dyn ComponentLifecycle> =
+    Arc::new(Recoverer::new(broker.clone(), RecovererConfig::default()));
   manage_component(recoverer, Duration::from_millis(50)).await;
 }

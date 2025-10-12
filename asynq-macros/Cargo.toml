@@ -1,0 +1,20 @@
+[package]
+name = "asynq-macros"
+version = "0.1.0"
+license.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+description = "Procedural macros for asynq task handler registration"
+readme = "README.md"
+repository = "https://github.com/emo-crab/asynq"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2.0", features = ["full", "parsing"] }
+quote = "1.0"
+proc-macro2 = "1.0"
+
+[dev-dependencies]
