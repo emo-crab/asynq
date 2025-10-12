@@ -88,10 +88,8 @@ pub mod serve_mux;
 pub mod server;
 pub mod task;
 
-// Macro support (feature-gated)
-#[cfg(feature = "macros")]
-pub mod macros;
-
 // Re-export macros when the feature is enabled
 #[cfg(feature = "macros")]
-pub use asynq_macros::{register_async_handlers, register_handlers, task_handler, task_handler_async};
+pub use asynq_macros::{
+  register_async_handlers, register_handlers, task_handler, task_handler_async,
+};

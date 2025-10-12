@@ -477,12 +477,7 @@ impl RedisBroker {
 
   /// 列出指定服务器的工作者 - 使用脚本 - Go: ListWorkers
   /// List workers for a specific server using script - Go: ListWorkers
-  pub async fn list_workers(
-    &self,
-    host: &str,
-    pid: i32,
-    server_id: &str,
-  ) -> Result<Vec<String>> {
+  pub async fn list_workers(&self, host: &str, pid: i32, server_id: &str) -> Result<Vec<String>> {
     let mut conn = self.get_async_connection().await?;
     let workers_key = keys::workers_key(host, pid, server_id);
     let now = Utc::now().timestamp();
@@ -1323,7 +1318,10 @@ impl RedisBroker {
       RedisArg::Str(keys::queue_key_prefix(queue)),
       RedisArg::Str(keys::group_key_prefix(queue)),
     ];
-    let result:i64 = self.script_manager.eval_script(&mut conn,"run_task",&keys,&args).await?;
+    let result: i64 = self
+      .script_manager
+      .eval_script(&mut conn, "run_task", &keys, &args)
+      .await?;
     match result {
       1 => Ok(()),
       0 => Err(Error::other("Task not found")),
@@ -1449,12 +1447,7 @@ impl RedisBroker {
 
   /// 使用 DELETE_AGGREGATION_SET_CMD 脚本删除聚合集合
   /// Delete aggregation set using DELETE_AGGREGATION_SET_CMD script
-  pub async fn del_aggregation_set(
-    &self,
-    queue: &str,
-    group: &str,
-    set_id: &str,
-  ) -> Result<()> {
+  pub async fn del_aggregation_set(&self, queue: &str, group: &str, set_id: &str) -> Result<()> {
     let mut conn = self.get_async_connection().await?;
 
     let aggregation_set_key = format!("asynq:{}:g:{}:{}", queue, group, set_id);

@@ -119,7 +119,7 @@ pub struct ProcessorParams {
 
 /// 任务取消追踪结构
 /// Task cancellation tracking structure
-/// 
+///
 /// 对应 Go asynq 的 internal/base/base.go 中的 Cancellations
 /// Corresponds to Cancellations in Go asynq's internal/base/base.go
 #[derive(Clone)]
@@ -154,7 +154,7 @@ impl CancellationMap {
 
   /// 取消指定的任务
   /// Cancel specified task
-  /// 
+  ///
   /// 对应 Go 的 cancelations.Cancel(taskID)
   /// Corresponds to Go's cancelations.Cancel(taskID)
   pub fn cancel(&self, task_id: &str) -> bool {
@@ -196,32 +196,32 @@ pub struct Processor {
   ordered_queues: Option<Vec<String>>,
   task_check_interval: Duration,
   shutdown_timeout: Duration,
-  
+
   // 信号量用于限制并发工作者数量
   // Semaphore to limit number of concurrent workers
   sema: Arc<Semaphore>,
-  
+
   // 运行状态标志
   // Running state flag
   running: Arc<AtomicBool>,
-  
+
   // 退出信号通道
   // Quit signal channel
   quit_tx: Option<mpsc::Sender<()>>,
   quit_rx: Option<mpsc::Receiver<()>>,
-  
+
   // 中止信号通道 - 用于强制停止所有工作者
   // Abort signal channel - used to forcefully stop all workers
   abort_tx: Option<mpsc::Sender<()>>,
-  
+
   // 处理器主循环句柄
   // Main processor loop handle
   handle: Option<JoinHandle<()>>,
-  
+
   // 活跃工作者计数
   // Active worker count
   active_workers: Arc<AtomicUsize>,
-  
+
   // 任务取消追踪
   // Task cancellation tracking
   /// 对应 Go asynq 的 cancelations *base.Cancellations
@@ -239,10 +239,10 @@ impl Processor {
     } else {
       None
     };
-    
+
     let (quit_tx, quit_rx) = mpsc::channel(1);
     let (abort_tx, _abort_rx) = mpsc::channel(1);
-    
+
     Self {
       broker: params.broker,
       queue_config: queues,
@@ -259,16 +259,16 @@ impl Processor {
       cancellations: CancellationMap::new(),
     }
   }
-  
+
   /// 获取任务取消追踪器的克隆
   /// Get a clone of the task cancellation tracker
-  /// 
+  ///
   /// 用于在服务器中接收取消事件后调用 cancel 方法
   /// Used to call the cancel method after receiving cancellation events in the server
   pub fn cancellations(&self) -> CancellationMap {
     self.cancellations.clone()
   }
-  
+
   /// 启动处理器
   /// Start the processor
   pub fn start<H>(&mut self, handler: Arc<H>)
@@ -276,7 +276,7 @@ impl Processor {
     H: Handler + 'static,
   {
     self.running.store(true, Ordering::SeqCst);
-    
+
     let broker = Arc::clone(&self.broker);
     let running = Arc::clone(&self.running);
     let sema = Arc::clone(&self.sema);
@@ -286,7 +286,7 @@ impl Processor {
     let active_workers = Arc::clone(&self.active_workers);
     let cancelations = self.cancellations.clone();
     let mut quit_rx = self.quit_rx.take().unwrap();
-    
+
     let handle = tokio::spawn(async move {
       loop {
         // 检查是否收到退出信号
@@ -295,11 +295,11 @@ impl Processor {
           tracing::debug!("Processor received quit signal");
           break;
         }
-        
+
         if !running.load(Ordering::SeqCst) {
           break;
         }
-        
+
         // 尝试获取信号量令牌
         // Try to acquire semaphore permit
         let permit = match sema.clone().try_acquire_owned() {
@@ -311,11 +311,11 @@ impl Processor {
             continue;
           }
         };
-        
+
         // 获取队列列表
         // Get queue list
         let queues = get_queues(&queue_config, ordered_queues.as_ref());
-        
+
         // 从队列中取出任务
         // Dequeue a task from the queue
         match broker.dequeue(&queues).await {
@@ -323,17 +323,17 @@ impl Processor {
             // 增加活跃工作者计数
             // Increment active worker count
             active_workers.fetch_add(1, Ordering::Relaxed);
-            
+
             let handler = Arc::clone(&handler);
             let broker = Arc::clone(&broker);
             let active_workers = Arc::clone(&active_workers);
             let cancelations = cancelations.clone();
-            
+
             // 在新的任务中处理
             // Process in a new task
             tokio::spawn(async move {
               let _permit = permit; // 持有许可直到任务完成
-              
+
               // 创建任务
               // Create task
               let task = match Task::new(&task_msg.r#type, &task_msg.payload) {
@@ -344,20 +344,20 @@ impl Processor {
                   return;
                 }
               };
-              
+
               // 创建取消令牌
               // Create cancellation token
               let cancel_token = CancellationToken::new();
               let task_id = task_msg.id.clone();
-              
+
               // 注册取消令牌
               // Register cancellation token
               cancelations.add(task_id.clone(), cancel_token.clone());
-              
+
               // 计算任务超时
               // Calculate task timeout
               let timeout_duration = calculate_task_timeout(&task_msg);
-              
+
               // 执行任务，支持超时和取消
               // Execute task with timeout and cancellation support
               let result = if let Some(timeout) = timeout_duration {
@@ -391,11 +391,11 @@ impl Processor {
                   }
                 }
               };
-              
+
               // 移除取消令牌
               // Remove cancellation token
               cancelations.remove(&task_id);
-              
+
               // 处理结果
               // Handle result
               match result {
@@ -412,9 +412,11 @@ impl Processor {
                   if task_msg.retried < task_msg.retry {
                     // 计算重试延迟
                     // Calculate retry delay
-                    let retry_delay = calculate_retry_delay(task_msg.retried, task.options.retry_policy.as_ref());
-                    let retry_at = chrono::Utc::now() + chrono::Duration::seconds(retry_delay.as_secs() as i64);
-                    
+                    let retry_delay =
+                      calculate_retry_delay(task_msg.retried, task.options.retry_policy.as_ref());
+                    let retry_at =
+                      chrono::Utc::now() + chrono::Duration::seconds(retry_delay.as_secs() as i64);
+
                     if let Err(e) = broker.requeue(&task_msg, retry_at, &e.to_string()).await {
                       tracing::error!("Failed to requeue task: {}", e);
                     }
@@ -448,13 +450,13 @@ impl Processor {
           }
         }
       }
-      
+
       tracing::debug!("Processor loop exited");
     });
-    
+
     self.handle = Some(handle);
   }
-  
+
   /// 停止处理器（不等待工作者完成）
   /// Stop the processor (without waiting for workers)
   pub fn stop(&mut self) {
@@ -463,12 +465,12 @@ impl Processor {
       let _ = tx.try_send(());
     }
   }
-  
+
   /// 关闭处理器并等待所有工作者完成
   /// Shutdown the processor and wait for all workers to finish
   pub async fn shutdown(&mut self) {
     self.stop();
-    
+
     // 启动超时定时器，之后发送中止信号
     // Start timeout timer, then send abort signal
     let abort_tx = self.abort_tx.clone();
@@ -479,15 +481,15 @@ impl Processor {
         let _ = tx.send(()).await;
       }
     });
-    
+
     // 等待处理器主循环退出
     // Wait for processor main loop to exit
     if let Some(handle) = self.handle.take() {
       let _ = handle.await;
     }
-    
+
     tracing::info!("Waiting for all workers to finish...");
-    
+
     // 等待所有信号量令牌被释放（即所有工作者完成）
     // Wait for all semaphore permits to be released (i.e., all workers finished)
     let sema = Arc::clone(&self.sema);
@@ -495,7 +497,7 @@ impl Processor {
     for _ in 0..concurrency {
       let _ = sema.acquire().await;
     }
-    
+
     tracing::info!("All workers have finished");
   }
 }
@@ -514,24 +516,30 @@ fn normalize_queues(queues: HashMap<String, i32>) -> HashMap<String, i32> {
 fn sort_by_priority(queues: &HashMap<String, i32>) -> Vec<String> {
   let mut queue_vec: Vec<_> = queues.iter().collect();
   queue_vec.sort_by(|a, b| b.1.cmp(a.1)); // 降序排序
-  queue_vec.into_iter().map(|(name, _)| name.clone()).collect()
+  queue_vec
+    .into_iter()
+    .map(|(name, _)| name.clone())
+    .collect()
 }
 
 /// 获取队列列表，基于优先级
 /// Get queue list based on priority
-fn get_queues(queue_config: &HashMap<String, i32>, ordered_queues: Option<&Vec<String>>) -> Vec<String> {
+fn get_queues(
+  queue_config: &HashMap<String, i32>,
+  ordered_queues: Option<&Vec<String>>,
+) -> Vec<String> {
   // 如果只有一个队列，直接返回
   // If only one queue, return directly
   if queue_config.len() == 1 {
     return queue_config.keys().cloned().collect();
   }
-  
+
   // 如果有排序的队列（严格优先级模式），返回排序后的队列
   // If ordered queues exist (strict priority mode), return ordered queues
   if let Some(ordered) = ordered_queues {
     return ordered.clone();
   }
-  
+
   // 否则，基于优先级加权随机选择
   // Otherwise, weighted random selection based on priority
   let mut names = Vec::new();
@@ -540,13 +548,13 @@ fn get_queues(queue_config: &HashMap<String, i32>, ordered_queues: Option<&Vec<S
       names.push(name.clone());
     }
   }
-  
+
   // 随机打乱
   // Shuffle randomly
   use rand::seq::SliceRandom;
   let mut rng = rand::rng();
   names.shuffle(&mut rng);
-  
+
   // 去重并返回
   // Deduplicate and return
   let mut seen = std::collections::HashSet::new();
@@ -566,13 +574,13 @@ fn get_queues(queue_config: &HashMap<String, i32>, ordered_queues: Option<&Vec<S
 /// Calculate task timeout
 fn calculate_task_timeout(task_msg: &crate::proto::TaskMessage) -> Option<Duration> {
   use crate::base::constants::DEFAULT_TIMEOUT;
-  
+
   // 优先使用任务级别的超时设置
   // Prefer task-level timeout settings
   if task_msg.timeout > 0 {
     return Some(Duration::from_secs(task_msg.timeout as u64));
   }
-  
+
   // 如果任务有截止时间，计算剩余时间作为超时
   // If the task has a deadline, calculate remaining time as timeout
   if task_msg.deadline > 0 {
@@ -582,7 +590,7 @@ fn calculate_task_timeout(task_msg: &crate::proto::TaskMessage) -> Option<Durati
       return Some(Duration::from_secs(remaining as u64));
     }
   }
-  
+
   // 使用默认超时
   // Use default timeout
   Some(DEFAULT_TIMEOUT)
@@ -609,129 +617,129 @@ fn calculate_retry_delay(
 #[cfg(test)]
 mod tests {
   use super::*;
-  
+
   #[test]
   fn test_normalize_queues() {
     let mut queues = HashMap::new();
     queues.insert("default".to_string(), 3);
     queues.insert("low".to_string(), 0);
     queues.insert("high".to_string(), -5);
-    
+
     let normalized = normalize_queues(queues);
     assert_eq!(normalized.get("default"), Some(&3));
     assert_eq!(normalized.get("low"), Some(&1));
     assert_eq!(normalized.get("high"), Some(&1));
   }
-  
+
   #[test]
   fn test_sort_by_priority() {
     let mut queues = HashMap::new();
     queues.insert("default".to_string(), 3);
     queues.insert("low".to_string(), 1);
     queues.insert("high".to_string(), 6);
-    
+
     let sorted = sort_by_priority(&queues);
     assert_eq!(sorted[0], "high");
     assert_eq!(sorted[1], "default");
     assert_eq!(sorted[2], "low");
   }
-  
+
   #[test]
   fn test_get_queues_single() {
     let mut queues = HashMap::new();
     queues.insert("default".to_string(), 3);
-    
+
     let result = get_queues(&queues, None);
     assert_eq!(result.len(), 1);
     assert_eq!(result[0], "default");
   }
-  
+
   #[test]
   fn test_get_queues_strict_priority() {
     let mut queues = HashMap::new();
     queues.insert("default".to_string(), 3);
     queues.insert("low".to_string(), 1);
     queues.insert("high".to_string(), 6);
-    
+
     let ordered = vec!["high".to_string(), "default".to_string(), "low".to_string()];
     let result = get_queues(&queues, Some(&ordered));
     assert_eq!(result, ordered);
   }
-  
+
   #[test]
   fn test_cancelations_new() {
     let cancelations = CancellationMap::new();
     assert!(cancelations.is_empty());
     assert_eq!(cancelations.len(), 0);
   }
-  
+
   #[test]
   fn test_cancelations_add_remove() {
     let cancelations = CancellationMap::new();
     let token = CancellationToken::new();
-    
+
     cancelations.add("task1".to_string(), token.clone());
     assert_eq!(cancelations.len(), 1);
     assert!(!cancelations.is_empty());
-    
+
     cancelations.remove("task1");
     assert_eq!(cancelations.len(), 0);
     assert!(cancelations.is_empty());
   }
-  
+
   #[tokio::test]
   async fn test_cancelations_cancel() {
     let cancellations = CancellationMap::new();
     let token = CancellationToken::new();
     let task_id = "task1".to_string();
-    
+
     // Add token
     cancellations.add(task_id.clone(), token.clone());
-    
+
     // Verify token is not cancelled
     assert!(!token.is_cancelled());
-    
+
     // Cancel the task
     let cancelled = cancellations.cancel(&task_id);
     assert!(cancelled);
-    
+
     // Verify token is now cancelled
     assert!(token.is_cancelled());
   }
-  
+
   #[tokio::test]
   async fn test_cancelations_cancel_nonexistent() {
     let cancellations = CancellationMap::new();
-    
+
     // Try to cancel a non-existent task
     let cancelled = cancellations.cancel("nonexistent");
     assert!(!cancelled);
   }
-  
+
   #[tokio::test]
   async fn test_cancelations_multiple_tasks() {
     let cancellations = CancellationMap::new();
-    
+
     let token1 = CancellationToken::new();
     let token2 = CancellationToken::new();
     let token3 = CancellationToken::new();
-    
+
     cancellations.add("task1".to_string(), token1.clone());
     cancellations.add("task2".to_string(), token2.clone());
     cancellations.add("task3".to_string(), token3.clone());
-    
+
     assert_eq!(cancellations.len(), 3);
-    
+
     // Cancel task2
     cancellations.cancel("task2");
     assert!(!token1.is_cancelled());
     assert!(token2.is_cancelled());
     assert!(!token3.is_cancelled());
-    
+
     // Remove task1
     cancellations.remove("task1");
     assert_eq!(cancellations.len(), 2);
-    
+
     // Cancel task3
     cancellations.cancel("task3");
     assert!(token3.is_cancelled());

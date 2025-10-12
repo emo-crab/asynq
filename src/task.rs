@@ -468,8 +468,12 @@ mod tests {
       count: 42,
     };
 
-    let task = Task::new("test_task", &serde_json::to_vec(&payload).unwrap_or_default()).unwrap();
-    let decoded: TestPayload =serde_json::from_slice(task.get_payload()).unwrap();
+    let task = Task::new(
+      "test_task",
+      &serde_json::to_vec(&payload).unwrap_or_default(),
+    )
+    .unwrap();
+    let decoded: TestPayload = serde_json::from_slice(task.get_payload()).unwrap();
     assert_eq!(decoded, payload);
   }
 

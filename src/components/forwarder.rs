@@ -10,8 +10,8 @@
 //! Reference: Go asynq/forwarder.go
 
 use crate::base::Broker;
-use crate::error::Result;
 use crate::components::ComponentLifecycle;
+use crate::error::Result;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;

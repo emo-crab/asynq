@@ -231,7 +231,7 @@ impl Aggregator {
                 set_id,
                 queue
               );
-              
+
               // 如果配置了 GroupAggregator，则调用聚合函数
               // If GroupAggregator is configured, call the aggregation function
               if let Some(aggregator) = &self.config.group_aggregator {
@@ -242,14 +242,11 @@ impl Aggregator {
                   match Task::new(&task_msg.r#type, &task_msg.payload) {
                     Ok(task) => tasks.push(task),
                     Err(e) => {
-                      tracing::warn!(
-                        "Aggregator: failed to create task from message: {}",
-                        e
-                      );
+                      tracing::warn!("Aggregator: failed to create task from message: {}", e);
                     }
                   }
                 }
-                
+
                 if !tasks.is_empty() {
                   // 调用聚合函数
                   // Call aggregation function
@@ -261,7 +258,7 @@ impl Aggregator {
                         aggregated_task.get_type(),
                         group
                       );
-                      
+
                       // 入队聚合后的任务到原队列
                       // Enqueue the aggregated task to the original queue
                       let mut enqueue_task = aggregated_task.with_queue(queue);
@@ -270,12 +267,9 @@ impl Aggregator {
                       if enqueue_task.options.group.is_none() {
                         enqueue_task = enqueue_task.with_group(&group);
                       }
-                      
+
                       if let Err(e) = self.broker.enqueue(&enqueue_task).await {
-                        tracing::error!(
-                          "Aggregator: failed to enqueue aggregated task: {}",
-                          e
-                        );
+                        tracing::error!("Aggregator: failed to enqueue aggregated task: {}", e);
                       } else {
                         tracing::debug!(
                           "Aggregator: successfully enqueued aggregated task to queue '{}'",
@@ -311,7 +305,11 @@ impl Aggregator {
 
           // 关闭聚合集合
           // Close the aggregation set
-          if let Err(e) = self.broker.delete_aggregation_set(queue, &group, &set_id).await {
+          if let Err(e) = self
+            .broker
+            .delete_aggregation_set(queue, &group, &set_id)
+            .await
+          {
             tracing::warn!(
               "Aggregator: failed to close aggregation set {}: {}",
               set_id,
@@ -418,12 +416,10 @@ mod tests {
 
     // 创建带有 GroupAggregator 的配置
     // Create config with GroupAggregator
-    let aggregator = Arc::new(GroupAggregatorFunc::new(
-      |group: &str, tasks: Vec<Task>| {
-        let combined = format!("Aggregated {} tasks from group {}", tasks.len(), group);
-        Task::new("batch:process", combined.as_bytes())
-      },
-    ));
+    let aggregator = Arc::new(GroupAggregatorFunc::new(|group: &str, tasks: Vec<Task>| {
+      let combined = format!("Aggregated {} tasks from group {}", tasks.len(), group);
+      Task::new("batch:process", combined.as_bytes())
+    }));
 
     let config = AggregatorConfig {
       interval: Duration::from_secs(5),

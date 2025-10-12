@@ -4,8 +4,8 @@
 //! 演示如何在 Redis Cluster 模式下使用 PubSub 功能
 //! Demonstrates how to use PubSub functionality in Redis Cluster mode
 
-use asynq::redis::{ClusterConfig, RedisConnectionConfig};
 use asynq::rdb::RedisBroker;
+use asynq::redis::{ClusterConfig, RedisConnectionConfig};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -26,8 +26,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   .with_resp3(true); // 启用 RESP3 协议 / Enable RESP3 protocol
 
   println!("配置信息 / Configuration:");
-  println!("  使用 RESP3: {} / Using RESP3: {}", cluster_config.use_resp3, cluster_config.use_resp3);
-  println!("  节点数量: {} / Node count: {}", cluster_config.nodes.len(), cluster_config.nodes.len());
+  println!(
+    "  使用 RESP3: {} / Using RESP3: {}",
+    cluster_config.use_resp3, cluster_config.use_resp3
+  );
+  println!(
+    "  节点数量: {} / Node count: {}",
+    cluster_config.nodes.len(),
+    cluster_config.nodes.len()
+  );
   println!();
 
   // 创建 broker
@@ -50,14 +57,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       println!("  - 通过 tokio channel 接收推送消息 / Receives push messages via tokio channel");
       println!("  - 订阅应通过连接对象的 subscribe() 方法完成 / Subscription should be done via connection.subscribe()");
       println!();
-      
+
       // 将 PubSub 转换为消息流
       // Convert PubSub to message stream
       let _stream = pubsub.into_on_message();
       println!("✓ 消息流创建成功 / Message stream created successfully");
     }
     Err(e) => {
-      println!("✗ 创建 PubSub 连接失败 / Failed to create PubSub connection: {}", e);
+      println!(
+        "✗ 创建 PubSub 连接失败 / Failed to create PubSub connection: {}",
+        e
+      );
       println!();
       println!("可能的原因 / Possible reasons:");
       println!("  - Redis Cluster 未运行 / Redis Cluster is not running");

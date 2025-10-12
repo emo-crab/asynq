@@ -9,14 +9,9 @@
 //! ```
 
 use asynq::{
-  config::ServerConfig,
-  error::Result,
-  redis::RedisConfig,
-  register_async_handlers, register_handlers,
-  server::ServerBuilder,
-  serve_mux::ServeMux,
-  task::Task,
-  task_handler, task_handler_async,
+  config::ServerConfig, error::Result, redis::RedisConfig, register_async_handlers,
+  register_handlers, serve_mux::ServeMux, server::ServerBuilder, task::Task, task_handler,
+  task_handler_async,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -43,15 +38,18 @@ struct ImagePayload {
 #[task_handler("email:send")]
 fn handle_email_send(task: Task) -> Result<()> {
   println!("📧 [Macro Handler] Processing email:send task");
-  
+
   if let Ok(payload) = serde_json::from_slice::<EmailPayload>(task.get_payload()) {
     println!("   To: {}", payload.to);
     println!("   Subject: {}", payload.subject);
     println!("   Body: {}", payload.body);
   } else {
-    println!("   Raw payload: {:?}", String::from_utf8_lossy(task.get_payload()));
+    println!(
+      "   Raw payload: {:?}",
+      String::from_utf8_lossy(task.get_payload())
+    );
   }
-  
+
   println!("✅ Email task completed");
   Ok(())
 }
@@ -60,17 +58,20 @@ fn handle_email_send(task: Task) -> Result<()> {
 #[task_handler_async("image:resize")]
 async fn handle_image_resize(task: Task) -> Result<()> {
   println!("🖼️  [Macro Handler] Processing image:resize task");
-  
+
   if let Ok(payload) = serde_json::from_slice::<ImagePayload>(task.get_payload()) {
     println!("   Source URL: {}", payload.src_url);
     println!("   Target size: {}x{}", payload.width, payload.height);
-    
+
     // Simulate async image processing
     tokio::time::sleep(Duration::from_millis(100)).await;
   } else {
-    println!("   Raw payload: {:?}", String::from_utf8_lossy(task.get_payload()));
+    println!(
+      "   Raw payload: {:?}",
+      String::from_utf8_lossy(task.get_payload())
+    );
   }
-  
+
   println!("✅ Image resize completed");
   Ok(())
 }
@@ -79,11 +80,14 @@ async fn handle_image_resize(task: Task) -> Result<()> {
 #[task_handler_async("payment:process")]
 async fn handle_payment(task: Task) -> Result<()> {
   println!("💰 [Macro Handler] Processing payment:process task");
-  println!("   Payload: {:?}", String::from_utf8_lossy(task.get_payload()));
-  
+  println!(
+    "   Payload: {:?}",
+    String::from_utf8_lossy(task.get_payload())
+  );
+
   // Simulate async payment processing
   tokio::time::sleep(Duration::from_millis(50)).await;
-  
+
   println!("✅ Payment processed");
   Ok(())
 }
@@ -92,7 +96,10 @@ async fn handle_payment(task: Task) -> Result<()> {
 #[task_handler("report:daily")]
 fn handle_daily_report(task: Task) -> Result<()> {
   println!("📊 [Macro Handler] Processing report:daily task");
-  println!("   Payload: {:?}", String::from_utf8_lossy(task.get_payload()));
+  println!(
+    "   Payload: {:?}",
+    String::from_utf8_lossy(task.get_payload())
+  );
   println!("✅ Daily report generated");
   Ok(())
 }
@@ -110,8 +117,8 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   println!();
 
   // Get Redis URL from environment or use default
-  let redis_url = std::env::var("REDIS_URL")
-    .unwrap_or_else(|_| "redis://localhost:6379".to_string());
+  let redis_url =
+    std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
   println!("🔗 Redis URL: {}", redis_url);
 
   // Create Redis configuration
@@ -141,19 +148,13 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   // Create ServeMux and register handlers using convenience macros
   println!("📋 Registering task handlers...");
   let mut mux = ServeMux::new();
-  
+
   // Register sync handlers with a single macro call
-  register_handlers!(mux, 
-    handle_email_send,
-    handle_daily_report
-  );
+  register_handlers!(mux, handle_email_send, handle_daily_report);
   println!("   ✓ Registered sync handlers");
-  
+
   // Register async handlers with a single macro call
-  register_async_handlers!(mux, 
-    handle_image_resize,
-    handle_payment
-  );
+  register_async_handlers!(mux, handle_image_resize, handle_payment);
   println!("   ✓ Registered async handlers");
   println!();
 

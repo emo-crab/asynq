@@ -12,8 +12,8 @@ use chrono::{DateTime, Utc};
 use std::str::FromStr;
 use std::time::Duration;
 
-pub mod keys;
 pub mod constants;
+pub mod keys;
 /// 经纪人特性，定义了与任务存储后端交互的接口
 /// Broker trait, defines the interface for interacting with the task storage backend
 /// 对应 Go asynq 的 internal/base/base.go 中的 Broker interface
@@ -112,8 +112,8 @@ pub trait Broker: Send + Sync {
     queue: &str,
     group: &str,
     aggregation_delay: Duration,
-    max_delay:Duration,
-    max_size:usize,
+    max_delay: Duration,
+    max_size: usize,
   ) -> Result<Option<String>>;
 
   /// 读取聚合集合中的任务 - Go: ReadAggregationSet

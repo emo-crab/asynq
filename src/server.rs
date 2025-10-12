@@ -262,11 +262,11 @@ impl Server {
       Arc::clone(&self.broker),
       SubscriberConfig::default(),
     );
-    
+
     // 获取事件接收器用于处理取消事件
     // Get event receiver for handling cancellation events
     let event_rx = subscriber.take_receiver();
-    
+
     let subscriber = Arc::new(subscriber);
     let subscriber_handle = subscriber.clone().start();
     self.components.push((
@@ -358,17 +358,17 @@ impl Server {
     let mut processor = Processor::new(processor_params);
     let handler = Arc::new(handler);
     processor.start(handler);
-    
+
     // 获取任务取消追踪器用于处理取消事件
     // Get cancellation tracker for handling cancellation events
     let cancellations = processor.cancellations();
-    
+
     // 如果成功获取事件接收器，启动取消事件处理
     // If event receiver was successfully obtained, start cancellation event handling
     if let Some(mut rx) = event_rx {
       tokio::spawn(async move {
         use crate::components::subscriber::SubscriptionEvent;
-        
+
         while let Some(event) = rx.recv().await {
           if let SubscriptionEvent::TaskCancelled { task_id } = event {
             tracing::info!("Received cancellation request for task: {}", task_id);
@@ -381,7 +381,7 @@ impl Server {
         }
       });
     }
-    
+
     self.processor = Some(processor);
 
     // 等待服务器停止信号
@@ -557,7 +557,9 @@ impl Drop for Server {
       // No runtime available, give up (cleanup will be done when the process exits and TTL expires)
       tracing::error!(
         "[asynq] Drop without runtime; server keys will expire via TTL for {}:{}:{}",
-        host, pid, uuid
+        host,
+        pid,
+        uuid
       );
     }
   }

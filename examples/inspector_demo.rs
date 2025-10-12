@@ -4,14 +4,14 @@
 //! 演示如何使用 Inspector API 监控和管理任务与队列，兼容 Go asynq Inspector。
 //! Demonstrates how to use the Inspector API to monitor and manage tasks and queues, fully compatible with Go asynq Inspector.
 
-use asynq::rdb::RedisBroker;
-use asynq::redis::RedisConfig;
-use std::sync::Arc;
 use asynq::base::keys::TaskState;
 use asynq::inspector::Inspector;
 use asynq::proto::ServerInfo;
 use asynq::rdb::inspect::Pagination;
+use asynq::rdb::RedisBroker;
+use asynq::redis::RedisConfig;
 use asynq::task::{DailyStats, QueueInfo};
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -84,7 +84,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   ];
 
   for (state_name, state) in &states_to_check {
-    match inspector.list_tasks("default", *state, Pagination::default()).await {
+    match inspector
+      .list_tasks("default", *state, Pagination::default())
+      .await
+    {
       Ok(tasks) => {
         println!("📝 {} tasks: {} found", state_name, tasks.len());
       }

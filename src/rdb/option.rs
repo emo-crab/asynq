@@ -1,7 +1,7 @@
+use crate::base::constants::{DEFAULT_MAX_RETRY, DEFAULT_QUEUE_NAME};
 use chrono::{DateTime, Utc};
 use std::fmt;
 use std::time::Duration;
-use crate::base::constants::{DEFAULT_MAX_RETRY, DEFAULT_QUEUE_NAME};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OptionType {
   MaxRetryOpt(u32),         // 最大重试次数
@@ -81,79 +81,97 @@ impl OptionType {
   /// Parse option type from string, compatible with Go asynq format
   pub fn parse(s: &str) -> Result<Self, OptionTypeParseError> {
     let s = s.trim();
-    
+
     // 匹配格式: OptionName(value) 或 OptionName("value")
     if let Some(pos) = s.find('(') {
       let name = &s[..pos];
-      let rest = &s[pos+1..];
-      
+      let rest = &s[pos + 1..];
+
       if let Some(end_pos) = rest.rfind(')') {
         let value = &rest[..end_pos].trim();
-        
+
         match name {
           "MaxRetry" => {
-            let v = value.parse::<u32>()
-              .map_err(|_| OptionTypeParseError::InvalidValue(format!("Invalid MaxRetry value: {}", value)))?;
+            let v = value.parse::<u32>().map_err(|_| {
+              OptionTypeParseError::InvalidValue(format!("Invalid MaxRetry value: {}", value))
+            })?;
             Ok(OptionType::MaxRetryOpt(v))
-          },
+          }
           "Queue" => {
             // Remove quotes if present
             let v = value.trim_matches('"').to_string();
             Ok(OptionType::QueueOpt(v))
-          },
+          }
           "Timeout" => {
-            let v = value.parse::<u64>()
-              .map_err(|_| OptionTypeParseError::InvalidValue(format!("Invalid Timeout value: {}", value)))?;
+            let v = value.parse::<u64>().map_err(|_| {
+              OptionTypeParseError::InvalidValue(format!("Invalid Timeout value: {}", value))
+            })?;
             Ok(OptionType::TimeoutOpt(v))
-          },
+          }
           "Deadline" => {
-            let v = value.parse::<u64>()
-              .map_err(|_| OptionTypeParseError::InvalidValue(format!("Invalid Deadline value: {}", value)))?;
+            let v = value.parse::<u64>().map_err(|_| {
+              OptionTypeParseError::InvalidValue(format!("Invalid Deadline value: {}", value))
+            })?;
             Ok(OptionType::DeadlineOpt(v))
-          },
-          "Unique" => {
-            Ok(OptionType::UniqueOpt(value.to_string()))
-          },
+          }
+          "Unique" => Ok(OptionType::UniqueOpt(value.to_string())),
           "ProcessAt" => {
-            let v = value.parse::<u64>()
-              .map_err(|_| OptionTypeParseError::InvalidValue(format!("Invalid ProcessAt value: {}", value)))?;
+            let v = value.parse::<u64>().map_err(|_| {
+              OptionTypeParseError::InvalidValue(format!("Invalid ProcessAt value: {}", value))
+            })?;
             Ok(OptionType::ProcessAtOpt(v))
-          },
+          }
           "ProcessIn" => {
-            let v = value.parse::<u64>()
-              .map_err(|_| OptionTypeParseError::InvalidValue(format!("Invalid ProcessIn value: {}", value)))?;
+            let v = value.parse::<u64>().map_err(|_| {
+              OptionTypeParseError::InvalidValue(format!("Invalid ProcessIn value: {}", value))
+            })?;
             Ok(OptionType::ProcessInOpt(v))
-          },
+          }
           "TaskID" => {
             let v = value.trim_matches('"').to_string();
             Ok(OptionType::TaskIDOpt(v))
-          },
+          }
           "Retention" => {
-            let v = value.parse::<u64>()
-              .map_err(|_| OptionTypeParseError::InvalidValue(format!("Invalid Retention value: {}", value)))?;
+            let v = value.parse::<u64>().map_err(|_| {
+              OptionTypeParseError::InvalidValue(format!("Invalid Retention value: {}", value))
+            })?;
             Ok(OptionType::RetentionOpt(v))
-          },
+          }
           "Group" => {
             let v = value.trim_matches('"').to_string();
             Ok(OptionType::GroupOpt(v))
-          },
+          }
           "RateLimit" => {
-            let v = value.parse::<u32>()
-              .map_err(|_| OptionTypeParseError::InvalidValue(format!("Invalid RateLimit value: {}", value)))?;
+            let v = value.parse::<u32>().map_err(|_| {
+              OptionTypeParseError::InvalidValue(format!("Invalid RateLimit value: {}", value))
+            })?;
             Ok(OptionType::RateLimitOpt(v))
-          },
+          }
           "GroupGracePeriod" => {
-            let v = value.parse::<u64>()
-              .map_err(|_| OptionTypeParseError::InvalidValue(format!("Invalid GroupGracePeriod value: {}", value)))?;
+            let v = value.parse::<u64>().map_err(|_| {
+              OptionTypeParseError::InvalidValue(format!(
+                "Invalid GroupGracePeriod value: {}",
+                value
+              ))
+            })?;
             Ok(OptionType::GroupGracePeriodOpt(v))
-          },
-          _ => Err(OptionTypeParseError::InvalidValue(format!("Unknown option type: {}", name)))
+          }
+          _ => Err(OptionTypeParseError::InvalidValue(format!(
+            "Unknown option type: {}",
+            name
+          ))),
         }
       } else {
-        Err(OptionTypeParseError::InvalidValue(format!("Missing closing parenthesis: {}", s)))
+        Err(OptionTypeParseError::InvalidValue(format!(
+          "Missing closing parenthesis: {}",
+          s
+        )))
       }
     } else {
-      Err(OptionTypeParseError::InvalidValue(format!("Invalid option format: {}", s)))
+      Err(OptionTypeParseError::InvalidValue(format!(
+        "Invalid option format: {}",
+        s
+      )))
     }
   }
 }
@@ -197,7 +215,7 @@ pub struct TaskOptions {
 impl From<Vec<OptionType>> for TaskOptions {
   fn from(opts: Vec<OptionType>) -> Self {
     let mut task_opts = TaskOptions::default();
-    
+
     for opt in opts {
       match opt {
         OptionType::MaxRetryOpt(v) => task_opts.max_retry = v as i32,
@@ -205,15 +223,15 @@ impl From<Vec<OptionType>> for TaskOptions {
         OptionType::TimeoutOpt(v) => task_opts.timeout = Some(Duration::from_secs(v)),
         OptionType::DeadlineOpt(v) => {
           task_opts.deadline = Some(DateTime::from_timestamp(v as i64, 0).unwrap_or_default());
-        },
+        }
         OptionType::UniqueOpt(v) => {
           if let Ok(secs) = v.parse::<u64>() {
             task_opts.unique_ttl = Some(Duration::from_secs(secs));
           }
-        },
+        }
         OptionType::ProcessAtOpt(v) => {
           task_opts.process_at = Some(DateTime::from_timestamp(v as i64, 0).unwrap_or_default());
-        },
+        }
         OptionType::ProcessInOpt(v) => task_opts.process_in = Some(Duration::from_secs(v)),
         OptionType::TaskIDOpt(v) => task_opts.task_id = Some(v),
         OptionType::RetentionOpt(v) => task_opts.retention = Some(Duration::from_secs(v)),
@@ -221,13 +239,13 @@ impl From<Vec<OptionType>> for TaskOptions {
         OptionType::RateLimitOpt(v) => {
           // Create a default rate limit with the given limit value
           task_opts.rate_limit = Some(RateLimit::per_task_type(Duration::from_secs(60), v));
-        },
+        }
         OptionType::GroupGracePeriodOpt(v) => {
           task_opts.group_grace_period = Some(Duration::from_secs(v));
-        },
+        }
       }
     }
-    
+
     task_opts
   }
 }
@@ -461,11 +479,20 @@ mod tests {
 
   #[test]
   fn test_option_type_display() {
-    assert_eq!(OptionType::QueueOpt("critical".to_string()).to_string(), "Queue(\"critical\")");
+    assert_eq!(
+      OptionType::QueueOpt("critical".to_string()).to_string(),
+      "Queue(\"critical\")"
+    );
     assert_eq!(OptionType::MaxRetryOpt(5).to_string(), "MaxRetry(5)");
     assert_eq!(OptionType::TimeoutOpt(60).to_string(), "Timeout(60)");
-    assert_eq!(OptionType::TaskIDOpt("abc123".to_string()).to_string(), "TaskID(\"abc123\")");
-    assert_eq!(OptionType::GroupOpt("batch".to_string()).to_string(), "Group(\"batch\")");
+    assert_eq!(
+      OptionType::TaskIDOpt("abc123".to_string()).to_string(),
+      "TaskID(\"abc123\")"
+    );
+    assert_eq!(
+      OptionType::GroupOpt("batch".to_string()).to_string(),
+      "Group(\"batch\")"
+    );
   }
 
   #[test]
@@ -515,13 +542,16 @@ mod tests {
 
   #[test]
   fn test_task_options_to_vec_option_type() {
-    let mut opts = TaskOptions { queue: "critical".to_string(), ..Default::default() };
+    let mut opts = TaskOptions {
+      queue: "critical".to_string(),
+      ..Default::default()
+    };
     opts.max_retry = 5;
     opts.timeout = Some(Duration::from_secs(60));
     opts.task_id = Some("task-123".to_string());
 
     let opt_vec: Vec<OptionType> = (&opts).into();
-    
+
     // Check that key options are present
     assert!(opt_vec.contains(&OptionType::QueueOpt("critical".to_string())));
     assert!(opt_vec.contains(&OptionType::MaxRetryOpt(5)));
@@ -540,7 +570,7 @@ mod tests {
     ];
 
     let task_opts: TaskOptions = opt_vec.into();
-    
+
     assert_eq!(task_opts.queue, "critical");
     assert_eq!(task_opts.max_retry, 5);
     assert_eq!(task_opts.timeout, Some(Duration::from_secs(60)));
@@ -550,26 +580,29 @@ mod tests {
 
   #[test]
   fn test_stringify_and_parse_options() {
-    let mut opts = TaskOptions { queue: "critical".to_string(), ..Default::default() };
+    let mut opts = TaskOptions {
+      queue: "critical".to_string(),
+      ..Default::default()
+    };
     opts.max_retry = 5;
     opts.timeout = Some(Duration::from_secs(60));
     opts.retention = Some(Duration::from_secs(3600));
 
     // Convert to OptionType vec
     let opt_vec: Vec<OptionType> = (&opts).into();
-    
+
     // Convert to strings
     let strings: Vec<String> = opt_vec.iter().map(|o| o.to_string()).collect();
-    
+
     // Parse back
     let parsed_opts: Vec<OptionType> = strings
       .iter()
       .filter_map(|s| OptionType::parse(s).ok())
       .collect();
-    
+
     // Convert to TaskOptions
     let result_opts: TaskOptions = parsed_opts.into();
-    
+
     // Verify key fields match
     assert_eq!(result_opts.queue, opts.queue);
     assert_eq!(result_opts.max_retry, opts.max_retry);

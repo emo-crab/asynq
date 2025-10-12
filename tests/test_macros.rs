@@ -2,140 +2,131 @@
 
 #[cfg(feature = "macros")]
 mod tests {
-    use asynq::{
-        error::Result,
-        register_async_handlers, register_handlers,
-        serve_mux::ServeMux,
-        server::Handler,
-        task::Task,
-        task_handler, task_handler_async,
-    };
+  use asynq::{
+    error::Result, register_async_handlers, register_handlers, serve_mux::ServeMux,
+    server::Handler, task::Task, task_handler, task_handler_async,
+  };
 
-    // Define test handlers using macros
-    #[task_handler("test:sync")]
-    fn test_sync_handler(task: Task) -> Result<()> {
-        assert_eq!(task.get_type(), "test:sync");
-        Ok(())
-    }
+  // Define test handlers using macros
+  #[task_handler("test:sync")]
+  fn test_sync_handler(task: Task) -> Result<()> {
+    assert_eq!(task.get_type(), "test:sync");
+    Ok(())
+  }
 
-    #[task_handler_async("test:async")]
-    async fn test_async_handler(task: Task) -> Result<()> {
-        assert_eq!(task.get_type(), "test:async");
-        Ok(())
-    }
+  #[task_handler_async("test:async")]
+  async fn test_async_handler(task: Task) -> Result<()> {
+    assert_eq!(task.get_type(), "test:async");
+    Ok(())
+  }
 
-    #[task_handler("test:sync2")]
-    fn test_sync_handler2(_task: Task) -> Result<()> {
-        Ok(())
-    }
+  #[task_handler("test:sync2")]
+  fn test_sync_handler2(_task: Task) -> Result<()> {
+    Ok(())
+  }
 
-    #[task_handler_async("test:async2")]
-    async fn test_async_handler2(_task: Task) -> Result<()> {
-        Ok(())
-    }
+  #[task_handler_async("test:async2")]
+  async fn test_async_handler2(_task: Task) -> Result<()> {
+    Ok(())
+  }
 
-    #[tokio::test]
-    async fn test_task_handler_macro() {
-        // Create a ServeMux
-        let mut mux = ServeMux::new();
+  #[tokio::test]
+  async fn test_task_handler_macro() {
+    // Create a ServeMux
+    let mut mux = ServeMux::new();
 
-        // Register handlers using macros
-        register_handlers!(mux, test_sync_handler);
-        register_async_handlers!(mux, test_async_handler);
+    // Register handlers using macros
+    register_handlers!(mux, test_sync_handler);
+    register_async_handlers!(mux, test_async_handler);
 
-        // Test sync handler
-        let task = Task::new("test:sync", b"test payload").unwrap();
-        let result = mux.process_task(task).await;
-        assert!(result.is_ok());
+    // Test sync handler
+    let task = Task::new("test:sync", b"test payload").unwrap();
+    let result = mux.process_task(task).await;
+    assert!(result.is_ok());
 
-        // Test async handler
-        let task = Task::new("test:async", b"test payload").unwrap();
-        let result = mux.process_task(task).await;
-        assert!(result.is_ok());
+    // Test async handler
+    let task = Task::new("test:async", b"test payload").unwrap();
+    let result = mux.process_task(task).await;
+    assert!(result.is_ok());
 
-        // Test non-existent handler
-        let task = Task::new("test:nonexistent", b"test payload").unwrap();
-        let result = mux.process_task(task).await;
-        assert!(result.is_err());
-    }
+    // Test non-existent handler
+    let task = Task::new("test:nonexistent", b"test payload").unwrap();
+    let result = mux.process_task(task).await;
+    assert!(result.is_err());
+  }
 
-    #[tokio::test]
-    async fn test_multiple_handlers_registration() {
-        let mut mux = ServeMux::new();
+  #[tokio::test]
+  async fn test_multiple_handlers_registration() {
+    let mut mux = ServeMux::new();
 
-        // Register multiple handlers at once
-        register_handlers!(mux, test_sync_handler, test_sync_handler2);
-        register_async_handlers!(mux, test_async_handler, test_async_handler2);
+    // Register multiple handlers at once
+    register_handlers!(mux, test_sync_handler, test_sync_handler2);
+    register_async_handlers!(mux, test_async_handler, test_async_handler2);
 
-        // Test all handlers
-        let task1 = Task::new("test:sync", b"payload").unwrap();
-        assert!(mux.process_task(task1).await.is_ok());
+    // Test all handlers
+    let task1 = Task::new("test:sync", b"payload").unwrap();
+    assert!(mux.process_task(task1).await.is_ok());
 
-        let task2 = Task::new("test:sync2", b"payload").unwrap();
-        assert!(mux.process_task(task2).await.is_ok());
+    let task2 = Task::new("test:sync2", b"payload").unwrap();
+    assert!(mux.process_task(task2).await.is_ok());
 
-        let task3 = Task::new("test:async", b"payload").unwrap();
-        assert!(mux.process_task(task3).await.is_ok());
+    let task3 = Task::new("test:async", b"payload").unwrap();
+    assert!(mux.process_task(task3).await.is_ok());
 
-        let task4 = Task::new("test:async2", b"payload").unwrap();
-        assert!(mux.process_task(task4).await.is_ok());
-    }
+    let task4 = Task::new("test:async2", b"payload").unwrap();
+    assert!(mux.process_task(task4).await.is_ok());
+  }
 
-    #[test]
-    fn test_pattern_constants_exist() {
-        // Verify that the pattern constants are created by the macros
-        assert_eq!(__test_sync_handler_PATTERN, "test:sync");
-        assert_eq!(__test_async_handler_PATTERN, "test:async");
-        assert_eq!(__test_sync_handler2_PATTERN, "test:sync2");
-        assert_eq!(__test_async_handler2_PATTERN, "test:async2");
-    }
+  #[test]
+  fn test_pattern_constants_exist() {
+    // Verify that the pattern constants are created by the macros
+    assert_eq!(__TEST_SYNC_HANDLER_PATTERN, "test:sync");
+    assert_eq!(__TEST_ASYNC_HANDLER_PATTERN, "test:async");
+    assert_eq!(__TEST_SYNC_HANDLER2_PATTERN, "test:sync2");
+    assert_eq!(__TEST_ASYNC_HANDLER2_PATTERN, "test:async2");
+  }
 
-    // Test handlers with wildcard patterns
-    #[task_handler("email:*")]
-    fn handle_all_emails(task: Task) -> Result<()> {
-        assert!(task.get_type().starts_with("email:"));
-        Ok(())
-    }
+  // Test handlers with wildcard patterns
+  #[task_handler("email:*")]
+  fn handle_all_emails(task: Task) -> Result<()> {
+    assert!(task.get_type().starts_with("email:"));
+    Ok(())
+  }
 
-    #[task_handler("*:urgent")]
-    fn handle_urgent(task: Task) -> Result<()> {
-        assert!(task.get_type().ends_with(":urgent"));
-        Ok(())
-    }
+  #[task_handler("*:urgent")]
+  fn handle_urgent(task: Task) -> Result<()> {
+    assert!(task.get_type().ends_with(":urgent"));
+    Ok(())
+  }
 
-    #[task_handler("*")]
-    fn handle_catchall(_task: Task) -> Result<()> {
-        Ok(())
-    }
+  #[task_handler("*")]
+  fn handle_catchall(_task: Task) -> Result<()> {
+    Ok(())
+  }
 
-    #[tokio::test]
-    async fn test_wildcard_patterns_with_macros() {
-        let mut mux = ServeMux::new();
+  #[tokio::test]
+  async fn test_wildcard_patterns_with_macros() {
+    let mut mux = ServeMux::new();
 
-        // Register handlers with wildcard patterns
-        register_handlers!(
-            mux,
-            handle_all_emails,
-            handle_urgent,
-            handle_catchall
-        );
+    // Register handlers with wildcard patterns
+    register_handlers!(mux, handle_all_emails, handle_urgent, handle_catchall);
 
-        // Test prefix wildcard - email:*
-        let task1 = Task::new("email:send", b"test").unwrap();
-        assert!(mux.process_task(task1).await.is_ok());
+    // Test prefix wildcard - email:*
+    let task1 = Task::new("email:send", b"test").unwrap();
+    assert!(mux.process_task(task1).await.is_ok());
 
-        let task2 = Task::new("email:deliver", b"test").unwrap();
-        assert!(mux.process_task(task2).await.is_ok());
+    let task2 = Task::new("email:deliver", b"test").unwrap();
+    assert!(mux.process_task(task2).await.is_ok());
 
-        // Test suffix wildcard - *:urgent
-        let task3 = Task::new("payment:urgent", b"test").unwrap();
-        assert!(mux.process_task(task3).await.is_ok());
+    // Test suffix wildcard - *:urgent
+    let task3 = Task::new("payment:urgent", b"test").unwrap();
+    assert!(mux.process_task(task3).await.is_ok());
 
-        let task4 = Task::new("notification:urgent", b"test").unwrap();
-        assert!(mux.process_task(task4).await.is_ok());
+    let task4 = Task::new("notification:urgent", b"test").unwrap();
+    assert!(mux.process_task(task4).await.is_ok());
 
-        // Test catch-all - *
-        let task5 = Task::new("any:random:task", b"test").unwrap();
-        assert!(mux.process_task(task5).await.is_ok());
-    }
+    // Test catch-all - *
+    let task5 = Task::new("any:random:task", b"test").unwrap();
+    assert!(mux.process_task(task5).await.is_ok());
+  }
 }

@@ -2,10 +2,7 @@
 //! ServeMux Example - Demonstrates how to use ServeMux to route different task types
 
 use asynq::{
-  config::ServerConfig,
-  redis::RedisConfig,
-  server::ServerBuilder,
-  serve_mux::ServeMux, task::Task,
+  config::ServerConfig, redis::RedisConfig, serve_mux::ServeMux, server::ServerBuilder, task::Task,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -33,7 +30,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 从环境变量读取 Redis URL，默认使用 localhost
   // Read Redis URL from environment variable, default to localhost
-  let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+  let redis_url =
+    std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
   println!("🔗 Using Redis URL: {}", redis_url);
 
   // 创建 Redis 配置
@@ -71,7 +69,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       println!("   To: {}", payload.to);
       println!("   Subject: {}", payload.subject);
     } else {
-      println!("   Payload: {:?}", String::from_utf8_lossy(task.get_payload()));
+      println!(
+        "   Payload: {:?}",
+        String::from_utf8_lossy(task.get_payload())
+      );
     }
     Ok(())
   });
@@ -83,7 +84,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       println!("   Source: {}", payload.src_url);
       println!("   Dimensions: {}x{}", payload.width, payload.height);
     } else {
-      println!("   Payload: {:?}", String::from_utf8_lossy(task.get_payload()));
+      println!(
+        "   Payload: {:?}",
+        String::from_utf8_lossy(task.get_payload())
+      );
     }
     Ok(())
   });
@@ -91,21 +95,30 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // payment:process - 异步处理器
   mux.handle_async_func("payment:process", |task: Task| async move {
     println!("💰 Rust Consumer: Processing payment:process task");
-    println!("   Payload: {:?}", String::from_utf8_lossy(task.get_payload()));
+    println!(
+      "   Payload: {:?}",
+      String::from_utf8_lossy(task.get_payload())
+    );
     Ok(())
   });
 
   // report:daily - 同步处理器
   mux.handle_func("report:daily", |task: Task| {
     println!("📊 Rust Consumer: Processing report:daily task");
-    println!("   Payload: {:?}", String::from_utf8_lossy(task.get_payload()));
+    println!(
+      "   Payload: {:?}",
+      String::from_utf8_lossy(task.get_payload())
+    );
     Ok(())
   });
 
   // batch:process - 同步处理器
   mux.handle_func("batch:process", |task: Task| {
     println!("🔄 Rust Consumer: Processing batch:process task");
-    println!("   Payload: {:?}", String::from_utf8_lossy(task.get_payload()));
+    println!(
+      "   Payload: {:?}",
+      String::from_utf8_lossy(task.get_payload())
+    );
     Ok(())
   });
 

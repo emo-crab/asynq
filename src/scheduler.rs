@@ -415,7 +415,10 @@ mod tests {
 
   #[test]
   fn test_stringify_options() {
-    let mut opts = TaskOptions { queue: "critical".to_string(), ..Default::default() };
+    let mut opts = TaskOptions {
+      queue: "critical".to_string(),
+      ..Default::default()
+    };
     opts.max_retry = 5;
     opts.timeout = Some(Duration::from_secs(60));
     opts.retention = Some(Duration::from_secs(3600));
@@ -448,7 +451,10 @@ mod tests {
 
   #[test]
   fn test_options_roundtrip() {
-    let mut original_opts = TaskOptions { queue: "high_priority".to_string(), ..Default::default() };
+    let mut original_opts = TaskOptions {
+      queue: "high_priority".to_string(),
+      ..Default::default()
+    };
     original_opts.queue = "high_priority".to_string();
     original_opts.max_retry = 10;
     original_opts.timeout = Some(Duration::from_secs(120));
@@ -471,7 +477,10 @@ mod tests {
 
   #[test]
   fn test_periodic_task_creation_with_options() {
-    let mut opts = TaskOptions { queue: "scheduled".to_string(), ..Default::default() };
+    let mut opts = TaskOptions {
+      queue: "scheduled".to_string(),
+      ..Default::default()
+    };
     opts.max_retry = 3;
     opts.timeout = Some(Duration::from_secs(30));
 

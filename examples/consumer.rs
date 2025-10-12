@@ -143,7 +143,7 @@ impl TaskProcessor {
       println!("Group {} completed! Do aggregation here.", group);
       // 执行聚合逻辑
     }
-    let _: () = conn.expire(format!("group:{}:count", group),120).await?;
+    let _: () = conn.expire(format!("group:{}:count", group), 120).await?;
     println!("🔄 Processing batch item: {}", payload);
     // 模拟批处理
     tokio::time::sleep(Duration::from_secs(50)).await;

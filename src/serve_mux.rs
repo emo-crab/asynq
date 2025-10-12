@@ -63,7 +63,7 @@ type BoxFuture<T> = std::pin::Pin<Box<dyn Future<Output = T> + Send>>;
 
 /// 检查任务类型是否匹配模式
 /// Check if a task type matches a pattern
-/// 
+///
 /// Supports wildcards:
 /// - "*" matches any string
 /// - "prefix:*" matches any string starting with "prefix:"
@@ -73,17 +73,17 @@ fn pattern_matches(pattern: &str, task_type: &str) -> bool {
   if pattern == "*" {
     return true;
   }
-  
+
   if !pattern.contains('*') {
     return pattern == task_type;
   }
-  
+
   // Handle wildcard patterns
   let parts: Vec<&str> = pattern.split('*').collect();
-  
+
   if parts.len() == 2 {
     let (prefix, suffix) = (parts[0], parts[1]);
-    
+
     if prefix.is_empty() {
       // Pattern like "*:suffix"
       return task_type.ends_with(suffix);
@@ -95,14 +95,14 @@ fn pattern_matches(pattern: &str, task_type: &str) -> bool {
       return task_type.starts_with(prefix) && task_type.ends_with(suffix);
     }
   }
-  
+
   // For complex patterns with multiple wildcards, use a simple approach
   // Check if task_type starts with first part and ends with last part
   if let (Some(first), Some(last)) = (parts.first(), parts.last()) {
     if task_type.starts_with(first) && task_type.ends_with(last) {
       // Check all middle parts are present in order
       let mut search_start = first.len();
-      for part in &parts[1..parts.len()-1] {
+      for part in &parts[1..parts.len() - 1] {
         if let Some(pos) = task_type[search_start..].find(part) {
           search_start += pos + part.len();
         } else {
@@ -112,7 +112,7 @@ fn pattern_matches(pattern: &str, task_type: &str) -> bool {
       return true;
     }
   }
-  
+
   false
 }
 
@@ -194,10 +194,9 @@ impl ServeMux {
   where
     F: Fn(Task) -> Result<()> + Send + Sync + 'static,
   {
-    self.handlers.insert(
-      pattern.to_string(),
-      HandlerWrapper::Sync(Arc::new(func)),
-    );
+    self
+      .handlers
+      .insert(pattern.to_string(), HandlerWrapper::Sync(Arc::new(func)));
   }
 
   /// 注册异步处理函数
@@ -236,7 +235,7 @@ impl ServeMux {
 
   /// 查找处理器
   /// Find handler for a task type
-  /// 
+  ///
   /// Supports exact match and wildcard patterns:
   /// - Exact match: "email:send" matches only "email:send"
   /// - Prefix wildcard: "email:*" matches "email:send", "email:deliver", etc.
@@ -247,14 +246,14 @@ impl ServeMux {
     if let Some(handler) = self.handlers.get(task_type) {
       return Some(handler);
     }
-    
+
     // Try pattern matching with wildcards
     for (pattern, handler) in &self.handlers {
       if pattern_matches(pattern, task_type) {
         return Some(handler);
       }
     }
-    
+
     None
   }
 }
@@ -269,7 +268,7 @@ impl Default for ServeMux {
 impl Handler for ServeMux {
   async fn process_task(&self, task: Task) -> Result<()> {
     let task_type = task.get_type();
-    
+
     match self.find_handler(task_type) {
       Some(HandlerWrapper::Sync(func)) => func(task),
       Some(HandlerWrapper::Async(func)) => func(task).await,
@@ -289,7 +288,7 @@ mod tests {
   #[tokio::test]
   async fn test_serve_mux_sync_handler() {
     let mut mux = ServeMux::new();
-    
+
     mux.handle_func("test:task", |task: Task| {
       assert_eq!(task.get_type(), "test:task");
       Ok(())
@@ -303,7 +302,7 @@ mod tests {
   #[tokio::test]
   async fn test_serve_mux_async_handler() {
     let mut mux = ServeMux::new();
-    
+
     mux.handle_async_func("async:task", |task: Task| async move {
       assert_eq!(task.get_type(), "async:task");
       Ok(())
@@ -317,11 +316,11 @@ mod tests {
   #[tokio::test]
   async fn test_serve_mux_no_handler() {
     let mux = ServeMux::new();
-    
+
     let task = Task::new("unknown:task", b"test payload").unwrap();
     let result = mux.process_task(task).await;
     assert!(result.is_err());
-    
+
     if let Err(e) = result {
       assert!(e.to_string().contains("No handler registered"));
     }
@@ -330,14 +329,10 @@ mod tests {
   #[tokio::test]
   async fn test_serve_mux_multiple_handlers() {
     let mut mux = ServeMux::new();
-    
-    mux.handle_func("email:send", |_task: Task| {
-      Ok(())
-    });
-    
-    mux.handle_async_func("image:resize", |_task: Task| async move {
-      Ok(())
-    });
+
+    mux.handle_func("email:send", |_task: Task| Ok(()));
+
+    mux.handle_async_func("image:resize", |_task: Task| async move { Ok(()) });
 
     let task1 = Task::new("email:send", b"test").unwrap();
     assert!(mux.process_task(task1).await.is_ok());
@@ -351,22 +346,22 @@ mod tests {
     // Exact match
     assert!(pattern_matches("email:send", "email:send"));
     assert!(!pattern_matches("email:send", "email:deliver"));
-    
+
     // Full wildcard
     assert!(pattern_matches("*", "any:task"));
     assert!(pattern_matches("*", "anything"));
-    
+
     // Prefix wildcard
     assert!(pattern_matches("email:*", "email:send"));
     assert!(pattern_matches("email:*", "email:deliver"));
     assert!(pattern_matches("email:*", "email:process:complex"));
     assert!(!pattern_matches("email:*", "sms:send"));
-    
+
     // Suffix wildcard
     assert!(pattern_matches("*:send", "email:send"));
     assert!(pattern_matches("*:send", "sms:send"));
     assert!(!pattern_matches("*:send", "email:deliver"));
-    
+
     // Prefix and suffix wildcard
     assert!(pattern_matches("email:*:done", "email:send:done"));
     assert!(pattern_matches("email:*:done", "email:process:task:done"));
@@ -377,31 +372,31 @@ mod tests {
   #[tokio::test]
   async fn test_serve_mux_wildcard_patterns() {
     let mut mux = ServeMux::new();
-    
+
     // Register a handler for all email tasks
     mux.handle_func("email:*", |task: Task| {
       assert!(task.get_type().starts_with("email:"));
       Ok(())
     });
-    
+
     // Register a handler for all tasks ending with :send
     mux.handle_async_func("*:send", |task: Task| async move {
       assert!(task.get_type().ends_with(":send"));
       Ok(())
     });
-    
+
     // Test email:send (should match "email:*" first due to exact prefix)
     let task1 = Task::new("email:send", b"test").unwrap();
     assert!(mux.process_task(task1).await.is_ok());
-    
+
     // Test email:deliver (should match "email:*")
     let task2 = Task::new("email:deliver", b"test").unwrap();
     assert!(mux.process_task(task2).await.is_ok());
-    
+
     // Test sms:send (should match "*:send")
     let task3 = Task::new("sms:send", b"test").unwrap();
     assert!(mux.process_task(task3).await.is_ok());
-    
+
     // Test task with no matching handler
     let task4 = Task::new("report:generate", b"test").unwrap();
     assert!(mux.process_task(task4).await.is_err());
@@ -410,16 +405,14 @@ mod tests {
   #[tokio::test]
   async fn test_serve_mux_catch_all_pattern() {
     let mut mux = ServeMux::new();
-    
+
     // Register a catch-all handler
-    mux.handle_func("*", |_task: Task| {
-      Ok(())
-    });
-    
+    mux.handle_func("*", |_task: Task| Ok(()));
+
     // Any task type should be handled
     let task1 = Task::new("any:task:type", b"test").unwrap();
     assert!(mux.process_task(task1).await.is_ok());
-    
+
     let task2 = Task::new("another:completely:different:task", b"test").unwrap();
     assert!(mux.process_task(task2).await.is_ok());
   }

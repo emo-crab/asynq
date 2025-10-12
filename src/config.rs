@@ -4,8 +4,8 @@
 //! 定义了服务器和客户端的配置选项
 //! Defines configuration options for server and client
 
-use crate::error::{Error, Result};
 use crate::base::constants::DEFAULT_QUEUE_NAME;
+use crate::error::{Error, Result};
 use std::collections::HashMap;
 use std::time::Duration;
 

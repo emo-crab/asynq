@@ -12,10 +12,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // 初始化 RedisConfig
   let redis_url = "redis://127.0.0.1:6379";
   let redis_config = asynq::redis::RedisConfig::from_url(redis_url)?;
-  
+
   // 创建 Client 和 RedisBroker
   let client = Arc::new(Client::new(redis_config.clone()).await?);
-  
+
   // 创建 Scheduler
   let scheduler = Scheduler::new(client.clone(), None).await?;
 
@@ -32,7 +32,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 示例 2: 使用自定义选项的周期性任务
   println!("\n📝 注册带自定义选项的周期性任务...");
-  let mut custom_opts = TaskOptions { queue: "critical".to_string(), ..Default::default() };
+  let mut custom_opts = TaskOptions {
+    queue: "critical".to_string(),
+    ..Default::default()
+  };
   custom_opts.max_retry = 10;
   custom_opts.timeout = Some(Duration::from_secs(120));
   custom_opts.retention = Some(Duration::from_secs(3600));
@@ -67,7 +70,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   scheduler.start();
 
   println!("\n🚀 调度器已启动，按 Ctrl+C 退出...");
-  
+
   // 等待一段时间来演示
   tokio::time::sleep(Duration::from_secs(5)).await;
 

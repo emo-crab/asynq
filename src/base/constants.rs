@@ -15,12 +15,12 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub const TIME_LAYOUT_YMD: &str = "%Y-%m-%d";
 #[cfg(test)]
 mod tests {
-    use super::*;
+  use super::*;
 
-    #[test]
-    fn test_constants() {
-        assert_eq!(DEFAULT_QUEUE_NAME, "default");
-        assert_eq!(DEFAULT_MAX_RETRY, 3);
-        assert_eq!(DEFAULT_TIMEOUT, Duration::from_secs(1800));
-    }
+  #[test]
+  fn test_constants() {
+    assert_eq!(DEFAULT_QUEUE_NAME, "default");
+    assert_eq!(DEFAULT_MAX_RETRY, 3);
+    assert_eq!(DEFAULT_TIMEOUT, Duration::from_secs(1800));
+  }
 }

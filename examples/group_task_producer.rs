@@ -4,7 +4,7 @@
 //! 演示如何创建带有组标签的任务以进行批量聚合
 //! Demonstrates how to create tasks with group labels for batch aggregation
 
-use asynq::{client::Client,task::Task, redis::RedisConfig};
+use asynq::{client::Client, redis::RedisConfig, task::Task};
 use serde::Serialize;
 use std::time::Duration;
 
@@ -26,9 +26,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let redis_url =
     std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
   println!("🔗 Using Redis URL: {}", redis_url);
-  
+
   let redis_config = RedisConfig::from_url(&redis_url)?;
-  
+
   // 创建客户端
   // Create client
   let client = Client::new(redis_config).await?;
@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // 示例 1: 创建带有组标签的电子邮件任务
   // Example 1: Create email tasks with group labels
   println!("📧 Creating email tasks with group 'daily-digest'...");
-  
+
   for i in 1..=6 {
     let payload = EmailPayload {
       to: format!("user{}@example.com", i),
@@ -46,10 +46,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       body: format!("Your daily digest #{}", i),
     };
 
-    let task = Task::new("email:send", &serde_json::to_vec(&payload).unwrap_or_default())?
-      .with_queue("default")
-      .with_group("daily-digest") // 设置组标签 / Set group label
-      .with_group_grace_period(Duration::from_secs(5)); // 设置组宽限期 / Set group grace period
+    let task = Task::new(
+      "email:send",
+      &serde_json::to_vec(&payload).unwrap_or_default(),
+    )?
+    .with_queue("default")
+    .with_group("daily-digest") // 设置组标签 / Set group label
+    .with_group_grace_period(Duration::from_secs(5)); // 设置组宽限期 / Set group grace period
 
     let task_info = client.enqueue(task).await?;
     println!("   ✅ Enqueued task {} with ID: {}", i, task_info.id);
@@ -68,7 +71,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // 示例 2: 创建另一个组的任务
   // Example 2: Create tasks for another group
   println!("📧 Creating email tasks with group 'weekly-report'...");
-  
+
   for i in 1..=3 {
     let payload = EmailPayload {
       to: format!("manager{}@example.com", i),
@@ -76,10 +79,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       body: format!("Your weekly report #{}", i),
     };
 
-    let task = Task::new("email:send", &serde_json::to_vec(&payload).unwrap_or_default())?
-      .with_queue("default")
-      .with_group("weekly-report") // 不同的组 / Different group
-      .with_group_grace_period(Duration::from_secs(5));
+    let task = Task::new(
+      "email:send",
+      &serde_json::to_vec(&payload).unwrap_or_default(),
+    )?
+    .with_queue("default")
+    .with_group("weekly-report") // 不同的组 / Different group
+    .with_group_grace_period(Duration::from_secs(5));
 
     let task_info = client.enqueue(task).await?;
     println!("   ✅ Enqueued task {} with ID: {}", i, task_info.id);

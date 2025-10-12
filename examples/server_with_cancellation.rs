@@ -8,11 +8,11 @@
 //! The server automatically handles task cancellation events published through Redis pub/sub
 
 use asynq::config::ServerConfig;
+use asynq::error::Result;
 use asynq::redis::RedisConfig;
 use asynq::server::{AsyncHandlerFunc, Server};
 use asynq::task::Task;
 use std::time::Duration;
-use asynq::error::Result;
 /// 长时间运行的任务处理器
 /// Long-running task handler
 async fn handle_long_task(task: Task) -> Result<()> {

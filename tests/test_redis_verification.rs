@@ -7,8 +7,8 @@ use std::time::Duration;
 use uuid::Uuid;
 
 use asynq::base::{keys, Broker};
-use asynq::{rdb::RedisBroker, redis::RedisConfig};
 use asynq::proto::ServerInfo;
+use asynq::{rdb::RedisBroker, redis::RedisConfig};
 
 #[tokio::test]
 async fn test_redis_zsets_population() -> Result<(), Box<dyn std::error::Error>> {
@@ -84,8 +84,7 @@ async fn test_redis_zsets_population() -> Result<(), Box<dyn std::error::Error>>
   );
   let workers_key = keys::workers_key(hostname, pid, &server_uuid);
   assert_eq!(
-    workers_zset[0],
-    workers_key,
+    workers_zset[0], workers_key,
     "Worker key should match expected format"
   );
 

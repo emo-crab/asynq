@@ -4,13 +4,10 @@
 //! 演示如何使用 asynq 客户端将任务加入队列
 //! Demonstrates how to use asynq client to enqueue tasks
 
-use asynq::{
-  redis::RedisConfig,
-  client::Client,task::Task,
-};
+use asynq::rdb::option::{RateLimit, RetryPolicy};
+use asynq::{client::Client, redis::RedisConfig, task::Task};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use asynq::rdb::option::{RateLimit, RetryPolicy};
 
 #[derive(Serialize, Deserialize)]
 struct EmailPayload {
@@ -32,8 +29,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 创建 Redis 配置 - 优先从环境变量中读取，否则使用默认的测试 Redis 服务器
   // Create Redis config - first read from environment variable, otherwise use the default test Redis server
-  let redis_url = std::env::var("REDIS_URL")
-    .unwrap_or_else(|_| "redis://localhost:6379".to_string());
+  let redis_url =
+    std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
   println!("🔗 Using Redis URL: {}", redis_url);
   let redis_config = RedisConfig::from_url(&redis_url)?;
 
@@ -72,7 +69,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   };
 
   let image_payload_bin = serde_json::to_vec(&image_payload)?;
-  let image_task = Task::new("image:resize", &image_payload_bin).unwrap()
+  let image_task = Task::new("image:resize", &image_payload_bin)
+    .unwrap()
     .with_queue("image_processing")
     .with_max_retry(5)
     .with_timeout(Duration::from_secs(300)); // 5 分钟超时
@@ -145,7 +143,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // 示例 6: 使用高级重试策略
   // Example 6: Use advanced retry policy
   let advanced_payload_bin = serde_json::to_vec(&image_payload)?;
-  let advanced_task = Task::new("image:process", &advanced_payload_bin).unwrap()
+  let advanced_task = Task::new("image:process", &advanced_payload_bin)
+    .unwrap()
     .with_queue("image_processing")
     .with_retry_policy(RetryPolicy::Exponential {
       base_delay: Duration::from_secs(2),
@@ -174,7 +173,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     "currency": "USD",
     "user_id": "12345"
   }))?;
-  let critical_task = Task::new("payment:process", &critical_payload_bin).unwrap()
+  let critical_task = Task::new("payment:process", &critical_payload_bin)
+    .unwrap()
     .with_queue("critical")
     .with_max_retry(10)
     .with_retry_policy(RetryPolicy::Linear {

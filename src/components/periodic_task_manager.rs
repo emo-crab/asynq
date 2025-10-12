@@ -13,8 +13,8 @@
 //! Note: This module complements scheduler.rs by providing more fine-grained periodic task management
 
 use crate::client::Client;
-use crate::error::Result;
 use crate::components::ComponentLifecycle;
+use crate::error::Result;
 use crate::scheduler::PeriodicTask;
 use crate::task::Task;
 use chrono::{DateTime, Utc};
@@ -294,15 +294,18 @@ mod tests {
   #[tokio::test]
   #[ignore] // Requires Redis to be running
   async fn test_periodic_task_manager_register() {
-    use crate::redis::RedisConfig;
     use crate::rdb::option::TaskOptions;
+    use crate::redis::RedisConfig;
 
     let redis_config = RedisConfig::from_url("redis://localhost:6379").unwrap();
     let client = Arc::new(Client::new(redis_config).await.unwrap());
     let config = PeriodicTaskManagerConfig::default();
     let manager = PeriodicTaskManager::new(client, config);
 
-    let options = TaskOptions { queue: "default".to_string(), ..Default::default() };
+    let options = TaskOptions {
+      queue: "default".to_string(),
+      ..Default::default()
+    };
     let task = PeriodicTask {
       name: "test:task".to_string(),
       payload: b"test payload".to_vec(),

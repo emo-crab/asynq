@@ -2,11 +2,11 @@ use crate::base::constants::{DEFAULT_ARCHIVED_EXPIRATION_IN_DAYS, DEFAULT_MAX_AR
 use crate::base::keys;
 use crate::base::keys::TaskState;
 use crate::base::Broker;
+use crate::error::{Error, Result};
 use crate::proto::{ServerInfo, TaskMessage};
 use crate::rdb::redis_scripts::RedisArg;
 use crate::rdb::RedisBroker;
 use crate::task::{generate_task_id, Task, TaskInfo};
-use crate::error::{Error, Result};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use prost::Message;
@@ -463,7 +463,7 @@ impl Broker for RedisBroker {
     ];
     // 使用 ScriptManager 执行脚本
     // Use ScriptManager to execute script
-    let _:()=self
+    let _: () = self
       .script_manager
       .eval_script(&mut conn, "archive", &keys, &args)
       .await?;
@@ -932,10 +932,7 @@ impl Broker for RedisBroker {
         Ok(task_id) => Some(Ok(task_id)),
         Err(e) => {
           tracing::warn!("Failed to parse cancellation message: {}", e);
-          Some(Err(Error::other(format!(
-            "Failed to parse message: {}",
-            e
-          ))))
+          Some(Err(Error::other(format!("Failed to parse message: {}", e))))
         }
       }
     });

@@ -4,11 +4,8 @@
 //! with @hibiken/asynq by testing all critical functionality and message formats.
 
 use asynq::{
-  config::ServerConfig,
-  rdb::RedisBroker,
-  redis::RedisConfig,
-  task::{ Task},
-  client::Client,inspector::Inspector,
+  client::Client, config::ServerConfig, inspector::Inspector, rdb::RedisBroker, redis::RedisConfig,
+  task::Task,
 };
 use std::sync::Arc;
 use std::time::Duration;
@@ -16,9 +13,9 @@ use std::time::Duration;
 /// Test suite for comprehensive Go asynq compatibility validation
 #[cfg(test)]
 mod go_compatibility_tests {
+  use super::*;
   use asynq::base::Broker;
   use asynq::rdb::option::RetryPolicy;
-  use super::*;
 
   /// Test that our Redis key generation exactly matches Go asynq format
   #[test]
@@ -182,8 +179,8 @@ mod go_compatibility_tests {
     // Test scheduled enqueue (matches Go client.Enqueue() with ProcessAt)
     let task = Task::new("test:scheduled", b"scheduled_payload").unwrap();
     let process_at = std::time::SystemTime::now()
-        .checked_add(Duration::from_secs(60))
-        .expect("SystemTime overflow");
+      .checked_add(Duration::from_secs(60))
+      .expect("SystemTime overflow");
     let result = client.schedule(task, process_at).await;
 
     match result {
@@ -490,8 +487,8 @@ mod go_compatibility_tests {
 /// Integration tests that require actual Go asynq interoperability
 #[cfg(test)]
 mod integration_tests {
-  use asynq::base::Broker;
   use super::*;
+  use asynq::base::Broker;
 
   /// Test that tasks created by Go asynq can be processed by Rust
   #[tokio::test]
