@@ -1,0 +1,59 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Go currentStatsCmd `KEYS[1]` -&#62;  asynq:`&#60;qname&#62;`:pending `KEYS[2]` -&#62;  asynq:`&#60;qname&#62;`:active `KEYS[3]` -&#62;  asynq:`&#60;qname&#62;`:scheduled `KEYS[4]` -&#62;  asynq:`&#60;qname&#62;`:retry `KEYS[5]` -&#62;  asynq:`&#60;qname&#62;`:archived `KEYS[6]` -&#62;  asynq:`&#60;qname&#62;`:completed `KEYS[7]` -&#62;  asynq:`&#60;qname&#62;`:processed:`&#60;yyyy-mm-dd&#62;` `KEYS[8]` -&#62;  asynq:`&#60;qname&#62;`:failed:`&#60;yyyy-mm-dd&#62;` `KEYS[9]` -&#62;  asynq:`&#60;qname&#62;`:processed `KEYS[10]` -&#62; asynq:`&#60;qname&#62;`:failed `KEYS[11]` -&#62; asynq:`&#60;qname&#62;`:paused `KEYS[12]` -&#62; asynq:`&#60;qname&#62;`:groups"><title>CURRENT_STATS in asynq::rdb::redis_scripts::scripts - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-aa0817cf.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="asynq" data-themes="" data-resource-suffix="" data-rustdoc-version="1.90.0 (1159e78c4 2025-09-14)" data-channel="1.90.0" data-search-js="search-fa3e91e5.js" data-settings-js="settings-5514c975.js" ><script src="../../../../static.files/storage-68b7e25d.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../../../static.files/main-eebb9057.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-32bb7600.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc constant"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../asynq/index.html">asynq</a><span class="version">0.1.2</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">CURRENT_<wbr>STATS</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#go-currentstatscmdkeys1----asynqqnamependingkeys2----asynqqnameactivekeys3----asynqqnamescheduledkeys4----asynqqnameretrykeys5----asynqqnamearchivedkeys6----asynqqnamecompletedkeys7----asynqqnameprocessedyyyy-mm-ddkeys8----asynqqnamefailedyyyy-mm-ddkeys9----asynqqnameprocessedkeys10---asynqqnamefailedkeys11---asynqqnamepausedkeys12---asynqqnamegroups" title="Go currentStatsCmd `KEYS[1]` -&#62;  asynq:`&#60;qname&#62;`:pending `KEYS[2]` -&#62;  asynq:`&#60;qname&#62;`:active `KEYS[3]` -&#62;  asynq:`&#60;qname&#62;`:scheduled `KEYS[4]` -&#62;  asynq:`&#60;qname&#62;`:retry `KEYS[5]` -&#62;  asynq:`&#60;qname&#62;`:archived `KEYS[6]` -&#62;  asynq:`&#60;qname&#62;`:completed `KEYS[7]` -&#62;  asynq:`&#60;qname&#62;`:processed:`&#60;yyyy-mm-dd&#62;` `KEYS[8]` -&#62;  asynq:`&#60;qname&#62;`:failed:`&#60;yyyy-mm-dd&#62;` `KEYS[9]` -&#62;  asynq:`&#60;qname&#62;`:processed `KEYS[10]` -&#62; asynq:`&#60;qname&#62;`:failed `KEYS[11]` -&#62; asynq:`&#60;qname&#62;`:paused `KEYS[12]` -&#62; asynq:`&#60;qname&#62;`:groups">Go currentStatsCmd <code>KEYS[1]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:pending <code>KEYS[2]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:active <code>KEYS[3]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:scheduled <code>KEYS[4]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:retry <code>KEYS[5]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:archived <code>KEYS[6]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:completed <code>KEYS[7]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:processed:<code>&lt;yyyy-mm-dd&gt;</code> <code>KEYS[8]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:failed:<code>&lt;yyyy-mm-dd&gt;</code> <code>KEYS[9]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:processed <code>KEYS[10]</code> -&gt; asynq:<code>&lt;qname&gt;</code>:failed <code>KEYS[11]</code> -&gt; asynq:<code>&lt;qname&gt;</code>:paused <code>KEYS[12]</code> -&gt; asynq:<code>&lt;qname&gt;</code>:groups</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="index.html">In asynq::<wbr>rdb::<wbr>redis_<wbr>scripts::<wbr>scripts</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../../index.html">asynq</a>::<wbr><a href="../../index.html">rdb</a>::<wbr><a href="../index.html">redis_scripts</a>::<wbr><a href="index.html">scripts</a></div><h1>Constant <span class="constant">CURRENT_STATS</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../../../src/asynq/rdb/redis_scripts.rs.html#1506-1549">Source</a> </span></div><pre class="rust item-decl"><code>pub const CURRENT_STATS: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.90.0/std/primitive.str.html">str</a> = r#&quot;
+        local res = {}
+        local pendingTaskCount = redis.call(&quot;LLEN&quot;, KEYS[1])
+        table.insert(res, KEYS[1])
+        table.insert(res, pendingTaskCount)
+        table.insert(res, KEYS[2])
+        table.insert(res, redis.call(&quot;LLEN&quot;, KEYS[2]))
+        table.insert(res, KEYS[3])
+        table.insert(res, redis.call(&quot;ZCARD&quot;, KEYS[3]))
+        table.insert(res, KEYS[4])
+        table.insert(res, redis.call(&quot;ZCARD&quot;, KEYS[4]))
+        table.insert(res, KEYS[5])
+        table.insert(res, redis.call(&quot;ZCARD&quot;, KEYS[5]))
+        table.insert(res, KEYS[6])
+        table.insert(res, redis.call(&quot;ZCARD&quot;, KEYS[6]))
+        for i=7,10 do
+            local count = 0
+            local n = redis.call(&quot;GET&quot;, KEYS[i])
+            if n then
+                count = tonumber(n)
+            end
+            table.insert(res, KEYS[i])
+            table.insert(res, count)
+        end
+        table.insert(res, KEYS[11])
+        table.insert(res, redis.call(&quot;EXISTS&quot;, KEYS[11]))
+        table.insert(res, &quot;oldest_pending_since&quot;)
+        if pendingTaskCount &gt; 0 then
+            local id = redis.call(&quot;LRANGE&quot;, KEYS[1], -1, -1)[1]
+            table.insert(res, redis.call(&quot;HGET&quot;, ARGV[1] .. id, &quot;pending_since&quot;))
+        else
+            table.insert(res, 0)
+        end
+        local group_names = redis.call(&quot;SMEMBERS&quot;, KEYS[12])
+        table.insert(res, &quot;group_size&quot;)
+        table.insert(res, table.getn(group_names))
+        local aggregating_count = 0
+        for _, gname in ipairs(group_names) do
+            aggregating_count = aggregating_count + redis.call(&quot;ZCARD&quot;, ARGV[2] .. gname)
+        end
+        table.insert(res, &quot;aggregating_count&quot;)
+        table.insert(res, aggregating_count)
+        return res
+&quot;#;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h3 id="go-currentstatscmdkeys1----asynqqnamependingkeys2----asynqqnameactivekeys3----asynqqnamescheduledkeys4----asynqqnameretrykeys5----asynqqnamearchivedkeys6----asynqqnamecompletedkeys7----asynqqnameprocessedyyyy-mm-ddkeys8----asynqqnamefailedyyyy-mm-ddkeys9----asynqqnameprocessedkeys10---asynqqnamefailedkeys11---asynqqnamepausedkeys12---asynqqnamegroups"><a class="doc-anchor" href="#go-currentstatscmdkeys1----asynqqnamependingkeys2----asynqqnameactivekeys3----asynqqnamescheduledkeys4----asynqqnameretrykeys5----asynqqnamearchivedkeys6----asynqqnamecompletedkeys7----asynqqnameprocessedyyyy-mm-ddkeys8----asynqqnamefailedyyyy-mm-ddkeys9----asynqqnameprocessedkeys10---asynqqnamefailedkeys11---asynqqnamepausedkeys12---asynqqnamegroups">§</a>Go currentStatsCmd
+<code>KEYS[1]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:pending
+<code>KEYS[2]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:active
+<code>KEYS[3]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:scheduled
+<code>KEYS[4]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:retry
+<code>KEYS[5]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:archived
+<code>KEYS[6]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:completed
+<code>KEYS[7]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:processed:<code>&lt;yyyy-mm-dd&gt;</code>
+<code>KEYS[8]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:failed:<code>&lt;yyyy-mm-dd&gt;</code>
+<code>KEYS[9]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:processed
+<code>KEYS[10]</code> -&gt; asynq:<code>&lt;qname&gt;</code>:failed
+<code>KEYS[11]</code> -&gt; asynq:<code>&lt;qname&gt;</code>:paused
+<code>KEYS[12]</code> -&gt; asynq:<code>&lt;qname&gt;</code>:groups</h3>
+<p><code>ARGV[1]</code> -&gt; task key prefix
+<code>ARGV[2]</code> -&gt; group key prefix</p>
+</div></details></section></div></main></body></html>

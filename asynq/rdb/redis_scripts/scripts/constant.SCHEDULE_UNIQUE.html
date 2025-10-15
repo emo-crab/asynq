@@ -1,0 +1,27 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="调度唯一任务脚本 - Go: scheduleUniqueCmd `KEYS[1]` -&#62; unique key `KEYS[2]` -&#62; asynq:{`&#60;qname&#62;`}:t:&#60;task_id&#62; `KEYS[3]` -&#62; asynq:{`&#60;qname&#62;`}:scheduled `ARGV[1]` -&#62; task ID `ARGV[2]` -&#62; 唯一锁TTL / Uniqueness lock TTL `ARGV[3]` -&#62; task message data `ARGV[4]` -&#62; process_at time in Unix time"><title>SCHEDULE_UNIQUE in asynq::rdb::redis_scripts::scripts - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-aa0817cf.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="asynq" data-themes="" data-resource-suffix="" data-rustdoc-version="1.90.0 (1159e78c4 2025-09-14)" data-channel="1.90.0" data-search-js="search-fa3e91e5.js" data-settings-js="settings-5514c975.js" ><script src="../../../../static.files/storage-68b7e25d.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../../../static.files/main-eebb9057.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-32bb7600.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc constant"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../asynq/index.html">asynq</a><span class="version">0.1.2</span></h2></div><div class="sidebar-elems"><div id="rustdoc-modnav"><h2><a href="index.html">In asynq::<wbr>rdb::<wbr>redis_<wbr>scripts::<wbr>scripts</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../../index.html">asynq</a>::<wbr><a href="../../index.html">rdb</a>::<wbr><a href="../index.html">redis_scripts</a>::<wbr><a href="index.html">scripts</a></div><h1>Constant <span class="constant">SCHEDULE_UNIQUE</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../../../src/asynq/rdb/redis_scripts.rs.html#622-636">Source</a> </span></div><pre class="rust item-decl"><code>pub const SCHEDULE_UNIQUE: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.90.0/std/primitive.str.html">str</a> = r#&quot;
+        local ok = redis.call(&quot;SET&quot;, KEYS[1], ARGV[1], &quot;NX&quot;, &quot;EX&quot;, ARGV[2])
+        if not ok then
+          return -1
+        end
+        if redis.call(&quot;EXISTS&quot;, KEYS[2]) == 1 then
+          return 0
+        end
+        redis.call(&quot;HSET&quot;, KEYS[2],
+                   &quot;msg&quot;, ARGV[4],
+                   &quot;state&quot;, &quot;scheduled&quot;,
+                   &quot;unique_key&quot;, KEYS[1])
+        redis.call(&quot;ZADD&quot;, KEYS[3], ARGV[3], ARGV[1])
+        return 1
+    &quot;#;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>调度唯一任务脚本 - Go: scheduleUniqueCmd
+<code>KEYS[1]</code> -&gt; unique key
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:scheduled
+<code>ARGV[1]</code> -&gt; task ID
+<code>ARGV[2]</code> -&gt; 唯一锁TTL / Uniqueness lock TTL
+<code>ARGV[3]</code> -&gt; task message data
+<code>ARGV[4]</code> -&gt; process_at time in Unix time</p>
+<p>Output:
+Returns 1 if successfully scheduled
+Returns 0 if task ID already exists
+Returns -1 if task unique key already exists</p>
+</div></details></section></div></main></body></html>

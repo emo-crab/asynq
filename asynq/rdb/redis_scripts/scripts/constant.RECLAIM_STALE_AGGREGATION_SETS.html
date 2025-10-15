@@ -1,0 +1,35 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="回收陈旧聚合集合脚本 - Go: ReclaimStaleAggregationSets `KEYS[1]` -&#62; all aggregation sets key `KEYS[2]` -&#62; group key prefix `ARGV[1]` -&#62; cutoff timestamp"><title>RECLAIM_STALE_AGGREGATION_SETS in asynq::rdb::redis_scripts::scripts - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-aa0817cf.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="asynq" data-themes="" data-resource-suffix="" data-rustdoc-version="1.90.0 (1159e78c4 2025-09-14)" data-channel="1.90.0" data-search-js="search-fa3e91e5.js" data-settings-js="settings-5514c975.js" ><script src="../../../../static.files/storage-68b7e25d.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../../../static.files/main-eebb9057.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-32bb7600.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc constant"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../asynq/index.html">asynq</a><span class="version">0.1.2</span></h2></div><div class="sidebar-elems"><div id="rustdoc-modnav"><h2><a href="index.html">In asynq::<wbr>rdb::<wbr>redis_<wbr>scripts::<wbr>scripts</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../../index.html">asynq</a>::<wbr><a href="../../index.html">rdb</a>::<wbr><a href="../index.html">redis_scripts</a>::<wbr><a href="index.html">scripts</a></div><h1>Constant <span class="constant">RECLAIM_STALE_AGGREGATION_SETS</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../../../src/asynq/rdb/redis_scripts.rs.html#345-375">Source</a> </span></div><pre class="rust item-decl"><code>pub const RECLAIM_STALE_AGGREGATION_SETS: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.90.0/std/primitive.str.html">str</a> = r#&quot;
+        local all_sets_key = KEYS[1]
+        local group_prefix = KEYS[2]
+        local cutoff = tonumber(ARGV[1])
+
+        -- Get all aggregation sets
+        local sets = redis.call(&quot;SMEMBERS&quot;, all_sets_key)
+        local reclaimed = 0
+
+        for _, set_id in ipairs(sets) do
+            -- Extract timestamp from set_id (assuming format &quot;set_&lt;timestamp&gt;&quot;)
+            local timestamp = tonumber(string.match(set_id, &quot;set_(%d+)&quot;))
+            if timestamp and timestamp &lt; cutoff then
+                -- This set is stale, reclaim it
+                local set_key = group_prefix .. &quot;:&quot; .. set_id
+
+                -- Move tasks back to group
+                local tasks = redis.call(&quot;SMEMBERS&quot;, set_key)
+                for _, task in ipairs(tasks) do
+                    redis.call(&quot;ZADD&quot;, group_prefix, timestamp, task)
+                end
+
+                -- Remove the set
+                redis.call(&quot;DEL&quot;, set_key)
+                redis.call(&quot;SREM&quot;, all_sets_key, set_id)
+                reclaimed = reclaimed + 1
+            end
+        end
+
+        return reclaimed
+    &quot;#;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>回收陈旧聚合集合脚本 - Go: ReclaimStaleAggregationSets
+<code>KEYS[1]</code> -&gt; all aggregation sets key
+<code>KEYS[2]</code> -&gt; group key prefix
+<code>ARGV[1]</code> -&gt; cutoff timestamp</p>
+</div></details></section></div></main></body></html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="删除任务脚本 - Go: deleteTaskCmd Input: `KEYS[1]` -&#62; asynq:{`&#60;qname&#62;`}:t:&#60;task_id&#62; `KEYS[2]` -&#62; asynq:{`&#60;qname&#62;`}:groups"><title>DELETE_TASK in asynq::rdb::redis_scripts::scripts - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-aa0817cf.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="asynq" data-themes="" data-resource-suffix="" data-rustdoc-version="1.90.0 (1159e78c4 2025-09-14)" data-channel="1.90.0" data-search-js="search-fa3e91e5.js" data-settings-js="settings-5514c975.js" ><script src="../../../../static.files/storage-68b7e25d.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../../../static.files/main-eebb9057.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-32bb7600.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc constant"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../asynq/index.html">asynq</a><span class="version">0.1.2</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">DELETE_<wbr>TASK</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#删除任务脚本---go-deletetaskcmdinputkeys1---asynqqnamettask_idkeys2---asynqqnamegroups" title="删除任务脚本 - Go: deleteTaskCmd Input: `KEYS[1]` -&#62; asynq:{`&#60;qname&#62;`}:t:&#60;task_id&#62; `KEYS[2]` -&#62; asynq:{`&#60;qname&#62;`}:groups">删除任务脚本 - Go: deleteTaskCmd Input: <code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt; <code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:groups</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="index.html">In asynq::<wbr>rdb::<wbr>redis_<wbr>scripts::<wbr>scripts</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../../index.html">asynq</a>::<wbr><a href="../../index.html">rdb</a>::<wbr><a href="../index.html">redis_scripts</a>::<wbr><a href="index.html">scripts</a></div><h1>Constant <span class="constant">DELETE_TASK</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../../../src/asynq/rdb/redis_scripts.rs.html#1246-1275">Source</a> </span></div><pre class="rust item-decl"><code>pub const DELETE_TASK: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.90.0/std/primitive.str.html">str</a> = r#&quot;
+        if redis.call(&quot;EXISTS&quot;, KEYS[1]) == 0 then
+            return 0
+        end
+        local state, group = unpack(redis.call(&quot;HMGET&quot;, KEYS[1], &quot;state&quot;, &quot;group&quot;))
+        if state == &quot;active&quot; then
+            return -1
+        end
+        if state == &quot;pending&quot; then
+            if redis.call(&quot;LREM&quot;, ARGV[2] .. state, 0, ARGV[1]) == 0 then
+                return redis.error_reply(&quot;task is not found in list: &quot; .. tostring(ARGV[2] .. state))
+            end
+        elseif state == &quot;aggregating&quot; then
+            if redis.call(&quot;ZREM&quot;, ARGV[3] .. group, ARGV[1]) == 0 then
+                return redis.error_reply(&quot;task is not found in zset: &quot; .. tostring(ARGV[3] .. group))
+            end
+            if redis.call(&quot;ZCARD&quot;, ARGV[3] .. group) == 0 then
+                redis.call(&quot;SREM&quot;, KEYS[2], group)
+            end
+        else
+            if redis.call(&quot;ZREM&quot;, ARGV[2] .. state, ARGV[1]) == 0 then
+                return redis.error_reply(&quot;task is not found in zset: &quot; .. tostring(ARGV[2] .. state))
+            end
+        end
+        local unique_key = redis.call(&quot;HGET&quot;, KEYS[1], &quot;unique_key&quot;)
+        if unique_key and unique_key ~= &quot;&quot; and redis.call(&quot;GET&quot;, unique_key) == ARGV[1] then
+            redis.call(&quot;DEL&quot;, unique_key)
+        end
+        return redis.call(&quot;DEL&quot;, KEYS[1])
+    &quot;#;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h3 id="删除任务脚本---go-deletetaskcmdinputkeys1---asynqqnamettask_idkeys2---asynqqnamegroups"><a class="doc-anchor" href="#删除任务脚本---go-deletetaskcmdinputkeys1---asynqqnamettask_idkeys2---asynqqnamegroups">§</a>删除任务脚本 - Go: deleteTaskCmd
+Input:
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:groups</h3>
+<p><code>ARGV[1]</code> -&gt; task ID
+<code>ARGV[2]</code> -&gt; queue key prefix
+<code>ARGV[3]</code> -&gt; group key prefix</p>
+<p>Output:
+Numeric code indicating the status:
+Returns 1 if task is successfully deleted.
+Returns 0 if task is not found.
+Returns -1 if task is in active state.</p>
+</div></details></section></div></main></body></html>

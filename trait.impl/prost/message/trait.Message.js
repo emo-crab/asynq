@@ -1,0 +1,9 @@
+(function() {
+    var implementors = Object.fromEntries([["asynq",[["impl <a class=\"trait\" href=\"https://docs.rs/prost/0.14.1/prost/message/trait.Message.html\" title=\"trait prost::message::Message\">Message</a> for <a class=\"struct\" href=\"asynq/proto/struct.SchedulerEnqueueEvent.html\" title=\"struct asynq::proto::SchedulerEnqueueEvent\">SchedulerEnqueueEvent</a>"],["impl <a class=\"trait\" href=\"https://docs.rs/prost/0.14.1/prost/message/trait.Message.html\" title=\"trait prost::message::Message\">Message</a> for <a class=\"struct\" href=\"asynq/proto/struct.SchedulerEntry.html\" title=\"struct asynq::proto::SchedulerEntry\">SchedulerEntry</a>"],["impl <a class=\"trait\" href=\"https://docs.rs/prost/0.14.1/prost/message/trait.Message.html\" title=\"trait prost::message::Message\">Message</a> for <a class=\"struct\" href=\"asynq/proto/struct.ServerInfo.html\" title=\"struct asynq::proto::ServerInfo\">ServerInfo</a>"],["impl <a class=\"trait\" href=\"https://docs.rs/prost/0.14.1/prost/message/trait.Message.html\" title=\"trait prost::message::Message\">Message</a> for <a class=\"struct\" href=\"asynq/proto/struct.TaskMessage.html\" title=\"struct asynq::proto::TaskMessage\">TaskMessage</a>"],["impl <a class=\"trait\" href=\"https://docs.rs/prost/0.14.1/prost/message/trait.Message.html\" title=\"trait prost::message::Message\">Message</a> for <a class=\"struct\" href=\"asynq/proto/struct.WorkerInfo.html\" title=\"struct asynq::proto::WorkerInfo\">WorkerInfo</a>"]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":57,"fragment_lengths":[1439]}

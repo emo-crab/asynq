@@ -1,0 +1,80 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="AGGREGATION_CHECK checks the given group for whether to create an aggregation set. An aggregation set is created if one of the aggregation criteria is met:"><title>AGGREGATION_CHECK in asynq::rdb::redis_scripts::scripts - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-aa0817cf.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="asynq" data-themes="" data-resource-suffix="" data-rustdoc-version="1.90.0 (1159e78c4 2025-09-14)" data-channel="1.90.0" data-search-js="search-fa3e91e5.js" data-settings-js="settings-5514c975.js" ><script src="../../../../static.files/storage-68b7e25d.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../../../static.files/main-eebb9057.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-32bb7600.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc constant"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../asynq/index.html">asynq</a><span class="version">0.1.2</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">AGGREGATION_<wbr>CHECK</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#keys1---asynqqnameggroup_namekeys2---asynqqnameggroup_nameaggregation_set_idkeys3---asynqqnameaggregation_setskeys4---asynqqnamegroups" title="`KEYS[1]` -&#62; asynq:{`&#60;qname&#62;`}:g:`&#60;group_name&#62;` `KEYS[2]` -&#62; asynq:{`&#60;qname&#62;`}:g:`&#60;group_name&#62;`:&#60;aggregation_set_id&#62; `KEYS[3]` -&#62; asynq:{`&#60;qname&#62;`}:aggregation_sets `KEYS[4]` -&#62; asynq:{`&#60;qname&#62;`}:groups"><code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:g:<code>&lt;group_name&gt;</code> <code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:g:<code>&lt;group_name&gt;</code>:&lt;aggregation_set_id&gt; <code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:aggregation_sets <code>KEYS[4]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:groups</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="index.html">In asynq::<wbr>rdb::<wbr>redis_<wbr>scripts::<wbr>scripts</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../../index.html">asynq</a>::<wbr><a href="../../index.html">rdb</a>::<wbr><a href="../index.html">redis_scripts</a>::<wbr><a href="index.html">scripts</a></div><h1>Constant <span class="constant">AGGREGATION_CHECK</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../../../src/asynq/rdb/redis_scripts.rs.html#695-748">Source</a> </span></div><pre class="rust item-decl"><code>pub const AGGREGATION_CHECK: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.90.0/std/primitive.str.html">str</a> = r#&quot;
+        local size = redis.call(&quot;ZCARD&quot;, KEYS[1])
+        if size == 0 then
+            return 0
+        end
+        local maxSize = tonumber(ARGV[1])
+        if maxSize ~= 0 and size &gt;= maxSize then
+            local res = redis.call(&quot;ZRANGE&quot;, KEYS[1], 0, maxSize-1, &quot;WITHSCORES&quot;)
+            for i=1, table.getn(res)-1, 2 do
+                redis.call(&quot;ZADD&quot;, KEYS[2], tonumber(res[i+1]), res[i])
+            end
+            redis.call(&quot;ZREMRANGEBYRANK&quot;, KEYS[1], 0, maxSize-1)
+            redis.call(&quot;ZADD&quot;, KEYS[3], ARGV[4], KEYS[2])
+            if size == maxSize then
+                redis.call(&quot;SREM&quot;, KEYS[4], ARGV[6])
+            end
+            return 1
+        end
+        local maxDelay = tonumber(ARGV[2])
+        local currentTime = tonumber(ARGV[5])
+        if maxDelay ~= 0 then
+            local oldestEntry = redis.call(&quot;ZRANGE&quot;, KEYS[1], 0, 0, &quot;WITHSCORES&quot;)
+            local oldestEntryScore = tonumber(oldestEntry[2])
+            local maxDelayTime = currentTime - maxDelay
+            if oldestEntryScore &lt;= maxDelayTime then
+                local res = redis.call(&quot;ZRANGE&quot;, KEYS[1], 0, maxSize-1, &quot;WITHSCORES&quot;)
+                for i=1, table.getn(res)-1, 2 do
+                    redis.call(&quot;ZADD&quot;, KEYS[2], tonumber(res[i+1]), res[i])
+                end
+                redis.call(&quot;ZREMRANGEBYRANK&quot;, KEYS[1], 0, maxSize-1)
+                redis.call(&quot;ZADD&quot;, KEYS[3], ARGV[4], KEYS[2])
+                if size &lt;= maxSize or maxSize == 0 then
+                    redis.call(&quot;SREM&quot;, KEYS[4], ARGV[6])
+                end
+                return 1
+            end
+        end
+        local latestEntry = redis.call(&quot;ZREVRANGE&quot;, KEYS[1], 0, 0, &quot;WITHSCORES&quot;)
+        local latestEntryScore = tonumber(latestEntry[2])
+        local gracePeriodStartTime = currentTime - tonumber(ARGV[3])
+        if latestEntryScore &lt;= gracePeriodStartTime then
+            local res = redis.call(&quot;ZRANGE&quot;, KEYS[1], 0, maxSize-1, &quot;WITHSCORES&quot;)
+            for i=1, table.getn(res)-1, 2 do
+                redis.call(&quot;ZADD&quot;, KEYS[2], tonumber(res[i+1]), res[i])
+            end
+            redis.call(&quot;ZREMRANGEBYRANK&quot;, KEYS[1], 0, maxSize-1)
+            redis.call(&quot;ZADD&quot;, KEYS[3], ARGV[4], KEYS[2])
+            if size &lt;= maxSize or maxSize == 0 then
+                redis.call(&quot;SREM&quot;, KEYS[4], ARGV[6])
+            end
+            return 1
+        end
+        return 0
+  &quot;#;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>AGGREGATION_CHECK checks the given group for whether to create an aggregation set.
+An aggregation set is created if one of the aggregation criteria is met:</p>
+<ol>
+<li>group has reached or exceeded its max size</li>
+<li>group’s oldest task has reached or exceeded its max delay</li>
+<li>group’s latest task has reached or exceeded its grace period</li>
+</ol>
+<p>if aggregation criteria is met, the command moves those tasks from the group
+and put them in an aggregation set. Additionally, if the creation of aggregation set
+empties the group, it will clear the group name from the all groups set.</p>
+<h3 id="keys1---asynqqnameggroup_namekeys2---asynqqnameggroup_nameaggregation_set_idkeys3---asynqqnameaggregation_setskeys4---asynqqnamegroups"><a class="doc-anchor" href="#keys1---asynqqnameggroup_namekeys2---asynqqnameggroup_nameaggregation_set_idkeys3---asynqqnameaggregation_setskeys4---asynqqnamegroups">§</a><code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:g:<code>&lt;group_name&gt;</code>
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:g:<code>&lt;group_name&gt;</code>:&lt;aggregation_set_id&gt;
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:aggregation_sets
+<code>KEYS[4]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:groups</h3>
+<p><code>ARGV[1]</code> -&gt; max group size
+<code>ARGV[2]</code> -&gt; max group delay in unix time
+<code>ARGV[3]</code> -&gt; start time of the grace period
+<code>ARGV[4]</code> -&gt; aggregation set expire time
+<code>ARGV[5]</code> -&gt; current time in unix time
+<code>ARGV[6]</code> -&gt; group name</p>
+<p>Output:
+Returns 0 if no aggregation set was created
+Returns 1 if an aggregation set was created</p>
+<p>Time Complexity:
+O(log(N) + M) with N being the number tasks in the group zset
+and M being the max size.</p>
+</div></details></section></div></main></body></html>

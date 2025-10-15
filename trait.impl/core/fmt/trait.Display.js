@@ -1,0 +1,9 @@
+(function() {
+    var implementors = Object.fromEntries([["asynq",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.90.0/core/fmt/trait.Display.html\" title=\"trait core::fmt::Display\">Display</a> for <a class=\"enum\" href=\"asynq/base/keys/enum.TaskState.html\" title=\"enum asynq::base::keys::TaskState\">TaskState</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.90.0/core/fmt/trait.Display.html\" title=\"trait core::fmt::Display\">Display</a> for <a class=\"enum\" href=\"asynq/error/enum.Error.html\" title=\"enum asynq::error::Error\">Error</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.90.0/core/fmt/trait.Display.html\" title=\"trait core::fmt::Display\">Display</a> for <a class=\"enum\" href=\"asynq/rdb/option/enum.OptionType.html\" title=\"enum asynq::rdb::option::OptionType\">OptionType</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.90.0/core/fmt/trait.Display.html\" title=\"trait core::fmt::Display\">Display</a> for <a class=\"struct\" href=\"asynq/error/struct.RevokeTaskError.html\" title=\"struct asynq::error::RevokeTaskError\">RevokeTaskError</a>"],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.90.0/core/fmt/trait.Display.html\" title=\"trait core::fmt::Display\">Display</a> for <a class=\"struct\" href=\"asynq/error/struct.SkipRetryError.html\" title=\"struct asynq::error::SkipRetryError\">SkipRetryError</a>"]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":57,"fragment_lengths":[1372]}
