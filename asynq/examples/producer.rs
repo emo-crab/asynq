@@ -5,7 +5,8 @@
 //! Demonstrates how to use asynq client to enqueue tasks
 
 use asynq::rdb::option::{RateLimit, RetryPolicy};
-use asynq::{client::Client, redis::RedisConfig, task::Task};
+use asynq::redis::RedisConnectionConfig;
+use asynq::{client::Client, task::Task};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
@@ -31,8 +32,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // Create Redis config - first read from environment variable, otherwise use the default test Redis server
   let redis_url =
     std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
-  println!("🔗 Using Redis URL: {}", redis_url);
-  let redis_config = RedisConfig::from_url(&redis_url)?;
+  println!("🔗 Using Redis URL: {redis_url}");
+  let redis_config = RedisConnectionConfig::single(redis_url)?;
 
   // 创建客户端
   // Create client
@@ -56,7 +57,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       println!("Email task enqueued: ID = {}", task_info.id);
     }
     Err(e) => {
-      println!("Failed to enqueue email task: {}", e);
+      println!("Failed to enqueue email task: {e}");
     }
   }
 
@@ -82,7 +83,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       println!("Image task enqueued: ID = {}", task_info.id);
     }
     Err(e) => {
-      println!("Failed to enqueue image task: {}", e);
+      println!("Failed to enqueue image task: {e}");
     }
   }
 
@@ -101,7 +102,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       println!("Delayed email task scheduled: ID = {}", task_info.id);
     }
     Err(e) => {
-      println!("Failed to schedule delayed task: {}", e);
+      println!("Failed to schedule delayed task: {e}");
     }
   }
 
@@ -120,7 +121,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       println!("Unique task enqueued: ID = {}", task_info.id);
     }
     Err(e) => {
-      println!("Failed to enqueue unique task: {}", e);
+      println!("Failed to enqueue unique task: {e}");
     }
   }
 
@@ -135,7 +136,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("Batch task {} added to group: ID = {}", i, task_info.id);
       }
       Err(e) => {
-        println!("Failed to add batch task {} to group: {}", i, e);
+        println!("Failed to add batch task {i} to group: {e}");
       }
     }
   }
@@ -162,7 +163,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       );
     }
     Err(e) => {
-      println!("Failed to enqueue advanced task: {}", e);
+      println!("Failed to enqueue advanced task: {e}");
     }
   }
 
@@ -192,7 +193,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       );
     }
     Err(e) => {
-      println!("Failed to enqueue critical task: {}", e);
+      println!("Failed to enqueue critical task: {e}");
     }
   }
 

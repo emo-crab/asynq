@@ -1,6 +1,6 @@
 use asynq::{
   client::Client,
-  redis::RedisConfig,
+  redis::RedisConnectionConfig,
   scheduler::{PeriodicTask, Scheduler},
 };
 use std::sync::Arc;
@@ -10,7 +10,7 @@ use tokio::time::sleep;
 #[tokio::test]
 async fn test_scheduler_pushes_periodic_task() {
   // 使用本地 Redis
-  let redis_config = RedisConfig::from_url("redis://127.0.0.1:6379").unwrap();
+  let redis_config = RedisConnectionConfig::single("redis://127.0.0.1:6379").unwrap();
   let client = Arc::new(Client::new(redis_config.clone()).await.unwrap());
   let mut scheduler = Scheduler::new(client.clone(), None).await.unwrap();
 

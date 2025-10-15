@@ -8,10 +8,10 @@
 //! cargo run --example macro_example --features macros
 //! ```
 
+use asynq::redis::RedisConnectionConfig;
 use asynq::{
-  config::ServerConfig, error::Result, redis::RedisConfig, register_async_handlers,
-  register_handlers, serve_mux::ServeMux, server::ServerBuilder, task::Task, task_handler,
-  task_handler_async,
+  config::ServerConfig, error::Result, register_async_handlers, register_handlers,
+  serve_mux::ServeMux, server::ServerBuilder, task::Task, task_handler, task_handler_async,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -119,10 +119,10 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   // Get Redis URL from environment or use default
   let redis_url =
     std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
-  println!("🔗 Redis URL: {}", redis_url);
+  println!("🔗 Redis URL: {redis_url}");
 
   // Create Redis configuration
-  let redis_config = RedisConfig::from_url(&redis_url)?;
+  let redis_config = RedisConnectionConfig::single(redis_url)?;
 
   // Create queue configuration
   let mut queues = HashMap::new();

@@ -109,7 +109,7 @@ impl std::fmt::Display for TaskState {
 /// 生成队列键前缀 - 与 Go 版本兼容: asynq:{qname}:
 /// Generate queue key prefix - Compatible with Go version: asynq:{qname}:
 pub fn queue_key_prefix(qname: &str) -> String {
-  format!("asynq:{{{}}}:", qname)
+  format!("asynq:{{{qname}}}:")
 }
 
 /// 生成任务键前缀
@@ -188,7 +188,7 @@ pub fn unique_key(qname: &str, task_type: &str, payload: &[u8]) -> String {
   // 使用 MD5 哈希与 Go 版本保持兼容
   // Use MD5 hash to保持兼容 with Go version
   let digest = md5::compute(payload);
-  let checksum = format!("{:x}", digest);
+  let checksum = format!("{digest:x}");
 
   format!(
     "{}unique:{}:{}",
@@ -237,25 +237,25 @@ pub fn all_aggregation_sets(qname: &str) -> String {
 /// 生成服务器信息键 - 对应 Go 的 ServerInfoKey
 /// Generate server info key - Corresponds to Go's ServerInfoKey
 pub fn server_info_key(hostname: &str, pid: i32, server_id: &str) -> String {
-  format!("{}{{{}:{}:{}}}", SERVERS_PREFIX, hostname, pid, server_id)
+  format!("{SERVERS_PREFIX}{{{hostname}:{pid}:{server_id}}}")
 }
 
 /// 生成工作者键 - 对应 Go 的 WorkersKey
 /// Generate workers key - Corresponds to Go's WorkersKey
 pub fn workers_key(hostname: &str, pid: i32, server_id: &str) -> String {
-  format!("{}{{{}:{}:{}}}", WORKERS_PREFIX, hostname, pid, server_id)
+  format!("{WORKERS_PREFIX}{{{hostname}:{pid}:{server_id}}}")
 }
 
 /// 生成调度器条目键 - 对应 Go 的 SchedulerEntriesKey
 /// Generate scheduler entries key - Corresponds to Go's SchedulerEntriesKey
 pub fn scheduler_entries_key(scheduler_id: &str) -> String {
-  format!("{}:{{{}}}", ALL_SCHEDULERS, scheduler_id)
+  format!("{ALL_SCHEDULERS}:{{{scheduler_id}}}")
 }
 
 /// 生成调度器历史键 - 对应 Go 的 SchedulerHistoryKey
 /// Generate scheduler history key - Corresponds to Go's SchedulerHistoryKey
 pub fn scheduler_history_key(entry_id: &str) -> String {
-  format!("asynq:scheduler_history:{}", entry_id)
+  format!("asynq:scheduler_history:{entry_id}")
 }
 
 /// 生成处理总数键 - 对应 Go 的 ProcessedTotalKey
@@ -293,19 +293,19 @@ pub fn failed_key(qname: &str, date: &DateTime<Utc>) -> String {
 // 保留这些函数以便向后兼容
 // Keep these functions for backward compatibility
 pub fn server_info_key_legacy(server_id: &str) -> String {
-  format!("{}{}", SERVERS_PREFIX, server_id)
+  format!("{SERVERS_PREFIX}{server_id}")
 }
 
 /// 完整的服务器信息键生成函数 - 对应 Go 的 ServerInfoKey
 /// Full server info key generation function - Corresponds to Go's ServerInfoKey
 pub fn server_info_key_full(hostname: &str, pid: i32, server_id: &str) -> String {
-  format!("{}{{{}:{}:{}}}", SERVERS_PREFIX, hostname, pid, server_id)
+  format!("{SERVERS_PREFIX}{{{hostname}:{pid}:{server_id}}}")
 }
 
 /// 完整的工作者键生成函数 - 对应 Go 的 WorkersKey
 /// Full workers key generation function - Corresponds to Go's WorkersKey
 pub fn workers_key_full(hostname: &str, pid: i32, server_id: &str) -> String {
-  format!("{}{{{}:{}:{}}}", WORKERS_PREFIX, hostname, pid, server_id)
+  format!("{WORKERS_PREFIX}{{{hostname}:{pid}:{server_id}}}")
 }
 
 #[cfg(test)]

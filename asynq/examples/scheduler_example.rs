@@ -7,9 +7,8 @@ use std::sync::Arc;
 
 #[tokio::main]
 async fn main() {
-  // 初始化 RedisConfig
   let redis_url = "redis://127.0.0.1:6379";
-  let redis_config = asynq::redis::RedisConfig::from_url(redis_url).unwrap();
+  let redis_config = asynq::redis::RedisConnectionConfig::single(redis_url).unwrap();
   // 创建 Client 和 RedisBroker
   let client = Arc::new(Client::new(redis_config.clone()).await.unwrap());
   // 创建 Scheduler

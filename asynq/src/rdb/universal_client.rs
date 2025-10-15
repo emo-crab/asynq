@@ -1,12 +1,10 @@
 use crate::error::Result;
 use crate::redis::RedisConnection;
 use futures::Stream;
-use futures_util::stream::poll_fn;
+#[cfg(feature = "cluster")]
 use redis::cluster::ClusterClient;
 use redis::Client;
-use std::pin::Pin;
-use std::sync::Arc;
-use std::task::Poll;
+#[cfg(feature = "cluster")]
 /// 集群模式的 PubSub 连接封装
 /// Cluster mode PubSub connection wrapper
 ///
@@ -20,7 +18,7 @@ pub struct ClusterPubSubConnection {
   /// Cluster connection for subscribing
   connection: redis::cluster_async::ClusterConnection,
 }
-
+#[cfg(feature = "cluster")]
 impl ClusterPubSubConnection {
   /// 从通道接收器和连接创建集群 PubSub 连接
   /// Create cluster PubSub connection from channel receiver and connection
@@ -36,13 +34,13 @@ impl ClusterPubSubConnection {
 
   /// 将 PubSub 转换为消息流
   /// Convert PubSub to message stream
-  pub fn into_on_message(self) -> Pin<Box<dyn Stream<Item = redis::Msg> + Send>> {
+  pub fn into_on_message(self) -> std::pin::Pin<Box<dyn Stream<Item = redis::Msg> + Send>> {
     use futures::StreamExt;
     let mut receiver = self.receiver;
-    let stream = poll_fn(move |cx| match receiver.poll_recv(cx) {
-      Poll::Ready(Some(push_info)) => Poll::Ready(Some(push_info)),
-      Poll::Ready(None) => Poll::Ready(None),
-      Poll::Pending => Poll::Pending,
+    let stream = futures_util::stream::poll_fn(move |cx| match receiver.poll_recv(cx) {
+      std::task::Poll::Ready(Some(push_info)) => std::task::Poll::Ready(Some(push_info)),
+      std::task::Poll::Ready(None) => std::task::Poll::Ready(None),
+      std::task::Poll::Pending => std::task::Poll::Pending,
     })
     .filter_map(|push_info| {
       async move {
@@ -99,6 +97,7 @@ pub enum RedisPubSub {
   /// 单机模式的 PubSub
   /// Single mode PubSub
   Single(redis::aio::PubSub),
+  #[cfg(feature = "cluster")]
   /// 集群模式的 PubSub（通过集群中的一个节点连接）
   /// Cluster mode PubSub (via connection to a node in the cluster)
   /// Redis Cluster 的 PubSub 需要连接到特定节点
@@ -118,6 +117,7 @@ impl RedisPubSub {
         pubsub.subscribe(channel).await?;
         Ok(())
       }
+      #[cfg(feature = "cluster")]
       RedisPubSub::Cluster(cluster_pubsub) => {
         // 集群模式下，通过连接对象订阅
         // In cluster mode, subscribe through the connection object
@@ -132,6 +132,7 @@ impl RedisPubSub {
   pub fn into_on_message(self) -> Box<dyn Stream<Item = redis::Msg> + Unpin + Send> {
     match self {
       RedisPubSub::Single(pubsub) => Box::new(pubsub.into_on_message()),
+      #[cfg(feature = "cluster")]
       RedisPubSub::Cluster(pubsub) => Box::new(pubsub.into_on_message()),
     }
   }
@@ -140,12 +141,14 @@ impl RedisPubSub {
 #[derive(Clone)]
 pub enum RedisClient {
   Single(Client),
+  #[cfg(feature = "cluster")]
   Cluster {
     client: ClusterClient,
     /// 推送消息接收器（用于 PubSub，只能使用一次）
     /// Push message receiver (for PubSub, can only be used once)
-    push_receiver:
-      Arc<tokio::sync::Mutex<Option<tokio::sync::mpsc::UnboundedReceiver<redis::PushInfo>>>>,
+    push_receiver: std::sync::Arc<
+      tokio::sync::Mutex<Option<tokio::sync::mpsc::UnboundedReceiver<redis::PushInfo>>>,
+    >,
   },
 }
 
@@ -156,6 +159,7 @@ impl RedisClient {
         let conn = s.get_multiplexed_async_connection().await?;
         Ok(RedisConnection::Single(conn))
       }
+      #[cfg(feature = "cluster")]
       RedisClient::Cluster { client, .. } => {
         let conn = client.get_async_connection().await?;
         Ok(RedisConnection::Cluster(conn))
@@ -166,7 +170,7 @@ impl RedisClient {
 #[cfg(test)]
 mod tests {
   use super::*;
-
+  #[cfg(feature = "cluster")]
   #[test]
   fn test_cluster_pubsub_connection_creation() {
     // 这个测试验证 ClusterPubSubConnection 可以被创建
@@ -185,13 +189,13 @@ mod tests {
       fn _assert_has_subscribe<
         T: Fn(
           &mut ClusterPubSubConnection,
-        ) -> Pin<Box<dyn std::future::Future<Output = Result<()>> + '_>>,
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<()>> + '_>>,
       >(
         _: T,
       ) {
       }
       fn _assert_has_into_on_message<
-        T: Fn(ClusterPubSubConnection) -> Pin<Box<dyn Stream<Item = redis::Msg> + Send>>,
+        T: Fn(ClusterPubSubConnection) -> std::pin::Pin<Box<dyn Stream<Item = redis::Msg> + Send>>,
       >(
         _: T,
       ) {
@@ -215,6 +219,7 @@ mod tests {
       fn _match_check(pubsub: RedisPubSub) {
         match pubsub {
           RedisPubSub::Single(_) => {}
+          #[cfg(feature = "cluster")]
           RedisPubSub::Cluster(_) => {}
         }
       }

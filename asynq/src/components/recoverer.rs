@@ -202,6 +202,7 @@ impl ComponentLifecycle for Recoverer {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::redis::RedisConnectionConfig;
 
   #[test]
   fn test_recoverer_config_default() {
@@ -213,10 +214,9 @@ mod tests {
   #[test]
   fn test_recoverer_shutdown() {
     use crate::rdb::RedisBroker;
-    use crate::redis::RedisConfig;
+    let redis_connection_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
 
-    let redis_config = RedisConfig::from_url("redis://localhost:6379").unwrap();
-    let broker = Arc::new(RedisBroker::new(redis_config).unwrap());
+    let broker = Arc::new(RedisBroker::new(redis_connection_config).unwrap());
     let config = RecovererConfig::default();
     let recoverer = Recoverer::new(broker, config);
 

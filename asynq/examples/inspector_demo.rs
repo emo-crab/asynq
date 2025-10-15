@@ -9,7 +9,7 @@ use asynq::inspector::Inspector;
 use asynq::proto::ServerInfo;
 use asynq::rdb::inspect::Pagination;
 use asynq::rdb::RedisBroker;
-use asynq::redis::RedisConfig;
+use asynq::redis::RedisConnectionConfig;
 use asynq::task::{DailyStats, QueueInfo};
 use std::sync::Arc;
 
@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   println!("==========================");
 
   // Create Redis configuration (this would connect to a real Redis instance)
-  let redis_config = RedisConfig::from_url("redis://127.0.0.1:6379")?;
+  let redis_config = RedisConnectionConfig::single("redis://127.0.0.1:6379")?;
 
   // Create rdb and inspector
   let broker: Arc<RedisBroker> = Arc::new(RedisBroker::new(redis_config)?);
@@ -32,16 +32,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   match inspector.get_queues().await {
     Ok(queues) => {
       for queue_name in &queues {
-        println!("🔵 Queue: {}", queue_name);
+        println!("🔵 Queue: {queue_name}");
 
         // Get detailed queue info (Go: inspector.GetQueueInfo())
         match inspector.get_queue_info(queue_name).await {
           Ok(info) => print_queue_info(&info),
-          Err(e) => println!("   ❌ Error getting queue info: {}", e),
+          Err(e) => println!("   ❌ Error getting queue info: {e}"),
         }
       }
     }
-    Err(e) => println!("❌ Error getting queues: {}", e),
+    Err(e) => println!("❌ Error getting queues: {e}"),
   }
 
   println!("\n🖥️  Server Information:");
@@ -54,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         print_server_info(server);
       }
     }
-    Err(e) => println!("❌ Error getting servers: {}", e),
+    Err(e) => println!("❌ Error getting servers: {e}"),
   }
 
   println!("\n📈 Historical Data:");
@@ -67,7 +67,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         print_daily_stats(stats);
       }
     }
-    Err(e) => println!("❌ Error getting history: {}", e),
+    Err(e) => println!("❌ Error getting history: {e}"),
   }
 
   println!("\n📋 Task Management:");
@@ -91,7 +91,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       Ok(tasks) => {
         println!("📝 {} tasks: {} found", state_name, tasks.len());
       }
-      Err(e) => println!("❌ Error listing {} tasks: {}", state_name, e),
+      Err(e) => println!("❌ Error listing {state_name} tasks: {e}"),
     }
   }
 
@@ -107,12 +107,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   match inspector.list_pending_tasks("default").await {
     Ok(tasks) => println!("✅ list_pending_tasks(): {} tasks", tasks.len()),
-    Err(e) => println!("❌ list_pending_tasks() error: {}", e),
+    Err(e) => println!("❌ list_pending_tasks() error: {e}"),
   }
 
   match inspector.list_active_tasks("default").await {
     Ok(tasks) => println!("✅ list_active_tasks(): {} tasks", tasks.len()),
-    Err(e) => println!("❌ list_active_tasks() error: {}", e),
+    Err(e) => println!("❌ list_active_tasks() error: {e}"),
   }
 
   println!("\n✨ Inspector API is fully compatible with Go asynq!");

@@ -65,15 +65,15 @@ impl RedisBroker {
 
     let now = Utc::now();
     let date_str = now.format("%Y-%m-%d").to_string();
-    let processed_key = format!("asynq:{}:processed:{}", queue, date_str);
-    let failed_key = format!("asynq:{}:failed:{}", queue, date_str);
-    let processed_total_key = format!("asynq:{}:processed", queue);
-    let failed_total_key = format!("asynq:{}:failed", queue);
-    let paused_key = format!("asynq:{}:paused", queue);
-    let groups_key = format!("asynq:{}:groups", queue);
+    let processed_key = format!("asynq:{queue}:processed:{date_str}");
+    let failed_key = format!("asynq:{queue}:failed:{date_str}");
+    let processed_total_key = format!("asynq:{queue}:processed");
+    let failed_total_key = format!("asynq:{queue}:failed");
+    let paused_key = format!("asynq:{queue}:paused");
+    let groups_key = format!("asynq:{queue}:groups");
 
-    let task_key_prefix = format!("asynq:{}:t:", queue);
-    let group_key_prefix = format!("asynq:{}:g:", queue);
+    let task_key_prefix = format!("asynq:{queue}:t:");
+    let group_key_prefix = format!("asynq:{queue}:g:");
 
     let keys = vec![
       pending_key,
@@ -380,7 +380,7 @@ impl RedisBroker {
     pagination: Pagination,
   ) -> Result<Vec<TaskInfo>> {
     if !self.queue_exists(queue).await? {
-      return Err(Error::other(format!("Queue '{}' does not exist", queue)));
+      return Err(Error::other(format!("Queue '{queue}' does not exist")));
     }
     if pagination.page < 0 || pagination.size < 1 {
       return Ok(Vec::new());
@@ -401,7 +401,7 @@ impl RedisBroker {
   /// 获取指定队列的任务ID列表（按状态）
   /// Get task IDs for a queue by state
   pub async fn list_task_ids(&self, queue: &str, state: &TaskState) -> Result<Vec<String>> {
-    let key = format!("asynq:{}:{}", queue, state); // 这里可进一步用 keys.rs 的辅助函数优化
+    let key = format!("asynq:{queue}:{state}"); // 这里可进一步用 keys.rs 的辅助函数优化
     let mut conn = self.get_async_connection().await?;
     let ids: Vec<String> = conn.zrange(&key, 0, -1).await?;
     Ok(ids)
@@ -423,7 +423,7 @@ impl RedisBroker {
     state: TaskState,
     task_id: &str,
   ) -> Result<Option<TaskMessage>> {
-    let key = format!("asynq:{}:{}", queue, state); // 这里可进一步用 keys.rs 的辅助函数优化
+    let key = format!("asynq:{queue}:{state}"); // 这里可进一步用 keys.rs 的辅助函数优化
     let mut conn = self.get_async_connection().await?;
     let value: Option<Vec<u8>> = conn.zscore(&key, task_id).await?;
     if let Some(bytes) = value {
@@ -451,7 +451,7 @@ impl RedisBroker {
       "archived",
       "completed",
     ] {
-      let key = format!("asynq:{}:{}", queue, state); // 这里可进一步用 keys.rs 的辅助函数优化
+      let key = format!("asynq:{queue}:{state}"); // 这里可进一步用 keys.rs 的辅助函数优化
       let count: i64 = conn.zcard(&key).await?;
       counts.insert(state.to_string(), count);
     }
@@ -502,7 +502,7 @@ impl RedisBroker {
     // Use delete_task script
     let task_key = keys::task_key(queue, task_id);
     let groups_key = keys::groups_key(queue);
-    let queue_key_prefix = format!("asynq:{}:", queue);
+    let queue_key_prefix = format!("asynq:{queue}:");
     let group_key_prefix = keys::group_key_prefix(queue);
 
     let keys = vec![task_key, groups_key];
@@ -1008,8 +1008,7 @@ impl RedisBroker {
     let parts: Vec<&str> = server_id.split(':').collect();
     if parts.len() != 3 {
       return Err(Error::other(format!(
-        "Invalid server_id format: {}, expected hostname:pid:uuid",
-        server_id
+        "Invalid server_id format: {server_id}, expected hostname:pid:uuid"
       )));
     }
 
@@ -1369,13 +1368,13 @@ impl RedisBroker {
   pub async fn get_aggregation_sets(&self, queue: &str, group: &str) -> Result<Vec<String>> {
     let mut conn = self.get_async_connection().await?;
     let key = keys::all_aggregation_sets(queue);
-    let _pattern = format!("{}:*", group);
+    let _pattern = format!("{group}:*");
 
     // Use SMEMBERS to get all aggregation sets, then filter by pattern
     let all_sets: Vec<String> = conn.smembers(&key).await?;
     let filtered_sets: Vec<String> = all_sets
       .into_iter()
-      .filter(|s| s.starts_with(&format!("{}:", group)))
+      .filter(|s| s.starts_with(&format!("{group}:")))
       .collect();
 
     Ok(filtered_sets)
@@ -1450,9 +1449,9 @@ impl RedisBroker {
   pub async fn del_aggregation_set(&self, queue: &str, group: &str, set_id: &str) -> Result<()> {
     let mut conn = self.get_async_connection().await?;
 
-    let aggregation_set_key = format!("asynq:{}:g:{}:{}", queue, group, set_id);
+    let aggregation_set_key = format!("asynq:{queue}:g:{group}:{set_id}");
     let all_aggregation_sets_key = keys::all_aggregation_sets(queue);
-    let task_key_prefix = format!("asynq:{}:t:", queue);
+    let task_key_prefix = format!("asynq:{queue}:t:");
 
     let keys = vec![aggregation_set_key, all_aggregation_sets_key];
     let args = vec![RedisArg::Str(task_key_prefix)];

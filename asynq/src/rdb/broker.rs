@@ -877,7 +877,7 @@ impl Broker for RedisBroker {
 
     // 构造完整的 server_id (hostname:pid:uuid 格式)
     // Construct full server_id (hostname:pid:uuid format)
-    let full_server_id = format!("{}:{}:{}", host, pid, server_id);
+    let full_server_id = format!("{host}:{pid}:{server_id}");
 
     // 1. 从 AllServers ZSET 中删除服务器 (服务器跟踪)
     // Remove the server from AllServers ZSET (server tracking)
@@ -932,7 +932,7 @@ impl Broker for RedisBroker {
         Ok(task_id) => Some(Ok(task_id)),
         Err(e) => {
           tracing::warn!("Failed to parse cancellation message: {}", e);
-          Some(Err(Error::other(format!("Failed to parse message: {}", e))))
+          Some(Err(Error::other(format!("Failed to parse message: {e}"))))
         }
       }
     });

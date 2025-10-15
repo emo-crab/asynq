@@ -12,7 +12,7 @@ use crate::components::ComponentLifecycle;
 pub use crate::config::ServerConfig;
 use crate::error::{Error, Result};
 use crate::rdb::RedisBroker;
-use crate::redis::RedisConfig;
+use crate::redis::RedisConnectionConfig;
 use crate::task::Task;
 use async_trait::async_trait;
 use std::sync::atomic::AtomicUsize;
@@ -139,13 +139,16 @@ impl Server {
 
   /// 创建新的服务器实例
   /// Create a new server instance
-  pub async fn new(redis_config: RedisConfig, config: ServerConfig) -> Result<Self> {
+  pub async fn new(
+    redis_connection_config: RedisConnectionConfig,
+    config: ServerConfig,
+  ) -> Result<Self> {
     // 验证配置
     // Validate configuration
     config.validate()?;
     // 创建 RedisBroker 实例
     // Create RedisBroker instance
-    let mut redis_broker = RedisBroker::new(redis_config)?;
+    let mut redis_broker = RedisBroker::new(redis_connection_config)?;
     // 初始化脚本
     // Initialize scripts
     redis_broker.init_scripts().await?;
@@ -568,7 +571,7 @@ impl Drop for Server {
 /// 服务器构建器
 /// Server builder
 pub struct ServerBuilder {
-  redis_config: Option<RedisConfig>,
+  redis_config: Option<RedisConnectionConfig>,
   config: ServerConfig,
 }
 
@@ -584,7 +587,7 @@ impl ServerBuilder {
 
   /// 设置 Redis 配置
   /// Set Redis configuration
-  pub fn redis_config(mut self, config: RedisConfig) -> Self {
+  pub fn redis_config(mut self, config: RedisConnectionConfig) -> Self {
     self.redis_config = Some(config);
     self
   }

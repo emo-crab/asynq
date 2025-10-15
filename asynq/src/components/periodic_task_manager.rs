@@ -62,7 +62,7 @@ impl PeriodicTaskEntry {
   /// Create from PeriodicTask
   pub fn from_periodic_task(task: &PeriodicTask, entry_id: String) -> Result<Self> {
     let schedule = Schedule::from_str(&task.cron)
-      .map_err(|e| crate::error::Error::other(format!("Invalid cron expression: {}", e)))?;
+      .map_err(|e| crate::error::Error::other(format!("Invalid cron expression: {e}")))?;
     let next_run = schedule.upcoming(Utc).next();
 
     Ok(Self {
@@ -167,8 +167,7 @@ impl PeriodicTaskManager {
       Ok(())
     } else {
       Err(crate::error::Error::other(format!(
-        "Task entry {} not found",
-        entry_id
+        "Task entry {entry_id} not found"
       )))
     }
   }
@@ -284,6 +283,8 @@ impl ComponentLifecycle for PeriodicTaskManager {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::redis::RedisConnectionConfig;
+  use redis::IntoConnectionInfo;
 
   #[test]
   fn test_periodic_task_manager_config_default() {
@@ -295,10 +296,13 @@ mod tests {
   #[ignore] // Requires Redis to be running
   async fn test_periodic_task_manager_register() {
     use crate::rdb::option::TaskOptions;
-    use crate::redis::RedisConfig;
-
-    let redis_config = RedisConfig::from_url("redis://localhost:6379").unwrap();
-    let client = Arc::new(Client::new(redis_config).await.unwrap());
+    let client = Arc::new(
+      Client::new(RedisConnectionConfig::Single(
+        "redis://localhost:6379".into_connection_info().unwrap(),
+      ))
+      .await
+      .unwrap(),
+    );
     let config = PeriodicTaskManagerConfig::default();
     let manager = PeriodicTaskManager::new(client, config);
 
@@ -330,10 +334,13 @@ mod tests {
   #[tokio::test]
   #[ignore] // Requires Redis to be running
   async fn test_periodic_task_manager_shutdown() {
-    use crate::redis::RedisConfig;
-
-    let redis_config = RedisConfig::from_url("redis://localhost:6379").unwrap();
-    let client = Arc::new(Client::new(redis_config).await.unwrap());
+    let client = Arc::new(
+      Client::new(RedisConnectionConfig::Single(
+        "redis://localhost:6379".into_connection_info().unwrap(),
+      ))
+      .await
+      .unwrap(),
+    );
     let config = PeriodicTaskManagerConfig::default();
     let manager = PeriodicTaskManager::new(client, config);
 

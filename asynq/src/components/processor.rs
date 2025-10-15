@@ -56,9 +56,9 @@
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // 创建 broker 和其他必要组件
 //! // Create broker and other necessary components
-//! # use asynq::redis::RedisConfig;
+//! # use asynq::redis::RedisConnectionConfig;
 //! # use asynq::rdb::RedisBroker;
-//! # let redis_config = RedisConfig::from_url("redis://localhost:6379")?;
+//! # let redis_config = RedisConnectionConfig::single("redis://localhost:6379")?;
 //! # let broker = Arc::new(RedisBroker::new(redis_config)?);
 //!
 //! let mut queues = HashMap::new();

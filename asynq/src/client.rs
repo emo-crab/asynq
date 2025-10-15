@@ -8,7 +8,7 @@ use crate::base::Broker;
 use crate::config::ClientConfig;
 use crate::error::Result;
 use crate::rdb::RedisBroker;
-use crate::redis::{RedisConfig, RedisConnectionConfig};
+use crate::redis::RedisConnectionConfig;
 use crate::task::{Task, TaskInfo};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
@@ -24,17 +24,19 @@ pub struct Client {
 impl Client {
   /// 创建新的客户端实例
   /// Create a new client instance
-  pub async fn new(redis_config: RedisConfig) -> Result<Self> {
-    Self::with_config(redis_config, ClientConfig::default()).await
+  pub async fn new(redis_connection: RedisConnectionConfig) -> Result<Self> {
+    Self::with_config(redis_connection, ClientConfig::default()).await
   }
 
   /// 使用指定配置创建客户端实例
   /// Create a client instance with the specified configuration
-  pub async fn with_config(redis_config: RedisConfig, config: ClientConfig) -> Result<Self> {
+  pub async fn with_config(
+    redis_connection: RedisConnectionConfig,
+    config: ClientConfig,
+  ) -> Result<Self> {
     // 创建RedisBroker实例
     // Create RedisBroker instance
-    let redis_connection = RedisConnectionConfig::Single(redis_config);
-    let mut broker = RedisBroker::from_connection(redis_connection)?;
+    let mut broker = RedisBroker::new(redis_connection)?;
     broker.init_scripts().await?;
     Ok(Self {
       broker: Arc::new(broker),
@@ -121,8 +123,9 @@ impl Client {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::redis::RedisConfig;
   use crate::task::Task;
+  use redis::ConnectionInfo;
+  use std::str::FromStr;
 
   #[tokio::test]
   async fn test_task_creation() {
@@ -135,17 +138,14 @@ mod tests {
   async fn test_client_creation() {
     // 测试客户端创建（不需要实际连接）
     // Test client creation (no actual connection needed)
-    let redis_config = RedisConfig::from_url("redis://127.0.0.1:6379").unwrap();
+    let redis_config = ConnectionInfo::from_str("redis://127.0.0.1:6379").unwrap();
     let config = ClientConfig::default();
 
     // 这里只测试配置解析，不测试实际连接
     // Here we only test configuration parsing, not the actual connection
     // 由于客户端创建需要连接Redis，我们只测试配置解析和基础结构
     // Since client creation requires a connection to Redis, we only test configuration parsing and basic structure
-    assert_eq!(
-      redis_config.connection_info.addr.to_string(),
-      "127.0.0.1:6379"
-    );
+    assert_eq!(redis_config.addr.to_string(), "127.0.0.1:6379");
     assert_eq!(config.max_retries, 3);
   }
 

@@ -5,7 +5,7 @@
 //! This example creates some long-running tasks for testing cancellation
 
 use asynq::client::Client;
-use asynq::redis::RedisConfig;
+use asynq::redis::RedisConnectionConfig;
 use asynq::task::Task;
 
 #[tokio::main]
@@ -14,7 +14,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
   // 创建客户端
   // Create client
-  let redis_config = RedisConfig::from_url("redis://localhost:6379")?;
+  let redis_config = RedisConnectionConfig::single("redis://localhost:6379")?;
   let client = Client::new(redis_config).await?;
 
   // 创建并入队多个长任务
@@ -22,11 +22,11 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   let mut task_ids = Vec::new();
 
   for i in 1..=5 {
-    let task = Task::new("long_task", format!("task_{}", i).as_bytes())?;
+    let task = Task::new("long_task", format!("task_{i}").as_bytes())?;
     let info = client.enqueue(task).await?;
     let task_id = info.id.clone();
 
-    println!("✅ Enqueued task {}: {}", i, task_id);
+    println!("✅ Enqueued task {i}: {task_id}");
     println!("   Queue: {}", info.queue);
     println!("   State: {:?}\n", info.state);
 

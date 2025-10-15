@@ -13,6 +13,7 @@ use asynq::components::periodic_task_manager::{PeriodicTaskManager, PeriodicTask
 use asynq::components::recoverer::{Recoverer, RecovererConfig};
 use asynq::components::subscriber::{Subscriber, SubscriberConfig};
 use asynq::components::ComponentLifecycle;
+use asynq::redis::RedisConnectionConfig;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
@@ -25,11 +26,11 @@ use std::time::{Duration, SystemTime};
 async fn test_lifecycle_trait_usage() {
   use asynq::client::Client;
   use asynq::rdb::RedisBroker;
-  use asynq::redis::RedisConfig;
+  use asynq::redis::RedisConnectionConfig;
 
   // 创建 Redis 连接
   // Create Redis connection
-  let redis_config = RedisConfig::from_url("redis://localhost:6379").unwrap();
+  let redis_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
   let broker = Arc::new(RedisBroker::new(redis_config.clone()).unwrap());
   let client = Arc::new(Client::new(redis_config).await.unwrap());
 
@@ -111,9 +112,8 @@ async fn test_lifecycle_trait_usage() {
 #[ignore] // Requires Redis to be running
 async fn test_janitor_lifecycle() {
   use asynq::rdb::RedisBroker;
-  use asynq::redis::RedisConfig;
 
-  let redis_config = RedisConfig::from_url("redis://localhost:6379").unwrap();
+  let redis_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
   let broker = Arc::new(RedisBroker::new(redis_config).unwrap());
 
   let janitor: Arc<dyn ComponentLifecycle> =
@@ -154,9 +154,8 @@ async fn test_janitor_lifecycle() {
 #[ignore] // Requires Redis to be running
 async fn test_generic_component_management() {
   use asynq::rdb::RedisBroker;
-  use asynq::redis::RedisConfig;
 
-  let redis_config = RedisConfig::from_url("redis://localhost:6379").unwrap();
+  let redis_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
   let broker = Arc::new(RedisBroker::new(redis_config).unwrap());
 
   // 辅助函数：启动并运行一段时间后关闭组件

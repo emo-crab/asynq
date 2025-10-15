@@ -4,7 +4,8 @@
 //! 演示如何创建带有组标签的任务以进行批量聚合
 //! Demonstrates how to create tasks with group labels for batch aggregation
 
-use asynq::{client::Client, redis::RedisConfig, task::Task};
+use asynq::redis::RedisConnectionConfig;
+use asynq::{client::Client, task::Task};
 use serde::Serialize;
 use std::time::Duration;
 
@@ -25,9 +26,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // Create Redis configuration
   let redis_url =
     std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
-  println!("🔗 Using Redis URL: {}", redis_url);
+  println!("🔗 Using Redis URL: {redis_url}");
 
-  let redis_config = RedisConfig::from_url(&redis_url)?;
+  let redis_config = RedisConnectionConfig::single(redis_url)?;
 
   // 创建客户端
   // Create client
@@ -41,9 +42,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   for i in 1..=6 {
     let payload = EmailPayload {
-      to: format!("user{}@example.com", i),
+      to: format!("user{i}@example.com"),
       subject: "Daily Digest".to_string(),
-      body: format!("Your daily digest #{}", i),
+      body: format!("Your daily digest #{i}"),
     };
 
     let task = Task::new(
@@ -74,9 +75,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   for i in 1..=3 {
     let payload = EmailPayload {
-      to: format!("manager{}@example.com", i),
+      to: format!("manager{i}@example.com"),
       subject: "Weekly Report".to_string(),
-      body: format!("Your weekly report #{}", i),
+      body: format!("Your weekly report #{i}"),
     };
 
     let task = Task::new(

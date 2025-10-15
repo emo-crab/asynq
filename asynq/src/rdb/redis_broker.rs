@@ -9,14 +9,14 @@ use crate::base::keys;
 use crate::error::{Error, Result};
 use crate::proto::{SchedulerEnqueueEvent, SchedulerEntry, TaskMessage};
 use crate::rdb::redis_scripts::{RedisArg, ScriptManager};
-use crate::rdb::universal_client::{ClusterPubSubConnection, RedisClient, RedisPubSub};
-use crate::redis::{RedisConfig, RedisConnection, RedisConnectionConfig};
+#[cfg(feature = "cluster")]
+use crate::rdb::universal_client::ClusterPubSubConnection;
+use crate::rdb::universal_client::{RedisClient, RedisPubSub};
+use crate::redis::{RedisConnection, RedisConnectionConfig};
 use crate::task::Task;
 use prost::Message;
-use redis::cluster::{ClusterClient, ClusterClientBuilder};
 use redis::AsyncCommands;
 use redis::Client;
-use std::sync::Arc;
 use uuid::Uuid;
 
 /// Redis 经纪人实现
@@ -27,40 +27,31 @@ pub struct RedisBroker {
 }
 
 impl RedisBroker {
-  /// 从RedisConfig创建新的Redis经纪人实例
-  /// Create a new Redis broker instance from RedisConfig
-  pub fn new(config: RedisConfig) -> Result<Self> {
-    let client = Client::open(config.connection_info)?;
-    Ok(Self {
-      client: RedisClient::Single(client),
-      script_manager: ScriptManager::default(),
-    })
-  }
-
   /// 从RedisConnection创建新的Redis经纪人实例
   /// Create a new Redis broker instance from RedisConnection
-  pub fn from_connection(conn: RedisConnectionConfig) -> Result<Self> {
+  pub fn new(conn: RedisConnectionConfig) -> Result<Self> {
     match conn {
       RedisConnectionConfig::Single(config) => {
-        let client = Client::open(config.connection_info)?;
+        let client = Client::open(config)?;
         Ok(Self {
           client: RedisClient::Single(client),
           script_manager: ScriptManager::default(),
         })
       }
+      #[cfg(feature = "cluster")]
       RedisConnectionConfig::Cluster(config) => {
         // 如果配置了使用 RESP3，创建 push_sender 通道
         // If RESP3 is configured, create push_sender channel
-        let (push_receiver, cluster_client) = if config.use_resp3 {
+        let (push_receiver, cluster_client) = {
           let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
-          let client = ClusterClientBuilder::new(config.nodes.clone())
+          let client = redis::cluster::ClusterClientBuilder::new(config)
             .use_protocol(redis::ProtocolVersion::RESP3)
             .push_sender(tx)
             .build()?;
-          (Arc::new(tokio::sync::Mutex::new(Some(rx))), client)
-        } else {
-          let client = ClusterClient::new(config.nodes.clone())?;
-          (Arc::new(tokio::sync::Mutex::new(None)), client)
+          (
+            std::sync::Arc::new(tokio::sync::Mutex::new(Some(rx))),
+            client,
+          )
         };
 
         Ok(Self {
@@ -89,6 +80,7 @@ impl RedisBroker {
         let pubsub = client.get_async_pubsub().await?;
         Ok(RedisPubSub::Single(pubsub))
       }
+      #[cfg(feature = "cluster")]
       RedisClient::Cluster {
         client,
         push_receiver,

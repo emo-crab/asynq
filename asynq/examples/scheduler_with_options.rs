@@ -9,9 +9,8 @@ use std::time::Duration;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-  // 初始化 RedisConfig
   let redis_url = "redis://127.0.0.1:6379";
-  let redis_config = asynq::redis::RedisConfig::from_url(redis_url)?;
+  let redis_config = asynq::redis::RedisConnectionConfig::single(redis_url)?;
 
   // 创建 Client 和 RedisBroker
   let client = Arc::new(Client::new(redis_config.clone()).await?);
@@ -54,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   println!("\n🔍 演示选项字符串化:");
   let option_strings = Scheduler::stringify_options(&custom_opts);
   for opt_str in &option_strings {
-    println!("  - {}", opt_str);
+    println!("  - {opt_str}");
   }
 
   // 示例 4: 演示选项解析（parse_options）

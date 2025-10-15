@@ -9,10 +9,11 @@
 
 use asynq::config::ServerConfig;
 use asynq::error::Result;
-use asynq::redis::RedisConfig;
+use asynq::redis::RedisConnectionConfig;
 use asynq::server::{AsyncHandlerFunc, Server};
 use asynq::task::Task;
 use std::time::Duration;
+
 /// 长时间运行的任务处理器
 /// Long-running task handler
 async fn handle_long_task(task: Task) -> Result<()> {
@@ -45,7 +46,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
   // 1. 创建 Redis 配置
   // 1. Create Redis configuration
-  let redis_config = RedisConfig::from_url("redis://localhost:6379")?;
+  let redis_config = RedisConnectionConfig::single("redis://localhost:6379")?;
   println!("✅ Connected to Redis\n");
 
   // 2. 创建服务器配置

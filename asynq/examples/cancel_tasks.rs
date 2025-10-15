@@ -5,7 +5,7 @@
 //! This example demonstrates how to use Inspector to cancel running tasks
 
 use asynq::inspector::Inspector;
-use asynq::redis::RedisConfig;
+use asynq::redis::RedisConnectionConfig;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -14,7 +14,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
   // 创建 Inspector
   // Create Inspector
-  let redis_config = RedisConfig::from_url("redis://localhost:6379")?;
+  let redis_config = RedisConnectionConfig::single("redis://localhost:6379")?;
   let inspector = Arc::new(Inspector::new(redis_config).await?);
 
   // 1. 列出当前活跃的任务
@@ -53,7 +53,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
         println!("   Check the server logs to see the cancellation.");
       }
       Err(e) => {
-        println!("❌ Failed to cancel task: {}", e);
+        println!("❌ Failed to cancel task: {e}");
       }
     }
   }

@@ -4,11 +4,11 @@
 //! 演示如何在 Redis Cluster 模式下使用 PubSub 功能
 //! Demonstrates how to use PubSub functionality in Redis Cluster mode
 
-use asynq::rdb::RedisBroker;
-use asynq::redis::{ClusterConfig, RedisConnectionConfig};
-
+#[cfg(feature = "cluster")]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+  use asynq::rdb::RedisBroker;
+  use asynq::redis::RedisConnectionConfig;
   // 初始化日志
   // Initialize logging
   tracing_subscriber::fmt::init();
@@ -18,28 +18,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 创建集群配置，启用 RESP3 协议以支持 PubSub
   // Create cluster configuration with RESP3 enabled for PubSub support
-  let cluster_config = ClusterConfig::new(vec![
+  let cluster_config = RedisConnectionConfig::cluster(vec![
     "redis://127.0.0.1:7000".to_string(),
     "redis://127.0.0.1:7001".to_string(),
     "redis://127.0.0.1:7002".to_string(),
-  ])
-  .with_resp3(true); // 启用 RESP3 协议 / Enable RESP3 protocol
+  ])?; // 启用 RESP3 协议 / Enable RESP3 protocol
 
   println!("配置信息 / Configuration:");
-  println!(
-    "  使用 RESP3: {} / Using RESP3: {}",
-    cluster_config.use_resp3, cluster_config.use_resp3
-  );
-  println!(
-    "  节点数量: {} / Node count: {}",
-    cluster_config.nodes.len(),
-    cluster_config.nodes.len()
-  );
   println!();
 
   // 创建 broker
   // Create broker
-  let broker = RedisBroker::from_connection(RedisConnectionConfig::Cluster(cluster_config))?;
+  let broker = RedisBroker::new(cluster_config)?;
 
   println!("✓ Broker 创建成功 / Broker created successfully");
   println!();
@@ -64,10 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       println!("✓ 消息流创建成功 / Message stream created successfully");
     }
     Err(e) => {
-      println!(
-        "✗ 创建 PubSub 连接失败 / Failed to create PubSub connection: {}",
-        e
-      );
+      println!("✗ 创建 PubSub 连接失败 / Failed to create PubSub connection: {e}");
       println!();
       println!("可能的原因 / Possible reasons:");
       println!("  - Redis Cluster 未运行 / Redis Cluster is not running");
@@ -80,5 +67,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   println!();
   println!("示例完成 / Example completed");
 
+  Ok(())
+}
+#[cfg(not(feature = "cluster"))]
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
   Ok(())
 }
