@@ -1,6 +1,6 @@
 [package]
 name = "asynq"
-version = "0.1.1"
+version = "0.1.2"
 license.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -17,7 +17,7 @@ path = "src/lib.rs"
 
 [dependencies]
 # Redis 连接池和客户端
-redis = { version = "0.32.7", features = ["tokio-comp", "cluster-async", "aio", "connection-manager", "streams"] }
+redis = { version = "0.32.7", features = ["tokio-comp", "aio", "connection-manager", "streams"] }
 # 宏
 asynq-macros = { version = "0.1.0", optional = true }
 # 序列化和反序列化
@@ -64,6 +64,7 @@ phf = { version = "0.13.1", features = ["macros"] }
 default = []
 json = ["serde_json"]
 macros = ["asynq-macros"]
+cluster = ["redis/cluster-async"]
 
 [build-dependencies]
 prost-build = "0.14"

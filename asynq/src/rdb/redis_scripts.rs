@@ -1623,7 +1623,7 @@ impl ScriptManager {
     let script = match script_name {
       "write_server_state" => scripts::WRITE_SERVER_STATE,
       "clear_server_state" => scripts::CLEAR_SERVER_STATE,
-      _ => return Err(Error::other(format!("Script not loaded: {}", script_name))),
+      _ => return Err(Error::other(format!("Script not loaded: {script_name}"))),
     };
 
     let mut cmd = redis::cmd("EVAL");
@@ -1680,17 +1680,16 @@ impl ScriptManager {
               Ok(result)
             } else {
               Err(Error::other(format!(
-                "Script not found in KEYWORDS: {}",
-                script_name
+                "Script not found in KEYWORDS: {script_name}"
               )))
             }
           } else {
-            Err(Error::other(format!("Script execution failed: {}", e)))
+            Err(Error::other(format!("Script execution failed: {e}")))
           }
         }
       }
     } else {
-      Err(Error::other(format!("Script not loaded: {}", script_name)))
+      Err(Error::other(format!("Script not loaded: {script_name}")))
     }
   }
 }

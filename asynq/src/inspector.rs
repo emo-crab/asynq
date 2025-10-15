@@ -11,7 +11,7 @@ use crate::error::Result;
 use crate::proto::ServerInfo;
 use crate::rdb::inspect::Pagination;
 use crate::rdb::RedisBroker;
-use crate::redis::RedisConfig;
+use crate::redis::RedisConnectionConfig;
 use crate::task::{DailyStats, QueueInfo, QueueStats, TaskInfo};
 use std::sync::Arc;
 
@@ -22,10 +22,10 @@ pub struct Inspector {
 }
 
 impl Inspector {
-  /// 通过 RedisConfig 创建（测试期望）
-  /// Create via RedisConfig (for testing purposes)
-  pub async fn new(redis_config: RedisConfig) -> Result<Self> {
-    let mut broker = RedisBroker::new(redis_config)?;
+  /// 通过 RedisConnectionConfig 创建 Inspector
+  /// Create via RedisConnectionConfig Inspector
+  pub async fn new(redis_connection_config: RedisConnectionConfig) -> Result<Self> {
+    let mut broker = RedisBroker::new(redis_connection_config)?;
     broker.init_scripts().await?;
     Ok(Self {
       rdb: Arc::new(broker),

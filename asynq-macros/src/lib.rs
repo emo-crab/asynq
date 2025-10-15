@@ -52,7 +52,7 @@ pub fn task_handler(attr: TokenStream, item: TokenStream) -> TokenStream {
   let pattern_str = pattern.value();
 
   // Create a doc comment indicating this is a task handler
-  let doc_comment = format!("Task handler for pattern: `{}`", pattern_str);
+  let doc_comment = format!("Task handler for pattern: `{pattern_str}`");
 
   // Generate the pattern constant name directly
   let pattern_const = quote::format_ident!("__{}_PATTERN", fn_name.to_string().to_uppercase());
@@ -101,7 +101,7 @@ pub fn task_handler_async(attr: TokenStream, item: TokenStream) -> TokenStream {
   let pattern_str = pattern.value();
 
   // Create a doc comment indicating this is a task handler
-  let doc_comment = format!("Async task handler for pattern: `{}`", pattern_str);
+  let doc_comment = format!("Async task handler for pattern: `{pattern_str}`");
 
   // Generate the pattern constant name directly
   let pattern_const = quote::format_ident!("__{}_PATTERN", fn_name.to_string().to_uppercase());

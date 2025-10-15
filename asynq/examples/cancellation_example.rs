@@ -7,7 +7,7 @@
 use asynq::base::Broker;
 use asynq::components::subscriber::{Subscriber, SubscriberConfig, SubscriptionEvent};
 use asynq::rdb::RedisBroker;
-use asynq::redis::RedisConfig;
+use asynq::redis::RedisConnectionConfig;
 use std::sync::Arc;
 
 #[tokio::main]
@@ -21,7 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 1. 创建 Redis 配置
   // 1. Create Redis configuration
-  let redis_config = RedisConfig::from_url("redis://localhost:6379")?;
+  let redis_config = RedisConnectionConfig::single("redis://localhost:6379")?;
   let broker: Arc<dyn Broker> = Arc::new(RedisBroker::new(redis_config)?);
   println!("✅ Connected to Redis\n");
 
@@ -51,7 +51,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let task_ids = vec!["task_001", "task_002", "task_003"];
 
   for task_id in &task_ids {
-    println!("  Cancelling task: {}", task_id);
+    println!("  Cancelling task: {task_id}");
     broker.publish_cancellation(task_id).await?;
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
   }
@@ -76,7 +76,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
           );
         }
         _ => {
-          println!("  ℹ Other event received: {:?}", event);
+          println!("  ℹ Other event received: {event:?}");
         }
       },
       Ok(None) => {
@@ -92,7 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   println!("\n📊 Summary:");
   println!("  Total cancellation events published: {}", task_ids.len());
-  println!("  Total cancellation events received: {}", received_count);
+  println!("  Total cancellation events received: {received_count}");
 
   // 5. 关闭 Subscriber
   // 5. Shutdown Subscriber

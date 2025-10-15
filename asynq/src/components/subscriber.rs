@@ -199,8 +199,7 @@ impl Subscriber {
     if let Err(e) = self.event_tx.send(event).await {
       tracing::warn!("Subscriber: failed to publish event: {}", e);
       return Err(crate::error::Error::other(format!(
-        "Failed to publish event: {}",
-        e
+        "Failed to publish event: {e}"
       )));
     }
     Ok(())
@@ -239,6 +238,7 @@ impl ComponentLifecycle for Subscriber {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::redis::RedisConnectionConfig;
 
   #[test]
   fn test_subscriber_config_default() {
@@ -249,10 +249,8 @@ mod tests {
   #[test]
   fn test_subscriber_shutdown() {
     use crate::rdb::RedisBroker;
-    use crate::redis::RedisConfig;
-
-    let redis_config = RedisConfig::from_url("redis://localhost:6379").unwrap();
-    let broker = Arc::new(RedisBroker::new(redis_config).unwrap());
+    let redis_connection_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
+    let broker = Arc::new(RedisBroker::new(redis_connection_config).unwrap());
     let config = SubscriberConfig::default();
     let subscriber = Subscriber::new(broker, config);
 
@@ -264,10 +262,9 @@ mod tests {
   #[tokio::test]
   async fn test_subscriber_publish_receive() {
     use crate::rdb::RedisBroker;
-    use crate::redis::RedisConfig;
+    let redis_connection_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
 
-    let redis_config = RedisConfig::from_url("redis://localhost:6379").unwrap();
-    let broker = Arc::new(RedisBroker::new(redis_config).unwrap());
+    let broker = Arc::new(RedisBroker::new(redis_connection_config).unwrap());
     let config = SubscriberConfig::default();
     let mut subscriber = Subscriber::new(broker, config);
 
@@ -293,11 +290,8 @@ mod tests {
   #[ignore] // 需要运行 Redis 服务器才能运行此测试 / Requires running Redis server to run this test
   async fn test_subscriber_cancellation_pubsub() {
     use crate::rdb::RedisBroker;
-    use crate::redis::RedisConfig;
-
-    // 创建 broker
-    let redis_config = RedisConfig::from_url("redis://localhost:6379").unwrap();
-    let broker: Arc<dyn Broker> = Arc::new(RedisBroker::new(redis_config).unwrap());
+    let redis_connection_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
+    let broker: Arc<dyn Broker> = Arc::new(RedisBroker::new(redis_connection_config).unwrap());
 
     // 创建订阅者
     let config = SubscriberConfig::default();

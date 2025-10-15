@@ -21,18 +21,18 @@ pub enum OptionType {
 impl fmt::Display for OptionType {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     match self {
-      OptionType::MaxRetryOpt(v) => write!(f, "MaxRetry({})", v),
-      OptionType::QueueOpt(v) => write!(f, "Queue(\"{}\")", v),
-      OptionType::TimeoutOpt(v) => write!(f, "Timeout({})", v),
-      OptionType::DeadlineOpt(v) => write!(f, "Deadline({})", v),
-      OptionType::UniqueOpt(v) => write!(f, "Unique({})", v),
-      OptionType::ProcessAtOpt(v) => write!(f, "ProcessAt({})", v),
-      OptionType::ProcessInOpt(v) => write!(f, "ProcessIn({})", v),
-      OptionType::TaskIDOpt(v) => write!(f, "TaskID(\"{}\")", v),
-      OptionType::RetentionOpt(v) => write!(f, "Retention({})", v),
-      OptionType::GroupOpt(v) => write!(f, "Group(\"{}\")", v),
-      OptionType::RateLimitOpt(v) => write!(f, "RateLimit({})", v),
-      OptionType::GroupGracePeriodOpt(v) => write!(f, "GroupGracePeriod({})", v),
+      OptionType::MaxRetryOpt(v) => write!(f, "MaxRetry({v})"),
+      OptionType::QueueOpt(v) => write!(f, "Queue(\"{v}\")"),
+      OptionType::TimeoutOpt(v) => write!(f, "Timeout({v})"),
+      OptionType::DeadlineOpt(v) => write!(f, "Deadline({v})"),
+      OptionType::UniqueOpt(v) => write!(f, "Unique({v})"),
+      OptionType::ProcessAtOpt(v) => write!(f, "ProcessAt({v})"),
+      OptionType::ProcessInOpt(v) => write!(f, "ProcessIn({v})"),
+      OptionType::TaskIDOpt(v) => write!(f, "TaskID(\"{v}\")"),
+      OptionType::RetentionOpt(v) => write!(f, "Retention({v})"),
+      OptionType::GroupOpt(v) => write!(f, "Group(\"{v}\")"),
+      OptionType::RateLimitOpt(v) => write!(f, "RateLimit({v})"),
+      OptionType::GroupGracePeriodOpt(v) => write!(f, "GroupGracePeriod({v})"),
     }
   }
 }
@@ -93,7 +93,7 @@ impl OptionType {
         match name {
           "MaxRetry" => {
             let v = value.parse::<u32>().map_err(|_| {
-              OptionTypeParseError::InvalidValue(format!("Invalid MaxRetry value: {}", value))
+              OptionTypeParseError::InvalidValue(format!("Invalid MaxRetry value: {value}"))
             })?;
             Ok(OptionType::MaxRetryOpt(v))
           }
@@ -104,26 +104,26 @@ impl OptionType {
           }
           "Timeout" => {
             let v = value.parse::<u64>().map_err(|_| {
-              OptionTypeParseError::InvalidValue(format!("Invalid Timeout value: {}", value))
+              OptionTypeParseError::InvalidValue(format!("Invalid Timeout value: {value}"))
             })?;
             Ok(OptionType::TimeoutOpt(v))
           }
           "Deadline" => {
             let v = value.parse::<u64>().map_err(|_| {
-              OptionTypeParseError::InvalidValue(format!("Invalid Deadline value: {}", value))
+              OptionTypeParseError::InvalidValue(format!("Invalid Deadline value: {value}"))
             })?;
             Ok(OptionType::DeadlineOpt(v))
           }
           "Unique" => Ok(OptionType::UniqueOpt(value.to_string())),
           "ProcessAt" => {
             let v = value.parse::<u64>().map_err(|_| {
-              OptionTypeParseError::InvalidValue(format!("Invalid ProcessAt value: {}", value))
+              OptionTypeParseError::InvalidValue(format!("Invalid ProcessAt value: {value}"))
             })?;
             Ok(OptionType::ProcessAtOpt(v))
           }
           "ProcessIn" => {
             let v = value.parse::<u64>().map_err(|_| {
-              OptionTypeParseError::InvalidValue(format!("Invalid ProcessIn value: {}", value))
+              OptionTypeParseError::InvalidValue(format!("Invalid ProcessIn value: {value}"))
             })?;
             Ok(OptionType::ProcessInOpt(v))
           }
@@ -133,7 +133,7 @@ impl OptionType {
           }
           "Retention" => {
             let v = value.parse::<u64>().map_err(|_| {
-              OptionTypeParseError::InvalidValue(format!("Invalid Retention value: {}", value))
+              OptionTypeParseError::InvalidValue(format!("Invalid Retention value: {value}"))
             })?;
             Ok(OptionType::RetentionOpt(v))
           }
@@ -143,34 +143,28 @@ impl OptionType {
           }
           "RateLimit" => {
             let v = value.parse::<u32>().map_err(|_| {
-              OptionTypeParseError::InvalidValue(format!("Invalid RateLimit value: {}", value))
+              OptionTypeParseError::InvalidValue(format!("Invalid RateLimit value: {value}"))
             })?;
             Ok(OptionType::RateLimitOpt(v))
           }
           "GroupGracePeriod" => {
             let v = value.parse::<u64>().map_err(|_| {
-              OptionTypeParseError::InvalidValue(format!(
-                "Invalid GroupGracePeriod value: {}",
-                value
-              ))
+              OptionTypeParseError::InvalidValue(format!("Invalid GroupGracePeriod value: {value}"))
             })?;
             Ok(OptionType::GroupGracePeriodOpt(v))
           }
           _ => Err(OptionTypeParseError::InvalidValue(format!(
-            "Unknown option type: {}",
-            name
+            "Unknown option type: {name}"
           ))),
         }
       } else {
         Err(OptionTypeParseError::InvalidValue(format!(
-          "Missing closing parenthesis: {}",
-          s
+          "Missing closing parenthesis: {s}"
         )))
       }
     } else {
       Err(OptionTypeParseError::InvalidValue(format!(
-        "Invalid option format: {}",
-        s
+        "Invalid option format: {s}"
       )))
     }
   }
@@ -404,8 +398,8 @@ impl RateLimit {
   /// 生成速率限制键
   pub fn generate_key(&self, task_type: &str, queue: &str) -> String {
     match &self.limit_type {
-      RateLimitType::PerTaskType => format!("asynq:ratelimit:task:{}", task_type),
-      RateLimitType::PerQueue => format!("asynq:ratelimit:queue:{}", queue),
+      RateLimitType::PerTaskType => format!("asynq:ratelimit:task:{task_type}"),
+      RateLimitType::PerQueue => format!("asynq:ratelimit:queue:{queue}"),
       RateLimitType::Custom => format!(
         "asynq:ratelimit:custom:{}",
         self.key.as_ref().unwrap_or(&"default".to_string())
@@ -536,7 +530,7 @@ mod tests {
     for opt in &options {
       let s = opt.to_string();
       let parsed = OptionType::parse(&s).unwrap();
-      assert_eq!(*opt, parsed, "Failed roundtrip for option: {}", s);
+      assert_eq!(*opt, parsed, "Failed roundtrip for option: {s}");
     }
   }
 

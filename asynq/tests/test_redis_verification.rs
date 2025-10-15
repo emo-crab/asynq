@@ -1,19 +1,20 @@
 //! Test to verify that Redis ZSETs are properly populated
 //! This test validates that both asynq:servers and asynq:workers are correctly registered
 
-use redis::{aio::MultiplexedConnection, AsyncCommands};
+use redis::AsyncCommands;
 use std::collections::HashMap;
 use std::time::Duration;
 use uuid::Uuid;
 
 use asynq::base::{keys, Broker};
+use asynq::client::Client;
 use asynq::proto::ServerInfo;
-use asynq::{rdb::RedisBroker, redis::RedisConfig};
+use asynq::{rdb::RedisBroker, redis::RedisConnectionConfig};
 
 #[tokio::test]
 async fn test_redis_zsets_population() -> Result<(), Box<dyn std::error::Error>> {
   // Skip test if no Redis available
-  let redis_config = match RedisConfig::from_url("redis://localhost:6379") {
+  let redis_config = match RedisConnectionConfig::single("redis://localhost:6379") {
     Ok(config) => config,
     Err(_) => {
       println!("Skipping test - Redis not available");
@@ -27,8 +28,8 @@ async fn test_redis_zsets_population() -> Result<(), Box<dyn std::error::Error>>
   broker.ping().await?;
 
   // Create client for direct Redis access
-  let client = redis::Client::open(redis_config.connection_info)?;
-  let mut conn: MultiplexedConnection = client.get_multiplexed_tokio_connection().await?;
+  let client = Client::new(redis_config).await?;
+  let mut conn = client.get_broker().get_async_connection().await?;
 
   // Clean up any existing data
   let _: () = conn.del("asynq:servers").await?;

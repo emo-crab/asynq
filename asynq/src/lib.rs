@@ -47,7 +47,7 @@
 //! ## Quick Start
 //!
 //! ```rust,no_run
-//! use asynq::{client::Client,task::Task, redis::RedisConfig};
+//! use asynq::{client::Client,task::Task};
 //! use asynq::server::{Server,Handler};
 //! use async_trait::async_trait;
 //! use std::time::Duration;
@@ -56,7 +56,8 @@
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // 创建 Redis 配置
 //!     // Create Redis configuration
-//!     let redis_config = RedisConfig::from_url("redis://127.0.0.1:6379")?;
+//!     use asynq::redis::RedisConnectionConfig;
+//! let redis_config = RedisConnectionConfig::single("redis://127.0.0.1:6379")?;
 //!     
 //!     // 创建客户端
 //!     // Create client

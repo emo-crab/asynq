@@ -52,11 +52,11 @@ pub mod subscriber;
 /// use asynq::components::ComponentLifecycle;
 /// use asynq::components::janitor::{Janitor, JanitorConfig};
 /// use std::sync::Arc;
-/// # use asynq::redis::RedisConfig;
+/// # use asynq::redis::RedisConnectionConfig;
 /// # use asynq::rdb::RedisBroker;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// # let redis_config = RedisConfig::from_url("redis://localhost:6379")?;
+/// # let redis_config = RedisConnectionConfig::single("redis://localhost:6379")?;
 /// # let broker = Arc::new(RedisBroker::new(redis_config)?);
 /// let janitor = Arc::new(Janitor::new(broker, JanitorConfig::default()));
 ///

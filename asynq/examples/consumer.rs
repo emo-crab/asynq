@@ -7,10 +7,10 @@
 use async_trait::async_trait;
 use asynq::components::aggregator::GroupAggregatorFunc;
 use asynq::error::{Error, Result};
+use asynq::redis::RedisConnectionConfig;
 use asynq::task::Task;
 use asynq::{
   config::ServerConfig,
-  redis::RedisConfig,
   server::{Handler, ServerBuilder},
 };
 use serde::{Deserialize, Serialize};
@@ -119,7 +119,7 @@ impl TaskProcessor {
   }
 
   async fn handle_daily_report(&self, payload: serde_json::Value) -> Result<()> {
-    println!("📊 Generating daily report for: {}", payload);
+    println!("📊 Generating daily report for: {payload}");
 
     // 模拟报告生成
     tokio::time::sleep(Duration::from_secs(20)).await;
@@ -137,28 +137,28 @@ impl TaskProcessor {
     let mut conn = client.get_multiplexed_tokio_connection().await?;
 
     // 每处理一个任务，计数器+1
-    let count: i32 = conn.incr(format!("group:{}:count", group), 1).await?;
+    let count: i32 = conn.incr(format!("group:{group}:count"), 1).await?;
     // 假设你知道组内任务总数为5
     if count == 5 {
-      println!("Group {} completed! Do aggregation here.", group);
+      println!("Group {group} completed! Do aggregation here.");
       // 执行聚合逻辑
     }
-    let _: () = conn.expire(format!("group:{}:count", group), 120).await?;
-    println!("🔄 Processing batch item: {}", payload);
+    let _: () = conn.expire(format!("group:{group}:count"), 120).await?;
+    println!("🔄 Processing batch item: {payload}");
     // 模拟批处理
     tokio::time::sleep(Duration::from_secs(50)).await;
-    println!("✅ Batch item processed: {}", payload);
+    println!("✅ Batch item processed: {payload}");
     Ok(())
   }
 
   async fn handle_payment_process(&self, payload: serde_json::Value) -> Result<()> {
-    println!("💰 Processing payment: {}", payload);
+    println!("💰 Processing payment: {payload}");
 
     // 模拟支付处理 - 可能需要重试
     let success_rate = 0.8; // 80% 成功率
     if rand::random::<f64>() < success_rate {
       tokio::time::sleep(Duration::from_secs(20)).await;
-      println!("✅ Payment processed successfully: {}", payload);
+      println!("✅ Payment processed successfully: {payload}");
       Ok(())
     } else {
       // 模拟支付失败，需要重试
@@ -226,8 +226,8 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   // 创建 Redis 配置 - 优先从环境变量中读取，否则使用本地 Redis
   let redis_url =
     std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
-  println!("🔗 Using Redis URL: {}", redis_url);
-  let redis_config = RedisConfig::from_url(&redis_url)?;
+  println!("🔗 Using Redis URL: {redis_url}");
+  let redis_config = RedisConnectionConfig::single(redis_url)?;
 
   // 配置队列优先级
   let mut queues = HashMap::new();

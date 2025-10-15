@@ -273,8 +273,7 @@ impl Handler for ServeMux {
       Some(HandlerWrapper::Sync(func)) => func(task),
       Some(HandlerWrapper::Async(func)) => func(task).await,
       None => Err(Error::other(format!(
-        "No handler registered for task type: {}",
-        task_type
+        "No handler registered for task type: {task_type}"
       ))),
     }
   }

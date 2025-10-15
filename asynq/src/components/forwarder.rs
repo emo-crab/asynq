@@ -137,6 +137,7 @@ impl ComponentLifecycle for Forwarder {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::redis::RedisConnectionConfig;
 
   #[test]
   fn test_forwarder_config_default() {
@@ -148,10 +149,8 @@ mod tests {
   #[test]
   fn test_forwarder_shutdown() {
     use crate::rdb::RedisBroker;
-    use crate::redis::RedisConfig;
-
-    let redis_config = RedisConfig::from_url("redis://localhost:6379").unwrap();
-    let broker = Arc::new(RedisBroker::new(redis_config).unwrap());
+    let redis_connection_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
+    let broker = Arc::new(RedisBroker::new(redis_connection_config).unwrap());
     let config = ForwarderConfig::default();
     let forwarder = Forwarder::new(broker, config);
 
