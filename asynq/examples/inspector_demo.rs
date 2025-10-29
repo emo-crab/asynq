@@ -9,7 +9,7 @@ use asynq::inspector::Inspector;
 use asynq::proto::ServerInfo;
 use asynq::rdb::inspect::Pagination;
 use asynq::rdb::RedisBroker;
-use asynq::redis::RedisConnectionConfig;
+use asynq::redis::RedisConnectionType;
 use asynq::task::{DailyStats, QueueInfo};
 use std::sync::Arc;
 
@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   println!("==========================");
 
   // Create Redis configuration (this would connect to a real Redis instance)
-  let redis_config = RedisConnectionConfig::single("redis://127.0.0.1:6379")?;
+  let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
 
   // Create rdb and inspector
   let broker: Arc<RedisBroker> = Arc::new(RedisBroker::new(redis_config).await?);

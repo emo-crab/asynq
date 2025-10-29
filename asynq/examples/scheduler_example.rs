@@ -4,12 +4,12 @@
 //! 注意：Scheduler 的 start 和 stop 方法现在由 PeriodicTaskManager 管理
 //! Note: Scheduler's start and stop methods are now managed by PeriodicTaskManager
 
+use async_trait::async_trait;
 use asynq::client::Client;
 use asynq::components::periodic_task_manager::{
   PeriodicTaskConfig, PeriodicTaskConfigProvider, PeriodicTaskManager, PeriodicTaskManagerConfig,
 };
 use asynq::scheduler::Scheduler;
-use async_trait::async_trait;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -28,8 +28,8 @@ impl PeriodicTaskConfigProvider for SimpleConfigProvider {
 #[tokio::main]
 async fn main() {
   let redis_url = "redis://127.0.0.1:6379";
-  let redis_config = asynq::redis::RedisConnectionConfig::single(redis_url).unwrap();
-  
+  let redis_config = asynq::redis::RedisConnectionType::single(redis_url).unwrap();
+
   // 创建 Client 和 Scheduler
   // Create Client and Scheduler
   let client = Arc::new(Client::new(redis_config.clone()).await.unwrap());
@@ -38,14 +38,12 @@ async fn main() {
   // 创建配置提供者
   // Create config provider
   let config_provider = Arc::new(SimpleConfigProvider {
-    configs: vec![
-      PeriodicTaskConfig::new(
-        "demo:periodic_task".to_string(),
-        "0/30 * * * * *".to_string(), // 每30秒
-        b"hello scheduler".to_vec(),
-        "default".to_string(),
-      ),
-    ],
+    configs: vec![PeriodicTaskConfig::new(
+      "demo:periodic_task".to_string(),
+      "0/30 * * * * *".to_string(), // 每30秒
+      b"hello scheduler".to_vec(),
+      "default".to_string(),
+    )],
   });
 
   // 创建 PeriodicTaskManager（它会管理 Scheduler 的生命周期）
@@ -93,7 +91,7 @@ async fn main() {
   // 停止 PeriodicTaskManager（它会自动停止 Scheduler）
   // Stop PeriodicTaskManager (it automatically stops Scheduler)
   manager.shutdown();
-  
+
   // 给一点时间让 scheduler 完成清理
   // Give scheduler some time to finish cleanup
   tokio::time::sleep(Duration::from_secs(1)).await;

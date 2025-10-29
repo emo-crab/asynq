@@ -56,8 +56,8 @@
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // 创建 Redis 配置
 //!     // Create Redis configuration
-//!     use asynq::redis::RedisConnectionConfig;
-//! let redis_config = RedisConnectionConfig::single("redis://127.0.0.1:6379")?;
+//!     use asynq::redis::RedisConnectionType;
+//!     let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
 //!     
 //!     // 创建客户端
 //!     // Create client

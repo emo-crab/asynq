@@ -10,16 +10,16 @@
 //! 3. 让 PeriodicTaskManager 自动同步任务到 Redis
 //!    Let PeriodicTaskManager automatically sync tasks to Redis
 
+use async_trait::async_trait;
 use asynq::client::Client;
 use asynq::components::periodic_task_manager::{
   PeriodicTaskConfig, PeriodicTaskConfigProvider, PeriodicTaskManager, PeriodicTaskManagerConfig,
 };
 use asynq::config::ServerConfig;
-use asynq::redis::RedisConnectionConfig;
+use asynq::redis::RedisConnectionType;
 use asynq::scheduler::Scheduler;
 use asynq::server::{AsyncHandlerFunc, Server};
 use asynq::task::Task;
-use async_trait::async_trait;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -43,7 +43,7 @@ async fn main() -> anyhow::Result<()> {
   tracing_subscriber::fmt::init();
 
   let redis_url = "redis://127.0.0.1:6379";
-  let redis_config = RedisConnectionConfig::single(redis_url)?;
+  let redis_config = RedisConnectionType::single(redis_url)?;
 
   println!("创建 Scheduler 和 PeriodicTaskManager");
   println!("Creating Scheduler and PeriodicTaskManager");
@@ -56,14 +56,12 @@ async fn main() -> anyhow::Result<()> {
   // 创建配置提供者
   // Create config provider
   let config_provider = Arc::new(SimpleConfigProvider {
-    configs: vec![
-      PeriodicTaskConfig::new(
-        "demo:periodic_task".to_string(),
-        "0/30 * * * * *".to_string(), // Every 30 seconds
-        b"periodic payload".to_vec(),
-        "default".to_string(),
-      ),
-    ],
+    configs: vec![PeriodicTaskConfig::new(
+      "demo:periodic_task".to_string(),
+      "0/30 * * * * *".to_string(), // Every 30 seconds
+      b"periodic payload".to_vec(),
+      "default".to_string(),
+    )],
   });
 
   // 创建 PeriodicTaskManager
@@ -87,9 +85,7 @@ async fn main() -> anyhow::Result<()> {
 
   // 创建服务器处理任务
   // Create server to process tasks
-  let server_config = ServerConfig::new()
-    .concurrency(4)
-    .add_queue("default", 1)?;
+  let server_config = ServerConfig::new().concurrency(4).add_queue("default", 1)?;
 
   let mut server = Server::new(redis_config, server_config).await?;
 

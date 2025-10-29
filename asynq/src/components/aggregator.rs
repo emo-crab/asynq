@@ -356,7 +356,7 @@ impl ComponentLifecycle for Aggregator {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::redis::RedisConnectionConfig;
+  use crate::redis::RedisConnectionType;
 
   #[test]
   fn test_aggregator_config_default() {
@@ -372,7 +372,7 @@ mod tests {
   #[tokio::test]
   async fn test_aggregator_shutdown() {
     use crate::rdb::RedisBroker;
-    let redis_connection_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
+    let redis_connection_config = RedisConnectionType::single("redis://localhost:6379").unwrap();
 
     let broker = Arc::new(RedisBroker::new(redis_connection_config).await.unwrap());
     let config = AggregatorConfig::default();
@@ -409,7 +409,7 @@ mod tests {
   #[tokio::test]
   async fn test_group_aggregator_with_config() {
     use crate::rdb::RedisBroker;
-    let redis_connection_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
+    let redis_connection_config = RedisConnectionType::single("redis://localhost:6379").unwrap();
     let broker = Arc::new(RedisBroker::new(redis_connection_config).await.unwrap());
 
     // 创建带有 GroupAggregator 的配置

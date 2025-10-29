@@ -13,7 +13,7 @@ use asynq::components::janitor::{Janitor, JanitorConfig};
 use asynq::components::recoverer::{Recoverer, RecovererConfig};
 use asynq::components::subscriber::{Subscriber, SubscriberConfig};
 use asynq::rdb::RedisBroker;
-use asynq::redis::RedisConnectionConfig;
+use asynq::redis::RedisConnectionType;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -31,7 +31,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
   println!("📡 Connecting to Redis: {redis_url}");
 
-  let redis_config = RedisConnectionConfig::single(redis_url)?;
+  let redis_config = RedisConnectionType::single(redis_url)?;
   let broker = RedisBroker::new(redis_config.clone()).await?;
   let broker: Arc<dyn asynq::base::Broker> = Arc::new(broker);
 

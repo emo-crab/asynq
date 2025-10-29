@@ -2,7 +2,7 @@
 use async_trait::async_trait;
 use asynq::config::ServerConfig;
 use asynq::error::Result;
-use asynq::redis::RedisConnectionConfig;
+use asynq::redis::RedisConnectionType;
 use asynq::server::{Handler, ServerBuilder};
 use asynq::task::Task;
 use std::sync::{Arc, Mutex};
@@ -42,7 +42,7 @@ impl Handler for CountingHandler {
 async fn test_with_concurrency_limit() {
   let redis_url =
     std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
-  let redis_config = RedisConnectionConfig::single(redis_url).unwrap();
+  let redis_config = RedisConnectionType::single(redis_url).unwrap();
   let concurrency = 2;
   let barrier = Arc::new(Barrier::new(concurrency));
   let handler = CountingHandler {

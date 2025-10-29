@@ -12,7 +12,7 @@ use crate::components::ComponentLifecycle;
 pub use crate::config::ServerConfig;
 use crate::error::{Error, Result};
 use crate::rdb::RedisBroker;
-use crate::redis::RedisConnectionConfig;
+use crate::redis::RedisConnectionType;
 use crate::task::Task;
 use async_trait::async_trait;
 use std::sync::atomic::AtomicUsize;
@@ -140,7 +140,7 @@ impl Server {
   /// 创建新的服务器实例
   /// Create a new server instance
   pub async fn new(
-    redis_connection_config: RedisConnectionConfig,
+    redis_connection_config: RedisConnectionType,
     config: ServerConfig,
   ) -> Result<Self> {
     // 验证配置
@@ -596,7 +596,7 @@ impl Drop for Server {
 /// 服务器构建器
 /// Server builder
 pub struct ServerBuilder {
-  redis_config: Option<RedisConnectionConfig>,
+  redis_config: Option<RedisConnectionType>,
   config: ServerConfig,
 }
 
@@ -612,7 +612,7 @@ impl ServerBuilder {
 
   /// 设置 Redis 配置
   /// Set Redis configuration
-  pub fn redis_config(mut self, config: RedisConnectionConfig) -> Self {
+  pub fn redis_config(mut self, config: RedisConnectionType) -> Self {
     self.redis_config = Some(config);
     self
   }

@@ -3,14 +3,14 @@
 //! This module contains thorough test coverage for client functionality,
 //! ensuring full compatibility with the Go asynq client behavior.
 
-use asynq::redis::RedisConnectionConfig;
+use asynq::redis::RedisConnectionType;
 use asynq::{client::Client, inspector::Inspector, task::Task};
 use chrono::Utc;
 use std::time::Duration;
 
 // Helper to create a test client
 async fn create_test_client() -> asynq::error::Result<Client> {
-  let redis_config = RedisConnectionConfig::single("redis://localhost:6379")
+  let redis_config = RedisConnectionType::single("redis://localhost:6379")
     .expect("Redis should be available for tests");
   Client::new(redis_config).await
 }
@@ -519,7 +519,7 @@ mod integration_tests {
   /// Test client with inspector integration
   #[tokio::test]
   async fn test_client_inspector_integration() {
-    let redis_config = RedisConnectionConfig::single("redis://localhost:6379")
+    let redis_config = RedisConnectionType::single("redis://localhost:6379")
       .expect("Redis should be available for tests");
 
     let client = Client::new(redis_config.clone())

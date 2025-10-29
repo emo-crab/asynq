@@ -51,7 +51,7 @@ serde = { version = "1.0", features = ["derive"] }
 #### Producer (Enqueue Tasks)
 
 ```rust
-use asynq::{client::Client, task::Task, redis::RedisConnectionConfig};
+use asynq::{client::Client, task::Task, redis::RedisConnectionType};
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
@@ -64,7 +64,7 @@ struct EmailPayload {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create Redis configuration
-    let redis_config = RedisConnectionConfig::single("redis://127.0.0.1:6379")?;
+    let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
 
     // Create client
     let client = Client::new(redis_config).await?;
@@ -89,7 +89,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 #### Consumer (Process Tasks)
 
 ```rust
-use asynq::{server::Server,server::Handler,task::Task, redis::RedisConnectionConfig, config::ServerConfig};
+use asynq::{server::Server,server::Handler,task::Task, redis::RedisConnectionType, config::ServerConfig};
 use async_trait::async_trait;
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
@@ -123,7 +123,7 @@ impl Handler for EmailProcessor {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Redis configuration
-    let redis_config = RedisConnectionConfig::single("redis://127.0.0.1:6379")?;
+    let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
 
     // Configure queues
     let mut queues = HashMap::new();
@@ -151,12 +151,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ServeMux provides Go-like task routing functionality, automatically routing tasks to different handlers based on task type:
 
 ```rust
-use asynq::{serve_mux::ServeMux, task::Task, redis::RedisConnectionConfig, config::ServerConfig, server::ServerBuilder};
+use asynq::{serve_mux::ServeMux, task::Task, redis::RedisConnectionType, config::ServerConfig, server::ServerBuilder};
 use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let redis_config = RedisConnectionConfig::single("redis://127.0.0.1:6379")?;
+    let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
 
     // Create ServeMux
     let mut mux = ServeMux::new();
@@ -219,7 +219,7 @@ use asynq::{
     task_handler_async,
     register_handlers,
     register_async_handlers,
-    redis::RedisConnectionConfig, 
+    redis::RedisConnectionType, 
     config::ServerConfig, 
     server::ServerBuilder
 };
@@ -240,7 +240,7 @@ async fn handle_image(task: Task) -> asynq::error::Result<()> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let redis_config = RedisConnectionConfig::single("redis://127.0.0.1:6379")?;
+    let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
     
     // Create ServeMux and register handlers with convenience macros
     let mut mux = ServeMux::new();
@@ -431,13 +431,13 @@ let config = ServerConfig::new()
 ### Redis Configuration
 
 ```rust
-use asynq::redis::{RedisConnectionConfig};
+use asynq::redis::{RedisConnectionType};
 use std::time::Duration;
 
 // Basic configuration
-let redis_config = RedisConnectionConfig::single("redis://127.0.0.1:6379")?;
+let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
 let nodes = vec!["redis://127.0.0.1:6379/", "redis://127.0.0.1:6378/", "redis://127.0.0.1:6377/"];
-let redis_config = RedisConnectionConfig::cluster(nodes)?;
+let redis_config = RedisConnectionType::cluster(nodes)?;
 ```
 
 ## 📊 Monitoring and Management

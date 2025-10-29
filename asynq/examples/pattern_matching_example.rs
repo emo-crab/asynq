@@ -8,7 +8,7 @@
 //! cargo run --example pattern_matching_example --features macros
 //! ```
 
-use asynq::redis::RedisConnectionConfig;
+use asynq::redis::RedisConnectionType;
 use asynq::{
   config::ServerConfig, error::Result, register_handlers, serve_mux::ServeMux,
   server::ServerBuilder, task::Task, task_handler,
@@ -87,7 +87,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   println!();
 
   // Configure Redis connection
-  let redis_config = RedisConnectionConfig::single("redis://127.0.0.1:6379")?;
+  let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
 
   // Configure queue priorities
   let mut queues = HashMap::new();

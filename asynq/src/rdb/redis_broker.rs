@@ -12,7 +12,7 @@ use crate::rdb::redis_scripts::{RedisArg, ScriptManager};
 #[cfg(feature = "cluster")]
 use crate::rdb::universal_client::ClusterPubSubConnection;
 use crate::rdb::universal_client::{RedisClient, RedisPubSub};
-use crate::redis::{RedisConnection, RedisConnectionConfig};
+use crate::redis::{RedisConnection, RedisConnectionType};
 use crate::task::Task;
 use prost::Message;
 use redis::AsyncCommands;
@@ -29,9 +29,9 @@ pub struct RedisBroker {
 impl RedisBroker {
   /// 从RedisConnection创建新的Redis经纪人实例
   /// Create a new Redis broker instance from RedisConnection
-  pub async fn new(conn: RedisConnectionConfig) -> Result<Self> {
+  pub async fn new(conn: RedisConnectionType) -> Result<Self> {
     match conn {
-      RedisConnectionConfig::Single(config) => {
+      RedisConnectionType::Single(config) => {
         let client = Client::open(config)?;
         let mut broker = Self {
           client: RedisClient::Single(client),
@@ -41,7 +41,7 @@ impl RedisBroker {
         Ok(broker)
       }
       #[cfg(feature = "cluster")]
-      RedisConnectionConfig::Cluster(config) => {
+      RedisConnectionType::Cluster(config) => {
         // 如果配置了使用 RESP3，创建 push_sender 通道
         // If RESP3 is configured, create push_sender channel
         let (push_receiver, cluster_client) = {

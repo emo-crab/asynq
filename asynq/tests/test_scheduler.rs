@@ -1,6 +1,6 @@
 use asynq::{
   client::Client,
-  redis::RedisConnectionConfig,
+  redis::RedisConnectionType,
   scheduler::{PeriodicTask, Scheduler},
 };
 use std::sync::Arc;
@@ -10,7 +10,7 @@ use tokio::time::sleep;
 #[tokio::test]
 async fn test_scheduler_pushes_periodic_task() {
   // 使用本地 Redis
-  let redis_config = RedisConnectionConfig::single("redis://127.0.0.1:6379").unwrap();
+  let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379").unwrap();
   let client = Arc::new(Client::new(redis_config.clone()).await.unwrap());
   let scheduler = Scheduler::new(client.clone(), None).await.unwrap();
 
@@ -34,7 +34,7 @@ async fn test_scheduler_pushes_periodic_task() {
 #[tokio::test]
 async fn test_scheduler_in_arc() {
   // Test that Scheduler can be used from Arc without requiring mut
-  let redis_config = RedisConnectionConfig::single("redis://127.0.0.1:6379").unwrap();
+  let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379").unwrap();
   let client = Arc::new(Client::new(redis_config.clone()).await.unwrap());
   let scheduler = Arc::new(Scheduler::new(client.clone(), None).await.unwrap());
 
@@ -47,13 +47,13 @@ async fn test_scheduler_in_arc() {
   )
   .unwrap();
   let _ = scheduler.register(task, "test_scheduler").await;
-  
+
   // Start scheduler from Arc - this should work now
   scheduler.start().await;
 
   // Wait a bit
   sleep(Duration::from_secs(2)).await;
-  
+
   // Stop scheduler from Arc - this should work now
   scheduler.stop().await;
 }

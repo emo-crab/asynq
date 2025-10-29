@@ -84,17 +84,14 @@ impl PeriodicTaskConfig {
   pub fn config_key(&self) -> String {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
-    
+
     let mut hasher = DefaultHasher::new();
     self.payload.hash(&mut hasher);
     let payload_hash = hasher.finish();
-    
+
     format!(
       "{}:{}:{}:{}",
-      self.task,
-      self.cron,
-      self.queue,
-      payload_hash
+      self.task, self.cron, self.queue, payload_hash
     )
   }
 }
@@ -166,7 +163,7 @@ impl PeriodicTaskManager {
     tokio::spawn(async move {
       scheduler.start().await;
     });
-    
+
     tokio::spawn(async move {
       let mut interval = tokio::time::interval(self.config.sync_interval);
       loop {
@@ -192,10 +189,7 @@ impl PeriodicTaskManager {
     // 获取新配置
     // Get new configurations
     let new_configs = self.config_provider.get_configs().await?;
-    let new_config_keys: HashSet<String> = new_configs
-      .iter()
-      .map(|c| c.config_key())
-      .collect();
+    let new_config_keys: HashSet<String> = new_configs.iter().map(|c| c.config_key()).collect();
 
     let mut registered = self.registered_tasks.lock().await;
     let current_keys: HashSet<String> = registered.keys().cloned().collect();
@@ -207,26 +201,16 @@ impl PeriodicTaskManager {
       .filter(|c| !current_keys.contains(&c.config_key()))
       .collect();
 
-    let to_remove: Vec<_> = current_keys
-      .difference(&new_config_keys)
-      .cloned()
-      .collect();
+    let to_remove: Vec<_> = current_keys.difference(&new_config_keys).cloned().collect();
 
     // 注销不再需要的任务
     // Unregister tasks that are no longer needed
     for config_key in to_remove {
       if let Some(entry_id) = registered.remove(&config_key) {
         if let Err(e) = self.scheduler.unregister(&entry_id).await {
-          tracing::error!(
-            "Failed to unregister task {}: {}",
-            config_key,
-            e
-          );
+          tracing::error!("Failed to unregister task {}: {}", config_key, e);
         } else {
-          tracing::info!(
-            "PeriodicTaskManager: unregistered task {}",
-            config_key
-          );
+          tracing::info!("PeriodicTaskManager: unregistered task {}", config_key);
         }
       }
     }
@@ -253,11 +237,7 @@ impl PeriodicTaskManager {
           );
         }
         Err(e) => {
-          tracing::error!(
-            "Failed to register task {}: {}",
-            config.task,
-            e
-          );
+          tracing::error!("Failed to register task {}: {}", config.task, e);
         }
       }
     }
@@ -272,7 +252,7 @@ impl PeriodicTaskManager {
   /// Corresponds to Go's manager.Shutdown()
   pub fn shutdown(&self) {
     self.done.store(true, Ordering::Relaxed);
-    
+
     // Stop the scheduler
     let scheduler = self.scheduler.clone();
     tokio::spawn(async move {
@@ -305,7 +285,7 @@ impl ComponentLifecycle for PeriodicTaskManager {
 mod tests {
   use super::*;
   use crate::client::Client;
-  use crate::redis::RedisConnectionConfig;
+  use crate::redis::RedisConnectionType;
 
   // 测试配置提供者
   // Test configuration provider
@@ -349,7 +329,7 @@ mod tests {
       b"test payload".to_vec(),
       "default".to_string(),
     );
-    
+
     assert_eq!(config.task, "test:task");
     assert_eq!(config.cron, "* * * * * *");
     assert_eq!(config.queue, "default");
@@ -358,27 +338,25 @@ mod tests {
   #[tokio::test]
   #[ignore] // Requires Redis to be running
   async fn test_periodic_task_manager_sync() {
-    let redis_connection_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
+    let redis_connection_config = RedisConnectionType::single("redis://localhost:6379").unwrap();
     let client = Arc::new(Client::new(redis_connection_config).await.unwrap());
     let scheduler = Arc::new(Scheduler::new(client, None).await.unwrap());
-    
-    let initial_configs = vec![
-      PeriodicTaskConfig::new(
-        "task1".to_string(),
-        "* * * * * *".to_string(),
-        b"payload1".to_vec(),
-        "default".to_string(),
-      ),
-    ];
-    
+
+    let initial_configs = vec![PeriodicTaskConfig::new(
+      "task1".to_string(),
+      "* * * * * *".to_string(),
+      b"payload1".to_vec(),
+      "default".to_string(),
+    )];
+
     let provider = Arc::new(TestConfigProvider::new(initial_configs));
     let config = PeriodicTaskManagerConfig::default();
     let manager = PeriodicTaskManager::new(scheduler, config, provider.clone());
-    
+
     // 执行首次同步
     // Perform initial sync
     manager.sync_tasks().await.unwrap();
-    
+
     let registered = manager.registered_tasks.lock().await;
     assert_eq!(registered.len(), 1);
   }
@@ -386,10 +364,10 @@ mod tests {
   #[tokio::test]
   #[ignore] // Requires Redis to be running
   async fn test_periodic_task_manager_shutdown() {
-    let redis_connection_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
+    let redis_connection_config = RedisConnectionType::single("redis://localhost:6379").unwrap();
     let client = Arc::new(Client::new(redis_connection_config).await.unwrap());
     let scheduler = Arc::new(Scheduler::new(client, None).await.unwrap());
-    
+
     let provider = Arc::new(TestConfigProvider::new(vec![]));
     let config = PeriodicTaskManagerConfig::default();
     let manager = PeriodicTaskManager::new(scheduler, config, provider);

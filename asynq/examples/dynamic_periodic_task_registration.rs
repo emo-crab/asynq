@@ -9,14 +9,14 @@
 //! tasks based on configuration changes.
 //! PeriodicTaskManager 会轮询配置提供者，并根据配置变更自动注册/注销任务。
 
+use async_trait::async_trait;
 use asynq::client::Client;
 use asynq::components::periodic_task_manager::{
   PeriodicTaskConfig, PeriodicTaskConfigProvider, PeriodicTaskManager, PeriodicTaskManagerConfig,
 };
 use asynq::error::Result;
-use asynq::redis::RedisConnectionConfig;
+use asynq::redis::RedisConnectionType;
 use asynq::scheduler::Scheduler;
-use async_trait::async_trait;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -60,7 +60,7 @@ async fn main() -> anyhow::Result<()> {
   // Redis 连接 URL - 可以通过环境变量配置
   let redis_url =
     std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
-  let redis_config = RedisConnectionConfig::single(redis_url)?;
+  let redis_config = RedisConnectionType::single(redis_url)?;
 
   println!("Creating Scheduler and PeriodicTaskManager with ConfigProvider");
   println!("创建 Scheduler 和使用 ConfigProvider 的 PeriodicTaskManager");
@@ -103,7 +103,7 @@ async fn main() -> anyhow::Result<()> {
 
   println!("\n=== Starting PeriodicTaskManager ===");
   println!("=== 启动 PeriodicTaskManager ===\n");
-  
+
   let manager_handle = manager.clone().start();
 
   // Wait for initial sync

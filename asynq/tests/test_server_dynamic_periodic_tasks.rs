@@ -2,14 +2,14 @@
 //!
 //! Tests the new PeriodicTaskConfigProvider-based periodic task management.
 
+use async_trait::async_trait;
 use asynq::client::Client;
 use asynq::components::periodic_task_manager::{
   PeriodicTaskConfig, PeriodicTaskConfigProvider, PeriodicTaskManager, PeriodicTaskManagerConfig,
 };
 use asynq::config::ServerConfig;
-use asynq::redis::RedisConnectionConfig;
+use asynq::redis::RedisConnectionType;
 use asynq::scheduler::Scheduler;
-use async_trait::async_trait;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -59,7 +59,7 @@ impl PeriodicTaskConfigProvider for TestConfigProvider {
 #[tokio::test]
 async fn test_periodic_task_manager_with_config_provider() {
   // Skip test if Redis not available
-  let redis_config = match RedisConnectionConfig::single("redis://localhost:6379") {
+  let redis_config = match RedisConnectionType::single("redis://localhost:6379") {
     Ok(config) => config,
     Err(_) => {
       println!("Skipping test - Redis not available");
@@ -99,7 +99,7 @@ async fn test_periodic_task_manager_with_config_provider() {
 #[tokio::test]
 async fn test_periodic_task_manager_sync() {
   // Skip test if Redis not available
-  let redis_config = match RedisConnectionConfig::single("redis://localhost:6379") {
+  let redis_config = match RedisConnectionType::single("redis://localhost:6379") {
     Ok(config) => config,
     Err(_) => {
       println!("Skipping test - Redis not available");
@@ -158,7 +158,7 @@ async fn test_periodic_task_manager_sync() {
 #[tokio::test]
 async fn test_periodic_task_manager_shutdown() {
   // Skip test if Redis not available
-  let redis_config = match RedisConnectionConfig::single("redis://localhost:6379") {
+  let redis_config = match RedisConnectionType::single("redis://localhost:6379") {
     Ok(config) => config,
     Err(_) => {
       println!("Skipping test - Redis not available");

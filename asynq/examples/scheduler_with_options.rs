@@ -4,13 +4,13 @@
 //! 注意：Scheduler 的 start 和 stop 方法现在由 PeriodicTaskManager 管理
 //! Note: Scheduler's start and stop methods are now managed by PeriodicTaskManager
 
+use async_trait::async_trait;
 use asynq::client::Client;
 use asynq::components::periodic_task_manager::{
   PeriodicTaskConfig, PeriodicTaskConfigProvider, PeriodicTaskManager, PeriodicTaskManagerConfig,
 };
 use asynq::rdb::option::TaskOptions;
 use asynq::scheduler::{PeriodicTask, Scheduler};
-use async_trait::async_trait;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -29,7 +29,7 @@ impl PeriodicTaskConfigProvider for OptionsConfigProvider {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let redis_url = "redis://127.0.0.1:6379";
-  let redis_config = asynq::redis::RedisConnectionConfig::single(redis_url)?;
+  let redis_config = asynq::redis::RedisConnectionType::single(redis_url)?;
 
   // 创建 Client 和 RedisBroker
   let client = Arc::new(Client::new(redis_config.clone()).await?);
@@ -115,10 +115,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // 停止 PeriodicTaskManager（它会自动停止 Scheduler）
   println!("\n🛑 停止调度器...");
   manager.shutdown();
-  
+
   // 给一点时间让 scheduler 完成清理
   tokio::time::sleep(Duration::from_millis(500)).await;
-  
+
   println!("✅ 调度器已停止");
 
   Ok(())

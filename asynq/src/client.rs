@@ -8,7 +8,7 @@ use crate::base::Broker;
 use crate::config::ClientConfig;
 use crate::error::Result;
 use crate::rdb::RedisBroker;
-use crate::redis::RedisConnectionConfig;
+use crate::redis::RedisConnectionType;
 use crate::task::{Task, TaskInfo};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
@@ -24,14 +24,14 @@ pub struct Client {
 impl Client {
   /// 创建新的客户端实例
   /// Create a new client instance
-  pub async fn new(redis_connection: RedisConnectionConfig) -> Result<Self> {
+  pub async fn new(redis_connection: RedisConnectionType) -> Result<Self> {
     Self::with_config(redis_connection, ClientConfig::default()).await
   }
 
   /// 使用指定配置创建客户端实例
   /// Create a client instance with the specified configuration
   pub async fn with_config(
-    redis_connection: RedisConnectionConfig,
+    redis_connection: RedisConnectionType,
     config: ClientConfig,
   ) -> Result<Self> {
     // 创建RedisBroker实例

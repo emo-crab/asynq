@@ -335,7 +335,12 @@ impl RedisBroker {
         let msg: Vec<u8> = redis::from_redis_value(msg_val)?;
         let score: f64 = redis::from_redis_value(score_val)?;
         let next_process_at = if score > 0.0 {
-          Some(Utc.timestamp_opt(score as i64, 0).single().unwrap_or_default())
+          Some(
+            Utc
+              .timestamp_opt(score as i64, 0)
+              .single()
+              .unwrap_or_default(),
+          )
         } else {
           None
         };

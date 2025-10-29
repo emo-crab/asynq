@@ -1,7 +1,7 @@
 //! ServeMux 示例 - 演示如何使用 ServeMux 路由不同的任务类型
 //! ServeMux Example - Demonstrates how to use ServeMux to route different task types
 
-use asynq::redis::RedisConnectionConfig;
+use asynq::redis::RedisConnectionType;
 use asynq::{config::ServerConfig, serve_mux::ServeMux, server::ServerBuilder, task::Task};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 创建 Redis 配置
   // Create Redis configuration
-  let redis_config = RedisConnectionConfig::single(redis_url)?;
+  let redis_config = RedisConnectionType::single(redis_url)?;
 
   // 创建队列配置
   // Create queue configuration

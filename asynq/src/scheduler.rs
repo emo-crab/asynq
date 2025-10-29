@@ -226,13 +226,13 @@ impl Scheduler {
     if self.running.swap(true, Ordering::SeqCst) {
       return;
     }
-    
+
     let tasks = self.tasks.clone();
     let running = self.running.clone();
     let notify = self.notify.clone();
     let client = self.client.clone();
     let heartbeat_interval = self.heartbeat_interval;
-    
+
     let main_handle = tokio::spawn(async move {
       loop {
         if !running.load(Ordering::Relaxed) {
@@ -293,10 +293,10 @@ impl Scheduler {
         }
       }
     });
-    
+
     // 启动心跳循环
     let heartbeat_handle = self.spawn_heartbeat();
-    
+
     // Store handles
     let mut handles_guard = self.handles.lock().await;
     *handles_guard = Some((main_handle, heartbeat_handle));
@@ -395,18 +395,18 @@ impl Scheduler {
   pub async fn stop(&self) {
     self.running.store(false, Ordering::SeqCst);
     self.notify.notify_one();
-    
+
     // Take the handles and wait for them
     let handles = {
       let mut handles_guard = self.handles.lock().await;
       handles_guard.take()
     };
-    
+
     if let Some((main_handle, heartbeat_handle)) = handles {
       let _ = main_handle.await;
       let _ = heartbeat_handle.await;
     }
-    
+
     // 正确清理 redis 中的 entry（只需用 scheduler_id）
     let broker = self.client.get_broker();
     let _ = broker.clear_scheduler_entries(&self.id).await;

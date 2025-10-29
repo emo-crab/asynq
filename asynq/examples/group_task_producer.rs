@@ -4,7 +4,7 @@
 //! 演示如何创建带有组标签的任务以进行批量聚合
 //! Demonstrates how to create tasks with group labels for batch aggregation
 
-use asynq::redis::RedisConnectionConfig;
+use asynq::redis::RedisConnectionType;
 use asynq::{client::Client, task::Task};
 use serde::Serialize;
 use std::time::Duration;
@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
   println!("🔗 Using Redis URL: {redis_url}");
 
-  let redis_config = RedisConnectionConfig::single(redis_url)?;
+  let redis_config = RedisConnectionType::single(redis_url)?;
 
   // 创建客户端
   // Create client
