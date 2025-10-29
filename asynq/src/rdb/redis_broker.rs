@@ -29,14 +29,16 @@ pub struct RedisBroker {
 impl RedisBroker {
   /// 从RedisConnection创建新的Redis经纪人实例
   /// Create a new Redis broker instance from RedisConnection
-  pub fn new(conn: RedisConnectionConfig) -> Result<Self> {
+  pub async fn new(conn: RedisConnectionConfig) -> Result<Self> {
     match conn {
       RedisConnectionConfig::Single(config) => {
         let client = Client::open(config)?;
-        Ok(Self {
+        let mut broker = Self {
           client: RedisClient::Single(client),
           script_manager: ScriptManager::default(),
-        })
+        };
+        broker.init_scripts().await?;
+        Ok(broker)
       }
       #[cfg(feature = "cluster")]
       RedisConnectionConfig::Cluster(config) => {
@@ -53,14 +55,15 @@ impl RedisBroker {
             client,
           )
         };
-
-        Ok(Self {
+        let mut broker = Self {
           client: RedisClient::Cluster {
             client: cluster_client,
             push_receiver,
           },
           script_manager: ScriptManager::default(),
-        })
+        };
+        broker.init_scripts().await?;
+        Ok(broker)
       }
     }
   }
@@ -105,7 +108,7 @@ impl RedisBroker {
 
   /// 初始化脚本管理器，预加载所有脚本
   /// Initialize script manager and preload all scripts
-  pub async fn init_scripts(&mut self) -> Result<()> {
+  pub(crate) async fn init_scripts(&mut self) -> Result<()> {
     let mut conn = self.get_async_connection().await?;
     self.script_manager.load_scripts(&mut conn).await?;
     Ok(())
