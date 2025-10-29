@@ -1,0 +1,43 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="运行任务脚本 - Go: runTaskCmd runTaskCmd is a Lua script that updates the given task to pending state."><title>RUN_TASK in asynq::rdb::redis_scripts::scripts - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2" crossorigin href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-aa0817cf.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="asynq" data-themes="" data-resource-suffix="" data-rustdoc-version="1.90.0 (1159e78c4 2025-09-14)" data-channel="1.90.0" data-search-js="search-fa3e91e5.js" data-settings-js="settings-5514c975.js" ><script src="../../../../static.files/storage-68b7e25d.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../../../static.files/main-eebb9057.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-32bb7600.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-6580c154.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc constant"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="mobile-topbar"><button class="sidebar-menu-toggle" title="show sidebar"></button></nav><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../asynq/index.html">asynq</a><span class="version">0.1.3</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">RUN_<wbr>TASK</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#inputkeys1---asynqqnamettask_idkeys2---asynqqnamependingkeys3---asynqqnamegroups" title="Input: `KEYS[1]` -&#62; asynq:{`&#60;qname&#62;`}:t:&#60;task_id&#62; `KEYS[2]` -&#62; asynq:{`&#60;qname&#62;`}:pending `KEYS[3]` -&#62; asynq:{`&#60;qname&#62;`}:groups">Input: <code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt; <code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:pending <code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:groups</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="index.html">In asynq::<wbr>rdb::<wbr>redis_<wbr>scripts::<wbr>scripts</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><rustdoc-search></rustdoc-search><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../../index.html">asynq</a>::<wbr><a href="../../index.html">rdb</a>::<wbr><a href="../index.html">redis_scripts</a>::<wbr><a href="index.html">scripts</a></div><h1>Constant <span class="constant">RUN_TASK</span><button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../../../src/asynq/rdb/redis_scripts.rs.html#1051-1077">Source</a> </span></div><pre class="rust item-decl"><code>pub const RUN_TASK: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.90.0/std/primitive.str.html">str</a> = r#&quot;
+        if redis.call(&quot;EXISTS&quot;, KEYS[1]) == 0 then
+            return 0
+        end
+        local state, group = unpack(redis.call(&quot;HMGET&quot;, KEYS[1], &quot;state&quot;, &quot;group&quot;))
+        if state == &quot;active&quot; then
+            return -1
+        elseif state == &quot;pending&quot; then
+            return -2
+        elseif state == &quot;aggregating&quot; then
+            local n = redis.call(&quot;ZREM&quot;, ARGV[3] .. group, ARGV[1])
+            if n == 0 then
+                return redis.error_reply(&quot;internal error: task id not found in zset &quot; .. tostring(ARGV[3] .. group))
+            end
+            if redis.call(&quot;ZCARD&quot;, ARGV[3] .. group) == 0 then
+                redis.call(&quot;SREM&quot;, KEYS[3], group)
+            end
+        else
+            local n = redis.call(&quot;ZREM&quot;, ARGV[2] .. state, ARGV[1])
+            if n == 0 then
+                return redis.error_reply(&quot;internal error: task id not found in zset &quot; .. tostring(ARGV[2] .. state))
+            end
+        end
+        redis.call(&quot;LPUSH&quot;, KEYS[2], ARGV[1])
+        redis.call(&quot;HSET&quot;, KEYS[1], &quot;state&quot;, &quot;pending&quot;)
+        return 1
+    &quot;#;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>运行任务脚本 - Go: runTaskCmd
+runTaskCmd is a Lua script that updates the given task to pending state.</p>
+<h3 id="inputkeys1---asynqqnamettask_idkeys2---asynqqnamependingkeys3---asynqqnamegroups"><a class="doc-anchor" href="#inputkeys1---asynqqnamettask_idkeys2---asynqqnamependingkeys3---asynqqnamegroups">§</a>Input:
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:pending
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:groups</h3>
+<p><code>ARGV[1]</code> -&gt; task ID
+<code>ARGV[2]</code> -&gt; queue key prefix; asynq:{<code>&lt;qname&gt;</code>}:
+<code>ARGV[3]</code> -&gt; group key prefix</p>
+<p>Output:
+Numeric code indicating the status:
+Returns 1 if task is successfully updated.
+Returns 0 if task is not found.
+Returns -1 if task is in active state.
+Returns -2 if task is in pending state.
+Returns error reply if unexpected error occurs.</p>
+</div></details></section></div></main></body></html>

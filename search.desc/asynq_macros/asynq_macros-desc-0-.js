@@ -1,0 +1,1 @@
+searchState.loadedDescShard("asynq_macros", 0, "Asynq Macros\nMacro for automatically registering asynchronous handlers …\nMacro for automatically registering synchronous handlers …\nAttribute macro for registering synchronous task handlers\nAttribute macro for registering asynchronous task handlers")
