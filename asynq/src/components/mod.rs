@@ -57,7 +57,7 @@ pub mod subscriber;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let redis_config = RedisConnectionConfig::single("redis://localhost:6379")?;
-/// # let broker = Arc::new(RedisBroker::new(redis_config)?);
+/// # let broker = Arc::new(RedisBroker::new(redis_config).await?);
 /// let janitor = Arc::new(Janitor::new(broker, JanitorConfig::default()));
 ///
 /// // 启动组件

@@ -22,7 +22,7 @@ async fn test_redis_zsets_population() -> Result<(), Box<dyn std::error::Error>>
     }
   };
 
-  let broker = RedisBroker::new(redis_config.clone())?;
+  let broker = RedisBroker::new(redis_config.clone()).await?;
 
   // Test connection
   broker.ping().await?;

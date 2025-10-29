@@ -146,11 +146,11 @@ mod tests {
     assert_eq!(config.queues, vec!["default".to_string()]);
   }
 
-  #[test]
-  fn test_forwarder_shutdown() {
+  #[tokio::test]
+  async fn test_forwarder_shutdown() {
     use crate::rdb::RedisBroker;
     let redis_connection_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
-    let broker = Arc::new(RedisBroker::new(redis_connection_config).unwrap());
+    let broker = Arc::new(RedisBroker::new(redis_connection_config).await.unwrap());
     let config = ForwarderConfig::default();
     let forwarder = Forwarder::new(broker, config);
 

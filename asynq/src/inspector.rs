@@ -25,8 +25,7 @@ impl Inspector {
   /// 通过 RedisConnectionConfig 创建 Inspector
   /// Create via RedisConnectionConfig Inspector
   pub async fn new(redis_connection_config: RedisConnectionConfig) -> Result<Self> {
-    let mut broker = RedisBroker::new(redis_connection_config)?;
-    broker.init_scripts().await?;
+    let broker = RedisBroker::new(redis_connection_config).await?;
     Ok(Self {
       rdb: Arc::new(broker),
     })
@@ -302,11 +301,6 @@ impl Inspector {
     self.rdb.is_queue_paused(queue).await
   }
 
-  /// 获取暂停的队列列表
-  /// Get the list of paused queues
-  pub async fn get_paused_queues(&self) -> Result<Vec<String>> {
-    self.rdb.get_paused_queues().await
-  }
   /// 获取任务结果
   /// Get the result of a task
   pub async fn get_task_result(&self, queue: &str, task_id: &str) -> Result<Option<Vec<u8>>> {

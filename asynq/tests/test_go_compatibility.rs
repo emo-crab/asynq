@@ -220,7 +220,7 @@ mod go_compatibility_tests {
       }
     };
 
-    let broker = match RedisBroker::new(redis_config) {
+    let broker = match RedisBroker::new(redis_config).await {
       Ok(broker_instance) => match broker_instance.ping().await {
         Ok(_) => Arc::new(broker_instance),
         Err(_) => {
@@ -503,7 +503,7 @@ mod integration_tests {
     let redis_config = RedisConnectionConfig::single("redis://localhost:6379")
       .expect("Redis should be available for integration test");
 
-    let broker: Arc<dyn Broker> = Arc::new(RedisBroker::new(redis_config).unwrap());
+    let broker: Arc<dyn Broker> = Arc::new(RedisBroker::new(redis_config).await.unwrap());
     broker.ping().await.expect("Redis should be connected");
 
     // Try to dequeue tasks that were created by Go producer

@@ -24,7 +24,7 @@ async fn test_server_registration() -> Result<(), Box<dyn std::error::Error>> {
     }
   };
 
-  let broker = RedisBroker::new(redis_config)?;
+  let broker = RedisBroker::new(redis_config).await?;
 
   // Test server info
   let hostname = "test-host";

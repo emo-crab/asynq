@@ -22,7 +22,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // 1. 创建 Redis 配置
   // 1. Create Redis configuration
   let redis_config = RedisConnectionConfig::single("redis://localhost:6379")?;
-  let broker: Arc<dyn Broker> = Arc::new(RedisBroker::new(redis_config)?);
+  let broker: Arc<dyn Broker> = Arc::new(RedisBroker::new(redis_config).await?);
   println!("✅ Connected to Redis\n");
 
   // 2. 创建并启动 Subscriber

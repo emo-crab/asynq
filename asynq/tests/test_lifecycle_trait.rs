@@ -9,7 +9,6 @@ use asynq::components::forwarder::{Forwarder, ForwarderConfig};
 use asynq::components::healthcheck::{Healthcheck, HealthcheckConfig};
 use asynq::components::heartbeat::{Heartbeat, HeartbeatMeta};
 use asynq::components::janitor::{Janitor, JanitorConfig};
-use asynq::components::periodic_task_manager::{PeriodicTaskManager, PeriodicTaskManagerConfig};
 use asynq::components::recoverer::{Recoverer, RecovererConfig};
 use asynq::components::subscriber::{Subscriber, SubscriberConfig};
 use asynq::components::ComponentLifecycle;
@@ -24,15 +23,13 @@ use std::time::{Duration, SystemTime};
 #[tokio::test]
 #[ignore] // Requires Redis to be running
 async fn test_lifecycle_trait_usage() {
-  use asynq::client::Client;
   use asynq::rdb::RedisBroker;
   use asynq::redis::RedisConnectionConfig;
 
   // 创建 Redis 连接
   // Create Redis connection
   let redis_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
-  let broker = Arc::new(RedisBroker::new(redis_config.clone()).unwrap());
-  let client = Arc::new(Client::new(redis_config).await.unwrap());
+  let broker = Arc::new(RedisBroker::new(redis_config.clone()).await.unwrap());
 
   // 创建各种组件
   // Create various components
@@ -52,11 +49,12 @@ async fn test_lifecycle_trait_usage() {
     Arc::new(Recoverer::new(broker.clone(), RecovererConfig::default())),
     // Subscriber
     Arc::new(Subscriber::new(broker.clone(), SubscriberConfig::default())),
-    // PeriodicTaskManager
-    Arc::new(PeriodicTaskManager::new(
-      client.clone(),
-      PeriodicTaskManagerConfig::default(),
-    )),
+    // PeriodicTaskManager - commented out as it now requires Scheduler and ConfigProvider
+    // Arc::new(PeriodicTaskManager::new(
+    //   scheduler,
+    //   PeriodicTaskManagerConfig::default(),
+    //   config_provider,
+    // )),
     // Heartbeat
     Arc::new(Heartbeat::new(
       broker.clone(),
@@ -114,7 +112,7 @@ async fn test_janitor_lifecycle() {
   use asynq::rdb::RedisBroker;
 
   let redis_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
-  let broker = Arc::new(RedisBroker::new(redis_config).unwrap());
+  let broker = Arc::new(RedisBroker::new(redis_config).await.unwrap());
 
   let janitor: Arc<dyn ComponentLifecycle> =
     Arc::new(Janitor::new(broker, JanitorConfig::default()));
@@ -156,7 +154,7 @@ async fn test_generic_component_management() {
   use asynq::rdb::RedisBroker;
 
   let redis_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
-  let broker = Arc::new(RedisBroker::new(redis_config).unwrap());
+  let broker = Arc::new(RedisBroker::new(redis_config).await.unwrap());
 
   // 辅助函数：启动并运行一段时间后关闭组件
   // Helper function: start, run for a while, then shutdown component

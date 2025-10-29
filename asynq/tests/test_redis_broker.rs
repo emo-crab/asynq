@@ -5,10 +5,10 @@ use asynq::redis::RedisConnectionConfig;
 // RedisBroker 单元测试
 // ...以下为原 tests 模块内容...
 
-#[test]
-fn test_redis_broker_creation() {
+#[tokio::test]
+async fn test_redis_broker_creation() {
   let config = RedisConnectionConfig::single("redis://127.0.0.1:6379").unwrap();
-  let broker = RedisBroker::new(config);
+  let broker = RedisBroker::new(config).await;
   assert!(broker.is_ok());
 }
 

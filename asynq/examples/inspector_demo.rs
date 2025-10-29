@@ -22,7 +22,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let redis_config = RedisConnectionConfig::single("redis://127.0.0.1:6379")?;
 
   // Create rdb and inspector
-  let broker: Arc<RedisBroker> = Arc::new(RedisBroker::new(redis_config)?);
+  let broker: Arc<RedisBroker> = Arc::new(RedisBroker::new(redis_config).await?);
   let inspector = Inspector::from_broker(broker);
 
   println!("\n📊 Queue Information:");

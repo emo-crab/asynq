@@ -246,11 +246,11 @@ mod tests {
     assert_eq!(config.buffer_size, 100);
   }
 
-  #[test]
-  fn test_subscriber_shutdown() {
+  #[tokio::test]
+  async fn test_subscriber_shutdown() {
     use crate::rdb::RedisBroker;
     let redis_connection_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
-    let broker = Arc::new(RedisBroker::new(redis_connection_config).unwrap());
+    let broker = Arc::new(RedisBroker::new(redis_connection_config).await.unwrap());
     let config = SubscriberConfig::default();
     let subscriber = Subscriber::new(broker, config);
 
@@ -264,7 +264,7 @@ mod tests {
     use crate::rdb::RedisBroker;
     let redis_connection_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
 
-    let broker = Arc::new(RedisBroker::new(redis_connection_config).unwrap());
+    let broker = Arc::new(RedisBroker::new(redis_connection_config).await.unwrap());
     let config = SubscriberConfig::default();
     let mut subscriber = Subscriber::new(broker, config);
 
@@ -291,7 +291,8 @@ mod tests {
   async fn test_subscriber_cancellation_pubsub() {
     use crate::rdb::RedisBroker;
     let redis_connection_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
-    let broker: Arc<dyn Broker> = Arc::new(RedisBroker::new(redis_connection_config).unwrap());
+    let broker: Arc<dyn Broker> =
+      Arc::new(RedisBroker::new(redis_connection_config).await.unwrap());
 
     // 创建订阅者
     let config = SubscriberConfig::default();

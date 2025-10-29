@@ -36,8 +36,7 @@ impl Client {
   ) -> Result<Self> {
     // 创建RedisBroker实例
     // Create RedisBroker instance
-    let mut broker = RedisBroker::new(redis_connection)?;
-    broker.init_scripts().await?;
+    let broker = RedisBroker::new(redis_connection).await?;
     Ok(Self {
       broker: Arc::new(broker),
       config,

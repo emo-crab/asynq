@@ -29,7 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 创建 broker
   // Create broker
-  let broker = RedisBroker::new(cluster_config)?;
+  let broker = RedisBroker::new(cluster_config).await?;
 
   println!("✓ Broker 创建成功 / Broker created successfully");
   println!();

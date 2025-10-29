@@ -369,12 +369,12 @@ mod tests {
     assert!(config.group_aggregator.is_none());
   }
 
-  #[test]
-  fn test_aggregator_shutdown() {
+  #[tokio::test]
+  async fn test_aggregator_shutdown() {
     use crate::rdb::RedisBroker;
     let redis_connection_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
 
-    let broker = Arc::new(RedisBroker::new(redis_connection_config).unwrap());
+    let broker = Arc::new(RedisBroker::new(redis_connection_config).await.unwrap());
     let config = AggregatorConfig::default();
     let aggregator = Aggregator::new(broker, config);
 
@@ -406,11 +406,11 @@ mod tests {
     assert_eq!(aggregated.get_payload(), b"aggregated");
   }
 
-  #[test]
-  fn test_group_aggregator_with_config() {
+  #[tokio::test]
+  async fn test_group_aggregator_with_config() {
     use crate::rdb::RedisBroker;
     let redis_connection_config = RedisConnectionConfig::single("redis://localhost:6379").unwrap();
-    let broker = Arc::new(RedisBroker::new(redis_connection_config).unwrap());
+    let broker = Arc::new(RedisBroker::new(redis_connection_config).await.unwrap());
 
     // 创建带有 GroupAggregator 的配置
     // Create config with GroupAggregator
