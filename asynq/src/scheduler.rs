@@ -67,14 +67,15 @@ use cron::Schedule;
 use prost::Message;
 use std::collections::HashMap;
 use std::str::FromStr;
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tokio::sync::Notify;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
 
 /// Represents a periodic task to be scheduled.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct PeriodicTask {
   /// 任务名称，作为唯一标识
   pub name: String,
@@ -134,19 +135,22 @@ impl PeriodicTask {
   }
 }
 
+/// Type alias for scheduler task handles (main scheduling loop, heartbeat loop)
+type SchedulerHandles = Arc<tokio::sync::Mutex<Option<(JoinHandle<()>, JoinHandle<()>)>>>;
+
 /// 周期性任务调度器
 pub struct Scheduler {
   client: Arc<Client>,
   /// 调度器唯一 id
   id: String,
   /// 存储所有任务的哈希表（entry_id -> PeriodicTask）
-  tasks: Arc<Mutex<HashMap<String, PeriodicTask>>>,
+  tasks: Arc<RwLock<HashMap<String, PeriodicTask>>>,
   /// 运行状态标志
-  running: Arc<Mutex<bool>>,
+  running: Arc<AtomicBool>,
   /// 通知机制，用于唤醒调度器
   notify: Arc<Notify>,
   /// 后台运行的任务句柄
-  handle: Option<JoinHandle<()>>,
+  handles: SchedulerHandles,
   /// 心跳间隔
   heartbeat_interval: Duration,
 }
@@ -166,10 +170,10 @@ impl Scheduler {
     Ok(Self {
       client,
       id,
-      tasks: Arc::new(Mutex::new(HashMap::new())),
-      running: Arc::new(Mutex::new(false)),
+      tasks: Arc::new(RwLock::new(HashMap::new())),
+      running: Arc::new(AtomicBool::new(false)),
       notify: Arc::new(Notify::new()),
-      handle: None,
+      handles: Arc::new(tokio::sync::Mutex::new(None)),
       heartbeat_interval: heartbeat_interval.unwrap_or(Duration::from_secs(10)),
     })
   }
@@ -185,7 +189,7 @@ impl Scheduler {
     task.next_tick = task.schedule.upcoming(Utc).next();
     let mut guard = self
       .tasks
-      .lock()
+      .write()
       .map_err(|e| anyhow::anyhow!("lock poisoned: {e}"))?;
     guard.insert(entry_id.clone(), task);
     drop(guard);
@@ -197,7 +201,7 @@ impl Scheduler {
   pub async fn unregister(&self, entry_id: &str) -> anyhow::Result<()> {
     let mut guard = self
       .tasks
-      .lock()
+      .write()
       .map_err(|e| anyhow::anyhow!("lock poisoned: {e}"))?;
     guard.remove(entry_id);
     drop(guard);
@@ -207,35 +211,38 @@ impl Scheduler {
 
   /// 列出所有任务的名称
   pub fn list_tasks(&self) -> Vec<String> {
-    match self.tasks.lock() {
+    match self.tasks.read() {
       Ok(tasks) => tasks.keys().cloned().collect(),
       Err(_) => vec![],
     }
   }
 
   /// 启动调度器，主循环和心跳分离
-  pub fn start(&mut self) {
+  /// 这个方法现在是 pub(crate)，只能被 PeriodicTaskManager 调用
+  /// 在测试环境中也可以直接调用
+  #[cfg_attr(not(test), doc(hidden))]
+  pub async fn start(&self) {
+    // Prevent double start
+    if self.running.swap(true, Ordering::SeqCst) {
+      return;
+    }
+    
     let tasks = self.tasks.clone();
     let running = self.running.clone();
     let notify = self.notify.clone();
     let client = self.client.clone();
     let heartbeat_interval = self.heartbeat_interval;
-    if let Ok(mut run_guard) = running.lock() {
-      *run_guard = true;
-    }
-    self.handle = Some(tokio::spawn(async move {
-      use chrono::Utc;
+    
+    let main_handle = tokio::spawn(async move {
       loop {
-        if let Ok(run_guard) = running.lock() {
-          if !*run_guard {
-            break;
-          }
+        if !running.load(Ordering::Relaxed) {
+          break;
         }
         let now = Utc::now();
         let mut min_next: Option<DateTime<Utc>> = None;
         let mut due_entries = Vec::new();
         {
-          if let Ok(mut tasks) = tasks.lock() {
+          if let Ok(mut tasks) = tasks.write() {
             for (entry_id, task) in tasks.iter_mut() {
               let next_tick = task.next_tick;
               if let Some(next) = next_tick {
@@ -285,13 +292,18 @@ impl Scheduler {
             _ = notify.notified() => {},
         }
       }
-    }));
+    });
+    
     // 启动心跳循环
-    self.spawn_heartbeat();
+    let heartbeat_handle = self.spawn_heartbeat();
+    
+    // Store handles
+    let mut handles_guard = self.handles.lock().await;
+    *handles_guard = Some((main_handle, heartbeat_handle));
   }
 
   /// 心跳循环，定期写入所有 entry 到 redis
-  fn spawn_heartbeat(&self) {
+  fn spawn_heartbeat(&self) -> JoinHandle<()> {
     let tasks = self.tasks.clone();
     let running = self.running.clone();
     let client = self.client.clone();
@@ -303,10 +315,13 @@ impl Scheduler {
       loop {
         tokio::select! {
           _ = ticker.tick() => {
+            if !running.load(Ordering::Relaxed) {
+              break;
+            }
             // 快照写入 redis
             let mut all_entries = Vec::new();
             {
-              if let Ok(tasks) = tasks.lock() {
+              if let Ok(tasks) = tasks.read() {
                 for (entry_id, task) in tasks.iter() {
                   let next_tick = task.next_tick;
                   let entry = SchedulerEntry {
@@ -327,9 +342,8 @@ impl Scheduler {
             }
             let _ = broker.write_scheduler_entries(&all_entries, &scheduler_id, (heartbeat_interval * 2).as_secs()).await;
           }
-          // 退出信号
           _ = async {
-            while running.lock().map(|g| *g).unwrap_or(false) {
+            while running.load(Ordering::Relaxed) {
               tokio::time::sleep(heartbeat_interval).await;
             }
           } => {
@@ -339,7 +353,7 @@ impl Scheduler {
           }
         }
       }
-    });
+    })
   }
 
   /// 查询所有注册的 SchedulerEntry，兼容 Go 版 asynq Inspector
@@ -375,14 +389,24 @@ impl Scheduler {
   }
 
   /// 停止调度器并清理 redis entry
-  pub async fn stop(&mut self) {
-    if let Ok(mut run_guard) = self.running.lock() {
-      *run_guard = false;
-    }
+  /// 这个方法现在是 pub(crate)，只能被 PeriodicTaskManager 调用
+  /// 在测试环境中也可以直接调用
+  #[cfg_attr(not(test), doc(hidden))]
+  pub async fn stop(&self) {
+    self.running.store(false, Ordering::SeqCst);
     self.notify.notify_one();
-    if let Some(handle) = self.handle.take() {
-      let _ = handle.await;
+    
+    // Take the handles and wait for them
+    let handles = {
+      let mut handles_guard = self.handles.lock().await;
+      handles_guard.take()
+    };
+    
+    if let Some((main_handle, heartbeat_handle)) = handles {
+      let _ = main_handle.await;
+      let _ = heartbeat_handle.await;
     }
+    
     // 正确清理 redis 中的 entry（只需用 scheduler_id）
     let broker = self.client.get_broker();
     let _ = broker.clear_scheduler_entries(&self.id).await;

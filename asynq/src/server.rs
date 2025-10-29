@@ -148,10 +148,9 @@ impl Server {
     config.validate()?;
     // 创建 RedisBroker 实例
     // Create RedisBroker instance
-    let mut redis_broker = RedisBroker::new(redis_connection_config)?;
+    let redis_broker = RedisBroker::new(redis_connection_config).await?;
     // 初始化脚本
     // Initialize scripts
-    redis_broker.init_scripts().await?;
     let broker = Arc::new(redis_broker);
 
     // 与 Go heartbeater 初始化保持一致：获取 host、pid、生成 uuid
@@ -218,133 +217,15 @@ impl Server {
     // Register the server
     self.register_server().await?;
 
-    // 使用新的 HeartbeatMeta + Heartbeater
-    // Use new HeartbeatMeta + Heartbeater
-    let meta = HeartbeatMeta {
-      host: self.host.clone(),
-      pid: self.pid,
-      server_uuid: self.server_uuid.clone(),
-      concurrency: self.config.concurrency,
-      queues: self.config.queues.clone(),
-      strict_priority: self.config.strict_priority,
-      started: std::time::SystemTime::now(),
-    };
-    let hb = Arc::new(Heartbeat::new(
-      Arc::clone(&self.broker),
-      self.config.heartbeat_interval,
-      meta,
-      Arc::clone(&self.active_workers),
-    ));
-    let hb_handle = hb.clone().start();
-    self
-      .components
-      .push((hb as Arc<dyn ComponentLifecycle + Send + Sync>, hb_handle));
-
-    // 启动新的组件（按 Go asynq 架构）
-    // Start new components (following Go asynq architecture)
-
-    // 启动 Janitor - 清理过期任务和死亡服务器
-    // Start Janitor - cleanup expired tasks and dead servers
-    let janitor_config = crate::components::janitor::JanitorConfig {
-      interval: self.config.janitor_interval,
-      batch_size: self.config.janitor_batch_size,
-      queues: self.config.queues.keys().cloned().collect(),
-    };
-    let janitor = Arc::new(crate::components::janitor::Janitor::new(
-      Arc::clone(&self.broker),
-      janitor_config,
-    ));
-    let janitor_handle = janitor.clone().start();
-    self.components.push((
-      janitor as Arc<dyn ComponentLifecycle + Send + Sync>,
-      janitor_handle,
-    ));
-    // 启动 Subscriber - 订阅事件
-    // Start Subscriber - subscribe to events
-    let mut subscriber = crate::components::subscriber::Subscriber::new(
-      Arc::clone(&self.broker),
-      SubscriberConfig::default(),
-    );
-
-    // 获取事件接收器用于处理取消事件
-    // Get event receiver for handling cancellation events
-    let event_rx = subscriber.take_receiver();
-
-    let subscriber = Arc::new(subscriber);
-    let subscriber_handle = subscriber.clone().start();
-    self.components.push((
-      subscriber as Arc<dyn ComponentLifecycle + Send + Sync>,
-      subscriber_handle,
-    ));
-
-    // 启动 Recoverer - 恢复孤儿任务
-    // Start Recoverer - recover orphaned tasks
-    let recoverer_config = crate::components::recoverer::RecovererConfig {
-      interval: self.config.janitor_interval, // 使用相同的间隔
-      queues: self.config.queues.keys().cloned().collect(),
-    };
-    let recoverer = Arc::new(crate::components::recoverer::Recoverer::new(
-      Arc::clone(&self.broker),
-      recoverer_config,
-    ));
-    let recoverer_handle = recoverer.clone().start();
-    self.components.push((
-      recoverer as Arc<dyn ComponentLifecycle + Send + Sync>,
-      recoverer_handle,
-    ));
-
-    // 启动 Forwarder - 转发调度任务
-    // Start Forwarder - forward scheduled tasks
-    let forwarder_config = crate::components::forwarder::ForwarderConfig {
-      interval: self.config.delayed_task_check_interval,
-      queues: self.config.queues.keys().cloned().collect(),
-    };
-    let forwarder = Arc::new(crate::components::forwarder::Forwarder::new(
-      Arc::clone(&self.broker),
-      forwarder_config,
-    ));
-    let forwarder_handle = forwarder.clone().start();
-    self.components.push((
-      forwarder as Arc<dyn ComponentLifecycle + Send + Sync>,
-      forwarder_handle,
-    ));
-
-    // 启动 Healthcheck - 健康检查
-    // Start Healthcheck - health check
-    let healthcheck_config = crate::components::healthcheck::HealthcheckConfig {
-      interval: self.config.health_check_interval,
-    };
-    let healthcheck = Arc::new(crate::components::healthcheck::Healthcheck::new(
-      Arc::clone(&self.broker),
-      healthcheck_config,
-    ));
-    let healthcheck_handle = healthcheck.clone().start();
-    self.components.push((
-      healthcheck as Arc<dyn ComponentLifecycle + Send + Sync>,
-      healthcheck_handle,
-    ));
-
-    // 启动 Aggregator - 聚合任务到组中
-    // Start Aggregator - aggregate tasks into groups
-    if self.config.group_aggregator_enabled {
-      let aggregator_config = crate::components::aggregator::AggregatorConfig {
-        interval: Duration::from_secs(5),
-        queues: self.config.queues.keys().cloned().collect(),
-        grace_period: self.config.group_grace_period,
-        max_delay: self.config.group_max_delay,
-        max_size: self.config.group_max_size,
-        group_aggregator: self.group_aggregator.clone(),
-      };
-      let aggregator = Arc::new(crate::components::aggregator::Aggregator::new(
-        Arc::clone(&self.broker),
-        aggregator_config,
-      ));
-      let aggregator_handle = aggregator.clone().start();
-      self.components.push((
-        aggregator as Arc<dyn ComponentLifecycle + Send + Sync>,
-        aggregator_handle,
-      ));
-    }
+    // 初始化各个组件
+    // Initialize components
+    self.init_heartbeat();
+    self.init_janitor();
+    let event_rx = self.init_subscriber();
+    self.init_recoverer();
+    self.init_forwarder();
+    self.init_healthcheck();
+    self.init_aggregator();
 
     // 创建处理器并启动
     // Create and start processor
@@ -506,6 +387,150 @@ impl Server {
       .broker
       .write_server_state(&server_info, Duration::from_secs(3600))
       .await
+  }
+
+  /// 初始化心跳组件
+  /// Initialize heartbeat component
+  fn init_heartbeat(&mut self) {
+    let meta = HeartbeatMeta {
+      host: self.host.clone(),
+      pid: self.pid,
+      server_uuid: self.server_uuid.clone(),
+      concurrency: self.config.concurrency,
+      queues: self.config.queues.clone(),
+      strict_priority: self.config.strict_priority,
+      started: std::time::SystemTime::now(),
+    };
+    let hb = Arc::new(Heartbeat::new(
+      Arc::clone(&self.broker),
+      self.config.heartbeat_interval,
+      meta,
+      Arc::clone(&self.active_workers),
+    ));
+    let hb_handle = hb.clone().start();
+    self
+      .components
+      .push((hb as Arc<dyn ComponentLifecycle + Send + Sync>, hb_handle));
+  }
+
+  /// 初始化清理器组件
+  /// Initialize janitor component
+  fn init_janitor(&mut self) {
+    let janitor_config = crate::components::janitor::JanitorConfig {
+      interval: self.config.janitor_interval,
+      batch_size: self.config.janitor_batch_size,
+      queues: self.config.queues.keys().cloned().collect(),
+    };
+    let janitor = Arc::new(crate::components::janitor::Janitor::new(
+      Arc::clone(&self.broker),
+      janitor_config,
+    ));
+    let janitor_handle = janitor.clone().start();
+    self.components.push((
+      janitor as Arc<dyn ComponentLifecycle + Send + Sync>,
+      janitor_handle,
+    ));
+  }
+
+  /// 初始化订阅器组件
+  /// Initialize subscriber component
+  fn init_subscriber(
+    &mut self,
+  ) -> Option<tokio::sync::mpsc::Receiver<crate::components::subscriber::SubscriptionEvent>> {
+    let mut subscriber = crate::components::subscriber::Subscriber::new(
+      Arc::clone(&self.broker),
+      SubscriberConfig::default(),
+    );
+
+    // 获取事件接收器用于处理取消事件
+    // Get event receiver for handling cancellation events
+    let event_rx = subscriber.take_receiver();
+
+    let subscriber = Arc::new(subscriber);
+    let subscriber_handle = subscriber.clone().start();
+    self.components.push((
+      subscriber as Arc<dyn ComponentLifecycle + Send + Sync>,
+      subscriber_handle,
+    ));
+
+    event_rx
+  }
+
+  /// 初始化恢复器组件
+  /// Initialize recoverer component
+  fn init_recoverer(&mut self) {
+    let recoverer_config = crate::components::recoverer::RecovererConfig {
+      interval: self.config.janitor_interval, // 使用相同的间隔
+      queues: self.config.queues.keys().cloned().collect(),
+    };
+    let recoverer = Arc::new(crate::components::recoverer::Recoverer::new(
+      Arc::clone(&self.broker),
+      recoverer_config,
+    ));
+    let recoverer_handle = recoverer.clone().start();
+    self.components.push((
+      recoverer as Arc<dyn ComponentLifecycle + Send + Sync>,
+      recoverer_handle,
+    ));
+  }
+
+  /// 初始化转发器组件
+  /// Initialize forwarder component
+  fn init_forwarder(&mut self) {
+    let forwarder_config = crate::components::forwarder::ForwarderConfig {
+      interval: self.config.delayed_task_check_interval,
+      queues: self.config.queues.keys().cloned().collect(),
+    };
+    let forwarder = Arc::new(crate::components::forwarder::Forwarder::new(
+      Arc::clone(&self.broker),
+      forwarder_config,
+    ));
+    let forwarder_handle = forwarder.clone().start();
+    self.components.push((
+      forwarder as Arc<dyn ComponentLifecycle + Send + Sync>,
+      forwarder_handle,
+    ));
+  }
+
+  /// 初始化健康检查组件
+  /// Initialize healthcheck component
+  fn init_healthcheck(&mut self) {
+    let healthcheck_config = crate::components::healthcheck::HealthcheckConfig {
+      interval: self.config.health_check_interval,
+    };
+    let healthcheck = Arc::new(crate::components::healthcheck::Healthcheck::new(
+      Arc::clone(&self.broker),
+      healthcheck_config,
+    ));
+    let healthcheck_handle = healthcheck.clone().start();
+    self.components.push((
+      healthcheck as Arc<dyn ComponentLifecycle + Send + Sync>,
+      healthcheck_handle,
+    ));
+  }
+
+  /// 初始化聚合器组件
+  /// Initialize aggregator component
+  fn init_aggregator(&mut self) {
+    if self.config.group_aggregator_enabled {
+      let aggregator_config = crate::components::aggregator::AggregatorConfig {
+        interval: Duration::from_secs(5),
+        queues: self.config.queues.keys().cloned().collect(),
+        grace_period: self.config.group_grace_period,
+        max_delay: self.config.group_max_delay,
+        max_size: self.config.group_max_size,
+        group_aggregator: self.group_aggregator.clone(),
+      };
+      let aggregator = Arc::new(crate::components::aggregator::Aggregator::new(
+        Arc::clone(&self.broker),
+        aggregator_config,
+      ));
+      let aggregator_handle = aggregator.clone().start();
+      self.components.push((
+        aggregator as Arc<dyn ComponentLifecycle + Send + Sync>,
+        aggregator_handle,
+      ));
+    }
   }
 
   /// 检查任务是否已过期（基于 deadline）
