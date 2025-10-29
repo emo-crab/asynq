@@ -144,7 +144,7 @@ impl RedisBroker {
 
     let mut keys = Vec::new();
     for date in dates {
-      let naive_datetime = date.and_hms_opt(0, 0, 0).unwrap();
+      let naive_datetime = date.and_hms_opt(0, 0, 0).unwrap_or_default();
       let dt = chrono::DateTime::<Utc>::from_naive_utc_and_offset(naive_datetime, Utc);
       let processed_key = keys::processed_key(queue, &dt);
       let failed_key = keys::failed_key(queue, &dt);
@@ -335,7 +335,12 @@ impl RedisBroker {
         let msg: Vec<u8> = redis::from_redis_value(msg_val)?;
         let score: f64 = redis::from_redis_value(score_val)?;
         let next_process_at = if score > 0.0 {
-          Some(Utc.timestamp_opt(score as i64, 0).single().unwrap())
+          Some(
+            Utc
+              .timestamp_opt(score as i64, 0)
+              .single()
+              .unwrap_or_default(),
+          )
         } else {
           None
         };
@@ -759,7 +764,7 @@ impl RedisBroker {
 
     // 获取所有队列名
     // Get all queue names
-    let queue_pattern = format!("{}*", keys::QUEUE_PREFIX);
+    let queue_pattern = format!("{}{}*", keys::QUEUE_PREFIX, keys::QUEUE_START);
     let queue_keys: Vec<String> = conn.keys(&queue_pattern).await?;
 
     let mut all_stats = Vec::new();
@@ -767,7 +772,9 @@ impl RedisBroker {
     for queue_key in queue_keys {
       // 从键名中提取队列名
       // Extract queue name from key
-      if let Some(queue_name) = queue_key.strip_prefix(keys::QUEUE_PREFIX) {
+      if let Some(queue_name) =
+        queue_key.strip_prefix(&format!("{}{}", keys::QUEUE_PREFIX, keys::QUEUE_START))
+      {
         let stats = self.get_queue_stats(queue_name).await?;
         all_stats.push(stats);
       }
@@ -783,7 +790,7 @@ impl RedisBroker {
 
     // 获取所有队列键模式
     // Get all queue key patterns
-    let queue_pattern = format!("{}*", keys::QUEUE_PREFIX);
+    let queue_pattern = format!("{}{}*", keys::QUEUE_PREFIX, keys::QUEUE_START);
     let queue_keys: Vec<String> = conn.keys(&queue_pattern).await?;
 
     let mut queues = std::collections::HashSet::new();
@@ -791,8 +798,11 @@ impl RedisBroker {
     for key in queue_keys {
       // 从键名中提取队列名
       // Extract queue name from key
-      if let Some(after_prefix) = key.strip_prefix(keys::QUEUE_PREFIX) {
+      if let Some(after_prefix) =
+        key.strip_prefix(&format!("{}{}", keys::QUEUE_PREFIX, keys::QUEUE_START))
+      {
         if let Some(queue_name) = after_prefix.split(':').next() {
+          let queue_name = queue_name.trim_end_matches(keys::QUEUE_END);
           if !queue_name.is_empty() {
             queues.insert(queue_name.to_string());
           }
@@ -810,7 +820,9 @@ impl RedisBroker {
 
     // 将队列添加到暂停队列集合中
     // Add the queue to the paused queue set
-    let _: i32 = conn.sadd(keys::PAUSED_QUEUES, queue).await?;
+    let key = keys::paused_key(queue);
+    let now = Utc::now().timestamp();
+    let _: i32 = conn.set_nx(key, now).await?;
 
     Ok(())
   }
@@ -822,7 +834,8 @@ impl RedisBroker {
 
     // 从暂停队列集合中移除队列
     // Remove the queue from the paused queue set
-    let _: i32 = conn.srem(keys::PAUSED_QUEUES, queue).await?;
+    let key = keys::paused_key(queue);
+    let _: i32 = conn.del(key).await?;
 
     Ok(())
   }
@@ -836,21 +849,10 @@ impl RedisBroker {
 
     // 检查队列是否在暂停集合中
     // Check if the queue is in the paused set
-    let is_member: bool = conn.sismember(keys::PAUSED_QUEUES, queue).await?;
+    let key = keys::paused_key(queue);
+    let exists: bool = conn.exists(key).await?;
 
-    Ok(is_member)
-  }
-
-  /// 获取所有暂停的队列。
-  /// Get all paused queues.
-  pub async fn get_paused_queues(&self) -> Result<Vec<String>> {
-    let mut conn = self.get_async_connection().await?;
-
-    // 获取所有暂停的队列
-    // Get all paused queues
-    let paused_queues: Vec<String> = conn.smembers(keys::PAUSED_QUEUES).await?;
-
-    Ok(paused_queues)
+    Ok(exists)
   }
 
   /// 获取任务结果。

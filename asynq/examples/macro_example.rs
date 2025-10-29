@@ -8,7 +8,7 @@
 //! cargo run --example macro_example --features macros
 //! ```
 
-use asynq::redis::RedisConnectionConfig;
+use asynq::redis::RedisConnectionType;
 use asynq::{
   config::ServerConfig, error::Result, register_async_handlers, register_handlers,
   serve_mux::ServeMux, server::ServerBuilder, task::Task, task_handler, task_handler_async,
@@ -122,7 +122,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   println!("🔗 Redis URL: {redis_url}");
 
   // Create Redis configuration
-  let redis_config = RedisConnectionConfig::single(redis_url)?;
+  let redis_config = RedisConnectionType::single(redis_url)?;
 
   // Create queue configuration
   let mut queues = HashMap::new();

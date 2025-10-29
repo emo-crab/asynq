@@ -55,6 +55,12 @@ pub struct ServerConfig {
   /// 是否启用组聚合器
   /// Whether to enable group aggregator
   pub group_aggregator_enabled: bool,
+  /// 是否启用周期性任务管理器
+  /// Whether to enable periodic task manager
+  pub periodic_task_manager_enabled: bool,
+  /// 周期性任务管理器检查间隔
+  /// Periodic task manager check interval
+  pub periodic_task_manager_check_interval: Duration,
 }
 
 impl Default for ServerConfig {
@@ -77,6 +83,8 @@ impl Default for ServerConfig {
       janitor_batch_size: 100,
       heartbeat_interval: Duration::from_secs(5),
       group_aggregator_enabled: false,
+      periodic_task_manager_enabled: false,
+      periodic_task_manager_check_interval: Duration::from_secs(60),
     }
   }
 }
@@ -203,6 +211,20 @@ impl ServerConfig {
   /// Enable group aggregator
   pub fn enable_group_aggregator(mut self, enabled: bool) -> Self {
     self.group_aggregator_enabled = enabled;
+    self
+  }
+
+  /// 启用周期性任务管理器
+  /// Enable periodic task manager
+  pub fn enable_periodic_task_manager(mut self, enabled: bool) -> Self {
+    self.periodic_task_manager_enabled = enabled;
+    self
+  }
+
+  /// 设置周期性任务管理器检查间隔
+  /// Set periodic task manager check interval
+  pub fn periodic_task_manager_check_interval(mut self, interval: Duration) -> Self {
+    self.periodic_task_manager_check_interval = interval;
     self
   }
 
@@ -431,5 +453,35 @@ mod tests {
     assert_eq!(config.group_grace_period, Duration::from_secs(30));
     assert_eq!(config.group_max_delay, Some(Duration::from_secs(120)));
     assert_eq!(config.group_max_size, Some(50));
+  }
+
+  #[test]
+  fn test_periodic_task_manager_enabled_in_config() {
+    // Test that periodic task manager can be enabled
+    let config = ServerConfig::new().enable_periodic_task_manager(true);
+
+    assert!(config.periodic_task_manager_enabled);
+  }
+
+  #[test]
+  fn test_periodic_task_manager_disabled_by_default() {
+    // Test that periodic task manager is disabled by default
+    let config = ServerConfig::default();
+
+    assert!(!config.periodic_task_manager_enabled);
+  }
+
+  #[test]
+  fn test_periodic_task_manager_check_interval() {
+    // Test that periodic task manager check interval can be configured
+    let config = ServerConfig::new()
+      .periodic_task_manager_check_interval(Duration::from_secs(30))
+      .enable_periodic_task_manager(true);
+
+    assert!(config.periodic_task_manager_enabled);
+    assert_eq!(
+      config.periodic_task_manager_check_interval,
+      Duration::from_secs(30)
+    );
   }
 }

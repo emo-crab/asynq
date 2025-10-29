@@ -11,12 +11,12 @@ use uuid::Uuid;
 
 use asynq::base::{keys, Broker};
 use asynq::proto::ServerInfo;
-use asynq::{rdb::RedisBroker, redis::RedisConnectionConfig};
+use asynq::{rdb::RedisBroker, redis::RedisConnectionType};
 
 #[tokio::test]
 async fn test_server_registration() -> Result<(), Box<dyn std::error::Error>> {
   // Skip test if no Redis available
-  let redis_config = match RedisConnectionConfig::single("redis://localhost:6379") {
+  let redis_config = match RedisConnectionType::single("redis://localhost:6379") {
     Ok(config) => config,
     Err(_) => {
       println!("Skipping test - Redis not available");
@@ -24,7 +24,7 @@ async fn test_server_registration() -> Result<(), Box<dyn std::error::Error>> {
     }
   };
 
-  let broker = RedisBroker::new(redis_config)?;
+  let broker = RedisBroker::new(redis_config).await?;
 
   // Test server info
   let hostname = "test-host";

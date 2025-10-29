@@ -46,7 +46,7 @@ impl redis::aio::ConnectionLike for RedisConnection {
 /// Redis 连接类型
 /// Redis connection types
 #[derive(Debug, Clone)]
-pub enum RedisConnectionConfig {
+pub enum RedisConnectionType {
   /// 单机连接
   /// Standalone connection
   Single(ConnectionInfo),
@@ -56,7 +56,7 @@ pub enum RedisConnectionConfig {
   Cluster(Vec<ConnectionInfo>),
 }
 
-impl RedisConnectionConfig {
+impl RedisConnectionType {
   /// 创建单机连接
   /// Create a standalone connection
   pub fn single<T: IntoConnectionInfo>(connection_info: T) -> Result<Self> {

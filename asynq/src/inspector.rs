@@ -11,7 +11,7 @@ use crate::error::Result;
 use crate::proto::ServerInfo;
 use crate::rdb::inspect::Pagination;
 use crate::rdb::RedisBroker;
-use crate::redis::RedisConnectionConfig;
+use crate::redis::RedisConnectionType;
 use crate::task::{DailyStats, QueueInfo, QueueStats, TaskInfo};
 use std::sync::Arc;
 
@@ -22,11 +22,10 @@ pub struct Inspector {
 }
 
 impl Inspector {
-  /// 通过 RedisConnectionConfig 创建 Inspector
-  /// Create via RedisConnectionConfig Inspector
-  pub async fn new(redis_connection_config: RedisConnectionConfig) -> Result<Self> {
-    let mut broker = RedisBroker::new(redis_connection_config)?;
-    broker.init_scripts().await?;
+  /// 通过 RedisConnectionType 创建 Inspector
+  /// Create via RedisConnectionType Inspector
+  pub async fn new(redis_connection_config: RedisConnectionType) -> Result<Self> {
+    let broker = RedisBroker::new(redis_connection_config).await?;
     Ok(Self {
       rdb: Arc::new(broker),
     })
@@ -302,11 +301,6 @@ impl Inspector {
     self.rdb.is_queue_paused(queue).await
   }
 
-  /// 获取暂停的队列列表
-  /// Get the list of paused queues
-  pub async fn get_paused_queues(&self) -> Result<Vec<String>> {
-    self.rdb.get_paused_queues().await
-  }
   /// 获取任务结果
   /// Get the result of a task
   pub async fn get_task_result(&self, queue: &str, task_id: &str) -> Result<Option<Vec<u8>>> {

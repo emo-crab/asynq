@@ -56,10 +56,10 @@
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // 创建 broker 和其他必要组件
 //! // Create broker and other necessary components
-//! # use asynq::redis::RedisConnectionConfig;
+//! # use asynq::redis::RedisConnectionType;
 //! # use asynq::rdb::RedisBroker;
-//! # let redis_config = RedisConnectionConfig::single("redis://localhost:6379")?;
-//! # let broker = Arc::new(RedisBroker::new(redis_config)?);
+//! # let redis_config = RedisConnectionType::single("redis://localhost:6379")?;
+//! # let broker = Arc::new(RedisBroker::new(redis_config).await?);
 //!
 //! let mut queues = HashMap::new();
 //! queues.insert("default".to_string(), 3);
@@ -141,15 +141,17 @@ impl CancellationMap {
   /// 添加任务取消令牌
   /// Add task cancellation token
   pub fn add(&self, task_id: String, token: CancellationToken) {
-    let mut tasks = self.tasks.lock().unwrap();
-    tasks.insert(task_id, token);
+    if let Ok(mut tasks) = self.tasks.lock() {
+      tasks.insert(task_id, token);
+    };
   }
 
   /// 移除任务取消令牌
   /// Remove task cancellation token
   pub fn remove(&self, task_id: &str) {
-    let mut tasks = self.tasks.lock().unwrap();
-    tasks.remove(task_id);
+    if let Ok(mut tasks) = self.tasks.lock() {
+      tasks.remove(task_id);
+    }
   }
 
   /// 取消指定的任务
@@ -159,20 +161,25 @@ impl CancellationMap {
   /// Corresponds to Go's cancelations.Cancel(taskID)
   pub fn cancel(&self, task_id: &str) -> bool {
     tracing::info!("canceling task {}", task_id);
-    let tasks = self.tasks.lock().unwrap();
-    if let Some(token) = tasks.get(task_id) {
-      token.cancel();
-      true
+    if let Ok(tasks) = self.tasks.lock() {
+      if let Some(token) = tasks.get(task_id) {
+        token.cancel();
+        true
+      } else {
+        false
+      }
     } else {
       false
     }
   }
-
   /// 获取正在运行的任务数量
   /// Get the number of running tasks
   pub fn len(&self) -> usize {
-    let tasks = self.tasks.lock().unwrap();
-    tasks.len()
+    if let Ok(tasks) = self.tasks.lock() {
+      tasks.len()
+    } else {
+      0
+    }
   }
 
   /// 检查是否为空
@@ -285,176 +292,177 @@ impl Processor {
     let task_check_interval = self.task_check_interval;
     let active_workers = Arc::clone(&self.active_workers);
     let cancelations = self.cancellations.clone();
-    let mut quit_rx = self.quit_rx.take().unwrap();
-
-    let handle = tokio::spawn(async move {
-      loop {
-        // 检查是否收到退出信号
-        // Check if quit signal received
-        if quit_rx.try_recv().is_ok() {
-          tracing::debug!("Processor received quit signal");
-          break;
-        }
-
-        if !running.load(Ordering::SeqCst) {
-          break;
-        }
-
-        // 尝试获取信号量令牌
-        // Try to acquire semaphore permit
-        let permit = match sema.clone().try_acquire_owned() {
-          Ok(permit) => permit,
-          Err(_) => {
-            // 没有可用的工作者槽位，短暂等待
-            // No available worker slots, wait briefly
-            tokio::time::sleep(Duration::from_millis(100)).await;
-            continue;
+    if let Some(mut quit_rx) = self.quit_rx.take() {
+      let handle = tokio::spawn(async move {
+        loop {
+          // 检查是否收到退出信号
+          // Check if quit signal received
+          if quit_rx.try_recv().is_ok() {
+            tracing::debug!("Processor received quit signal");
+            break;
           }
-        };
 
-        // 获取队列列表
-        // Get queue list
-        let queues = get_queues(&queue_config, ordered_queues.as_ref());
+          if !running.load(Ordering::SeqCst) {
+            break;
+          }
 
-        // 从队列中取出任务
-        // Dequeue a task from the queue
-        match broker.dequeue(&queues).await {
-          Ok(Some(task_msg)) => {
-            // 增加活跃工作者计数
-            // Increment active worker count
-            active_workers.fetch_add(1, Ordering::Relaxed);
+          // 尝试获取信号量令牌
+          // Try to acquire semaphore permit
+          let permit = match sema.clone().try_acquire_owned() {
+            Ok(permit) => permit,
+            Err(_) => {
+              // 没有可用的工作者槽位，短暂等待
+              // No available worker slots, wait briefly
+              tokio::time::sleep(Duration::from_millis(100)).await;
+              continue;
+            }
+          };
 
-            let handler = Arc::clone(&handler);
-            let broker = Arc::clone(&broker);
-            let active_workers = Arc::clone(&active_workers);
-            let cancelations = cancelations.clone();
+          // 获取队列列表
+          // Get queue list
+          let queues = get_queues(&queue_config, ordered_queues.as_ref());
 
-            // 在新的任务中处理
-            // Process in a new task
-            tokio::spawn(async move {
-              let _permit = permit; // 持有许可直到任务完成
+          // 从队列中取出任务
+          // Dequeue a task from the queue
+          match broker.dequeue(&queues).await {
+            Ok(Some(task_msg)) => {
+              // 增加活跃工作者计数
+              // Increment active worker count
+              active_workers.fetch_add(1, Ordering::Relaxed);
 
-              // 创建任务
-              // Create task
-              let task = match Task::new(&task_msg.r#type, &task_msg.payload) {
-                Ok(task) => task,
-                Err(e) => {
-                  tracing::error!("Failed to create task: {}", e);
-                  active_workers.fetch_sub(1, Ordering::Relaxed);
-                  return;
-                }
-              };
+              let handler = Arc::clone(&handler);
+              let broker = Arc::clone(&broker);
+              let active_workers = Arc::clone(&active_workers);
+              let cancelations = cancelations.clone();
 
-              // 创建取消令牌
-              // Create cancellation token
-              let cancel_token = CancellationToken::new();
-              let task_id = task_msg.id.clone();
+              // 在新的任务中处理
+              // Process in a new task
+              tokio::spawn(async move {
+                let _permit = permit; // 持有许可直到任务完成
 
-              // 注册取消令牌
-              // Register cancellation token
-              cancelations.add(task_id.clone(), cancel_token.clone());
-
-              // 计算任务超时
-              // Calculate task timeout
-              let timeout_duration = calculate_task_timeout(&task_msg);
-
-              // 执行任务，支持超时和取消
-              // Execute task with timeout and cancellation support
-              let result = if let Some(timeout) = timeout_duration {
-                tokio::select! {
-                  // 任务执行
-                  // Task execution
-                  result = handler.process_task(task.clone()) => result,
-                  // 超时
-                  // Timeout
-                  _ = tokio::time::sleep(timeout) => {
-                    tracing::warn!("Task {} timed out after {:?}", task_id, timeout);
-                    Err(Error::other("Task execution timeout"))
+                // 创建任务
+                // Create task
+                let task = match Task::new(&task_msg.r#type, &task_msg.payload) {
+                  Ok(task) => task,
+                  Err(e) => {
+                    tracing::error!("Failed to create task: {}", e);
+                    active_workers.fetch_sub(1, Ordering::Relaxed);
+                    return;
                   }
-                  // 取消信号
-                  // Cancellation signal
-                  _ = cancel_token.cancelled() => {
-                    tracing::info!("Task {} was cancelled", task_id);
-                    Ok(())
-                  }
-                }
-              } else {
-                tokio::select! {
-                  // 任务执行
-                  // Task execution
-                  result = handler.process_task(task.clone()) => result,
-                  // 取消信号
-                  // Cancellation signal
-                  _ = cancel_token.cancelled() => {
-                    tracing::info!("Task {} was cancelled", task_id);
-                    Err(Error::other("Task cancelled"))
-                  }
-                }
-              };
+                };
 
-              // 移除取消令牌
-              // Remove cancellation token
-              cancelations.remove(&task_id);
+                // 创建取消令牌
+                // Create cancellation token
+                let cancel_token = CancellationToken::new();
+                let task_id = task_msg.id.clone();
 
-              // 处理结果
-              // Handle result
-              match result {
-                Ok(()) => {
-                  // 任务成功
-                  // Task succeeded
-                  if let Err(e) = broker.done(&task_msg).await {
-                    tracing::error!("Failed to mark task as done: {}", e);
-                  }
-                }
-                Err(e) => {
-                  // 任务失败，决定重试还是归档
-                  // Task failed, decide retry or archive
-                  if task_msg.retried < task_msg.retry {
-                    // 计算重试延迟
-                    // Calculate retry delay
-                    let retry_delay =
-                      calculate_retry_delay(task_msg.retried, task.options.retry_policy.as_ref());
-                    let retry_at =
-                      chrono::Utc::now() + chrono::Duration::seconds(retry_delay.as_secs() as i64);
+                // 注册取消令牌
+                // Register cancellation token
+                cancelations.add(task_id.clone(), cancel_token.clone());
 
-                    if let Err(e) = broker.requeue(&task_msg, retry_at, &e.to_string()).await {
-                      tracing::error!("Failed to requeue task: {}", e);
+                // 计算任务超时
+                // Calculate task timeout
+                let timeout_duration = calculate_task_timeout(&task_msg);
+
+                // 执行任务，支持超时和取消
+                // Execute task with timeout and cancellation support
+                let result = if let Some(timeout) = timeout_duration {
+                  tokio::select! {
+                    // 任务执行
+                    // Task execution
+                    result = handler.process_task(task.clone()) => result,
+                    // 超时
+                    // Timeout
+                    _ = tokio::time::sleep(timeout) => {
+                      tracing::warn!("Task {} timed out after {:?}", task_id, timeout);
+                      Err(Error::other("Task execution timeout"))
                     }
-                  } else {
-                    // 归档任务
-                    // Archive task
-                    if let Err(e) = broker.archive(&task_msg, &e.to_string()).await {
-                      tracing::error!("Failed to archive task: {}", e);
+                    // 取消信号
+                    // Cancellation signal
+                    _ = cancel_token.cancelled() => {
+                      tracing::info!("Task {} was cancelled", task_id);
+                      Ok(())
                     }
                   }
-                }
-              }
+                } else {
+                  tokio::select! {
+                    // 任务执行
+                    // Task execution
+                    result = handler.process_task(task.clone()) => result,
+                    // 取消信号
+                    // Cancellation signal
+                    _ = cancel_token.cancelled() => {
+                      tracing::info!("Task {} was cancelled", task_id);
+                      Err(Error::other("Task cancelled"))
+                    }
+                  }
+                };
 
-              // 减少活跃工作者计数
-              // Decrement active worker count
-              active_workers.fetch_sub(1, Ordering::Relaxed);
-            });
-          }
-          Ok(None) => {
-            // 没有任务，等待后重试
-            // No tasks, wait and retry
-            drop(permit); // 释放许可
-            tokio::time::sleep(task_check_interval).await;
-          }
-          Err(e) => {
-            // 出队错误
-            // Dequeue error
-            tracing::error!("Dequeue error: {}", e);
-            drop(permit); // 释放许可
-            tokio::time::sleep(Duration::from_secs(1)).await;
+                // 移除取消令牌
+                // Remove cancellation token
+                cancelations.remove(&task_id);
+
+                // 处理结果
+                // Handle result
+                match result {
+                  Ok(()) => {
+                    // 任务成功
+                    // Task succeeded
+                    if let Err(e) = broker.done(&task_msg).await {
+                      tracing::error!("Failed to mark task as done: {}", e);
+                    }
+                  }
+                  Err(e) => {
+                    // 任务失败，决定重试还是归档
+                    // Task failed, decide retry or archive
+                    if task_msg.retried < task_msg.retry {
+                      // 计算重试延迟
+                      // Calculate retry delay
+                      let retry_delay =
+                        calculate_retry_delay(task_msg.retried, task.options.retry_policy.as_ref());
+                      let retry_at = chrono::Utc::now()
+                        + chrono::Duration::seconds(retry_delay.as_secs() as i64);
+
+                      if let Err(e) = broker.requeue(&task_msg, retry_at, &e.to_string()).await {
+                        tracing::error!("Failed to requeue task: {}", e);
+                      }
+                    } else {
+                      // 归档任务
+                      // Archive task
+                      if let Err(e) = broker.archive(&task_msg, &e.to_string()).await {
+                        tracing::error!("Failed to archive task: {}", e);
+                      }
+                    }
+                  }
+                }
+
+                // 减少活跃工作者计数
+                // Decrement active worker count
+                active_workers.fetch_sub(1, Ordering::Relaxed);
+              });
+            }
+            Ok(None) => {
+              // 没有任务，等待后重试
+              // No tasks, wait and retry
+              drop(permit); // 释放许可
+              tokio::time::sleep(task_check_interval).await;
+            }
+            Err(e) => {
+              // 出队错误
+              // Dequeue error
+              tracing::error!("Dequeue error: {}", e);
+              drop(permit); // 释放许可
+              tokio::time::sleep(Duration::from_secs(1)).await;
+            }
           }
         }
-      }
 
-      tracing::debug!("Processor loop exited");
-    });
-
-    self.handle = Some(handle);
+        tracing::debug!("Processor loop exited");
+      });
+      self.handle = Some(handle);
+    } else {
+      self.handle = None;
+    };
   }
 
   /// 停止处理器（不等待工作者完成）

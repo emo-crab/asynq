@@ -9,7 +9,7 @@
 
 use async_trait::async_trait;
 use asynq::error::{Error, Result};
-use asynq::redis::RedisConnectionConfig;
+use asynq::redis::RedisConnectionType;
 use asynq::{
   components::aggregator::GroupAggregatorFunc,
   config::ServerConfig,
@@ -103,7 +103,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   let redis_url =
     std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
   println!("🔗 Using Redis URL: {redis_url}");
-  let redis_config = RedisConnectionConfig::single(redis_url)?;
+  let redis_config = RedisConnectionType::single(redis_url)?;
 
   // 配置队列
   // Configure queues

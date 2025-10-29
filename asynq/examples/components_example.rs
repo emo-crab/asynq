@@ -10,11 +10,10 @@ use asynq::components::aggregator::{Aggregator, AggregatorConfig};
 use asynq::components::forwarder::{Forwarder, ForwarderConfig};
 use asynq::components::healthcheck::{Healthcheck, HealthcheckConfig};
 use asynq::components::janitor::{Janitor, JanitorConfig};
-use asynq::components::periodic_task_manager::{PeriodicTaskManager, PeriodicTaskManagerConfig};
 use asynq::components::recoverer::{Recoverer, RecovererConfig};
 use asynq::components::subscriber::{Subscriber, SubscriberConfig};
-use asynq::redis::RedisConnectionConfig;
-use asynq::{client::Client, rdb::RedisBroker};
+use asynq::rdb::RedisBroker;
+use asynq::redis::RedisConnectionType;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -32,9 +31,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
   println!("📡 Connecting to Redis: {redis_url}");
 
-  let redis_config = RedisConnectionConfig::single(redis_url)?;
-  let mut broker = RedisBroker::new(redis_config.clone())?;
-  broker.init_scripts().await?;
+  let redis_config = RedisConnectionType::single(redis_url)?;
+  let broker = RedisBroker::new(redis_config.clone()).await?;
   let broker: Arc<dyn asynq::base::Broker> = Arc::new(broker);
 
   println!("✅ Connected to Redis\n");
@@ -109,14 +107,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 7. Periodic Task Manager - 管理周期性任务
   // 7. Periodic Task Manager - Manage periodic tasks
-  println!("⏰ Starting Periodic Task Manager...");
-  let client = Arc::new(Client::new(redis_config).await?);
-  let ptm_config = PeriodicTaskManagerConfig {
-    check_interval: Duration::from_secs(60),
-  };
-  let ptm = Arc::new(PeriodicTaskManager::new(client, ptm_config));
-  let ptm_handle = ptm.clone().start();
-  println!("   ✓ Periodic Task Manager started (interval: 60s)\n");
+  println!("⏰ Note: Periodic Task Manager requires Scheduler to be started separately");
+  println!("   See periodic_task_manager_example.rs for full demonstration\n");
 
   println!("🎉 All components started successfully!\n");
   println!("📊 Component Status:");
@@ -125,8 +117,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   println!("   • Forwarder:     Running");
   println!("   • Healthcheck:   Healthy = {}", healthcheck.is_healthy());
   println!("   • Aggregator:    Running");
-  println!("   • Subscriber:    Running");
-  println!("   • Task Manager:  Running\n");
+  println!("   • Subscriber:    Running\n");
 
   println!("⏳ Running for 30 seconds...");
   println!("   (Components are working in the background)\n");
@@ -145,7 +136,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   healthcheck.shutdown();
   aggregator.shutdown();
   subscriber_arc.shutdown();
-  ptm.shutdown();
 
   // 等待所有任务完成
   // Wait for all tasks to complete
@@ -155,7 +145,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let _ = tokio::time::timeout(Duration::from_secs(5), healthcheck_handle).await;
   let _ = tokio::time::timeout(Duration::from_secs(5), aggregator_handle).await;
   let _ = tokio::time::timeout(Duration::from_secs(5), subscriber_handle).await;
-  let _ = tokio::time::timeout(Duration::from_secs(5), ptm_handle).await;
 
   println!("✅ All components shut down successfully!\n");
   println!("👋 Example completed!");

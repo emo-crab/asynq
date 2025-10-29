@@ -5,7 +5,7 @@
 //! Demonstrates how to use asynq client to enqueue tasks
 
 use asynq::rdb::option::{RateLimit, RetryPolicy};
-use asynq::redis::RedisConnectionConfig;
+use asynq::redis::RedisConnectionType;
 use asynq::{client::Client, task::Task};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   let redis_url =
     std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
   println!("🔗 Using Redis URL: {redis_url}");
-  let redis_config = RedisConnectionConfig::single(redis_url)?;
+  let redis_config = RedisConnectionType::single(redis_url)?;
 
   // 创建客户端
   // Create client

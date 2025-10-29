@@ -5,7 +5,8 @@ use crate::base::constants::TIME_LAYOUT_YMD;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
-
+pub const QUEUE_START: &str = "{";
+pub const QUEUE_END: &str = "}";
 /// 全局 Redis 键
 /// Global Redis keys
 pub const ALL_SERVERS: &str = "asynq:servers";
@@ -17,7 +18,7 @@ pub const SCHEDULER_EVENTS: &str = "asynq:scheduler:events";
 
 // 为了向后兼容，保留旧常量
 // For backward compatibility, keep old constants
-pub const QUEUE_PREFIX: &str = "asynq:{";
+pub const QUEUE_PREFIX: &str = "asynq:";
 pub const ACTIVE_PREFIX: &str = "asynq:active:";
 pub const SCHEDULED_PREFIX: &str = "asynq:scheduled:";
 pub const RETRY_PREFIX: &str = "asynq:retry:";
@@ -26,9 +27,7 @@ pub const COMPLETED_PREFIX: &str = "asynq:completed:";
 pub const AGGREGATING_PREFIX: &str = "asynq:aggregating:";
 pub const SERVERS_PREFIX: &str = "asynq:servers:";
 pub const WORKERS_PREFIX: &str = "asynq:workers:";
-pub const PAUSED_QUEUES: &str = "asynq:paused";
 pub const TASK_RESULT_PREFIX: &str = "asynq:result:";
-pub const UNIQUE_PREFIX: &str = "asynq:unique:";
 /// 任务状态
 /// Task state
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

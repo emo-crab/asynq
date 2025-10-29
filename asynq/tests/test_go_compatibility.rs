@@ -5,7 +5,7 @@
 
 use asynq::{
   client::Client, config::ServerConfig, inspector::Inspector, rdb::RedisBroker,
-  redis::RedisConnectionConfig, task::Task,
+  redis::RedisConnectionType, task::Task,
 };
 use std::sync::Arc;
 use std::time::Duration;
@@ -146,7 +146,7 @@ mod go_compatibility_tests {
   #[tokio::test]
   async fn test_client_compatibility() {
     // Skip if no Redis available
-    let redis_config = match RedisConnectionConfig::single("redis://localhost:6379") {
+    let redis_config = match RedisConnectionType::single("redis://localhost:6379") {
       Ok(config) => config,
       Err(_) => {
         println!("Skipping client test - Redis not available");
@@ -212,7 +212,7 @@ mod go_compatibility_tests {
   #[tokio::test]
   async fn test_inspector_api_compatibility() {
     // Skip if no Redis available
-    let redis_config = match RedisConnectionConfig::single("redis://localhost:6379") {
+    let redis_config = match RedisConnectionType::single("redis://localhost:6379") {
       Ok(config) => config,
       Err(_) => {
         println!("Skipping inspector test - Redis not available");
@@ -220,7 +220,7 @@ mod go_compatibility_tests {
       }
     };
 
-    let broker = match RedisBroker::new(redis_config) {
+    let broker = match RedisBroker::new(redis_config).await {
       Ok(broker_instance) => match broker_instance.ping().await {
         Ok(_) => Arc::new(broker_instance),
         Err(_) => {
@@ -500,10 +500,10 @@ mod integration_tests {
     // Run: cd go_test && go run go_producer.go
     // Then: cargo test --test test_go_compatibility go_to_rust_compatibility -- --ignored
 
-    let redis_config = RedisConnectionConfig::single("redis://localhost:6379")
+    let redis_config = RedisConnectionType::single("redis://localhost:6379")
       .expect("Redis should be available for integration test");
 
-    let broker: Arc<dyn Broker> = Arc::new(RedisBroker::new(redis_config).unwrap());
+    let broker: Arc<dyn Broker> = Arc::new(RedisBroker::new(redis_config).await.unwrap());
     broker.ping().await.expect("Redis should be connected");
 
     // Try to dequeue tasks that were created by Go producer
@@ -542,7 +542,7 @@ mod integration_tests {
   async fn test_rust_to_go_compatibility() {
     println!("🧪 Testing Rust Producer → Go Consumer compatibility");
 
-    let redis_config = RedisConnectionConfig::single("redis://localhost:6379")
+    let redis_config = RedisConnectionType::single("redis://localhost:6379")
       .expect("Redis should be available for integration test");
 
     let client = Client::new(redis_config.clone())
