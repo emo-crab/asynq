@@ -139,6 +139,7 @@ impl RedisBroker {
     TaskMessage {
       r#type: task.task_type.clone(),
       payload: task.payload.clone(),
+      headers: task.headers.clone(),
       id: task
         .options
         .task_id

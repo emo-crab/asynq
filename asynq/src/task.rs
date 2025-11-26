@@ -10,6 +10,7 @@ use crate::proto;
 use crate::rdb::option::{RateLimit, RetryPolicy, TaskOptions};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::time::Duration;
 use uuid::Uuid;
 
@@ -23,6 +24,9 @@ pub struct Task {
   /// 任务负载数据
   /// Task payload data
   pub payload: Vec<u8>,
+  /// 任务头信息
+  /// Task headers
+  pub headers: HashMap<String, String>,
   /// 任务选项
   /// Task options
   pub options: TaskOptions,
@@ -42,8 +46,18 @@ impl Task {
     Ok(Self {
       task_type: task_type.to_string(),
       payload: payload.to_vec(),
+      headers: Default::default(),
       options: TaskOptions::default(),
     })
+  }
+  pub fn new_with_headers<T: AsRef<str>>(
+    task_type: T,
+    payload: &[u8],
+    headers: HashMap<String, String>,
+  ) -> Result<Self> {
+    let mut task = Self::new(task_type, payload)?;
+    task.headers = headers;
+    Ok(task)
   }
   #[cfg(feature = "json")]
   /// 使用 JSON 负载创建新任务
@@ -162,6 +176,11 @@ impl Task {
   pub fn get_payload(&self) -> &[u8] {
     &self.payload
   }
+  /// 获取任务头信息
+  /// Get task headers
+  pub fn get_headers(&self) -> &HashMap<String, String> {
+    &self.headers
+  }
   #[cfg(feature = "json")]
   /// 获取任务负载作为 JSON
   /// Get task payload as JSON
@@ -186,6 +205,9 @@ pub struct TaskInfo {
   /// 任务负载数据
   /// Task payload data
   pub payload: Vec<u8>,
+  /// 任务头信息
+  /// Task headers
+  pub headers: HashMap<String, String>,
   /// 任务状态
   /// Task state
   pub state: TaskState,
@@ -241,6 +263,7 @@ impl TaskInfo {
       queue: msg.queue.clone(),
       task_type: msg.r#type.clone(),
       payload: msg.payload.clone(),
+      headers: msg.headers.clone(),
       state,
       max_retry: msg.retry,
       retried: msg.retried,
@@ -303,6 +326,7 @@ impl TaskInfo {
       group_key: self.group.clone().unwrap_or_default(),
       retention: self.retention.map(|d| d.as_secs() as i64).unwrap_or(0),
       completed_at: self.completed_at.map(|dt| dt.timestamp()).unwrap_or(0),
+      headers: self.headers.clone(),
     }
   }
 }

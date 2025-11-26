@@ -7,14 +7,20 @@ package asynq;
 
 import "google/protobuf/timestamp.proto";
 
-// TaskMessage 是任务的内部表示，包含额外的元数据字段
-// Next ID: 15
+option go_package = "github.com/hibiken/asynq/internal/proto";
+
+// TaskMessage is the internal representation of a task with additional
+// metadata fields.
+// Next ID: 16
 message TaskMessage {
-  // Type 表示要执行的任务类型
+  // Type indicates the kind of the task to be performed.
   string type = 1;
 
-  // Payload 保存处理任务所需的数据
+  // Payload holds data needed to process the task.
   bytes payload = 2;
+
+  // Headers holds additional metadata for the task.
+  map<string, string> headers = 15;
 
   // Unique identifier for the task.
   string id = 3;
@@ -62,9 +68,9 @@ message TaskMessage {
   // the number of seconds elapsed since January 1, 1970 UTC.
   // This field is populated if result_ttl > 0 upon completion.
   int64 completed_at = 13;
-}
+};
 
-// ServerInfo 保存正在运行的服务器信息
+// ServerInfo holds information about a running server.
 message ServerInfo {
   // Host machine the server is running on.
   string host = 1;
@@ -95,9 +101,9 @@ message ServerInfo {
 
   // Number of workers currently processing tasks.
   int32 active_worker_count = 9;
-}
+};
 
-// WorkerInfo 保存正在运行的工作者信息
+// WorkerInfo holds information about a running worker.
 message WorkerInfo {
   // Host matchine this worker is running on.
   string host = 1;
@@ -123,12 +129,13 @@ message WorkerInfo {
   // Time this worker started processing the task.
   google.protobuf.Timestamp start_time = 8;
 
-  // Deadline by which the worker needs to complete processing 
+  // Deadline by which the worker needs to complete processing
   // the task. If worker exceeds the deadline, the task will fail.
   google.protobuf.Timestamp deadline = 9;
-}
+};
 
-// SchedulerEntry 保存在调度器中注册的周期性任务信息
+// SchedulerEntry holds information about a periodic task registered
+// with a scheduler.
 message SchedulerEntry {
   // Identifier of the scheduler entry.
   string id = 1;
@@ -151,13 +158,14 @@ message SchedulerEntry {
   // Last time the task was enqueued.
   // Zero time if task was never enqueued.
   google.protobuf.Timestamp prev_enqueue_time = 7;
-}
+};
 
-// SchedulerEnqueueEvent 保存调度器入队事件的信息
+// SchedulerEnqueueEvent holds information about an enqueue event
+// by a scheduler.
 message SchedulerEnqueueEvent {
   // ID of the task that was enqueued.
   string task_id = 1;
 
   // Time the task was enqueued.
   google.protobuf.Timestamp enqueue_time = 2;
-}
+};
