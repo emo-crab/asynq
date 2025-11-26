@@ -15,6 +15,8 @@ use crate::rdb::universal_client::{RedisClient, RedisPubSub};
 use crate::redis::{RedisConnection, RedisConnectionType};
 use crate::task::Task;
 use prost::Message;
+#[cfg(feature = "sentinel")]
+use redis::sentinel::{SentinelClient, SentinelNodeConnectionInfo, SentinelServerType};
 use redis::AsyncCommands;
 use redis::Client;
 use uuid::Uuid;
@@ -31,8 +33,37 @@ impl RedisBroker {
   /// Create a new Redis broker instance from RedisConnection
   pub async fn new(conn: RedisConnectionType) -> Result<Self> {
     match conn {
-      RedisConnectionType::Single(config) => {
-        let client = Client::open(config)?;
+      RedisConnectionType::Single {
+        connection_info,
+        #[cfg(feature = "tls")]
+        tls_certs,
+      } => {
+        // If a tls_mode was provided in RedisConnectionType, apply it to the
+        // ConnectionInfo addr so redis::Client will create a TLS connection.
+        // This is a no-op when the `tls` feature is not enabled.
+        let client = {
+          #[cfg(feature = "tls")]
+          {
+            // When tls feature is enabled, if a tls_mode was supplied by the
+            // higher-level RedisConnectionType, prefer building a TLS-enabled
+            // client using the redis crate's TLS helpers. Otherwise fall back
+            // to the normal Client::open.
+            let ci = connection_info.clone();
+            if let Some(tls) = tls_certs {
+              // Attempt to build a client with TLS configuration provided by
+              // callers (they can construct a `redis::TlsCertificates` in examples).
+              // This uses the redis crate API to attach rustls-based cert/key
+              // and optional root CA bytes to the client.
+              Client::build_with_tls(ci, tls)?
+            } else {
+              Client::open(ci)?
+            }
+          }
+          #[cfg(not(feature = "tls"))]
+          {
+            Client::open(connection_info)?
+          }
+        };
         let mut broker = Self {
           client: RedisClient::Single(client),
           script_manager: ScriptManager::default(),
@@ -60,6 +91,54 @@ impl RedisBroker {
             client: cluster_client,
             push_receiver,
           },
+          script_manager: ScriptManager::default(),
+        };
+        broker.init_scripts().await?;
+        Ok(broker)
+      }
+      #[cfg(feature = "sentinel")]
+      RedisConnectionType::Sentinel {
+        master_name,
+        sentinels,
+        redis_connection_info,
+        #[cfg(feature = "tls")]
+        tls_certs,
+      } => {
+        // Use redis::SentinelClient to resolve the master and get a Client.
+        // See https://docs.rs/redis/latest/redis/sentinel/index.html
+        // Build a SentinelClient and wrap it in Arc<Mutex<>> so we can call its &mut async methods
+        // If any sentinel ConnectionInfo contains a username/password, use that to populate
+        // the SentinelNodeConnectionInfo so the resolved master connection will use auth.
+        let mut node_conn_info: Option<SentinelNodeConnectionInfo> = None;
+        if let Some(conn_info) = redis_connection_info {
+          node_conn_info = Some(SentinelNodeConnectionInfo {
+            #[cfg(feature = "tls")]
+            tls_mode: None, // node_conn_info is used for resolved master; we will pass tls via builder when possible
+            redis_connection_info: Some(conn_info),
+          });
+        }
+        // If TLS certificates are provided, use SentinelClientBuilder to attach them
+        #[cfg(feature = "tls")]
+        let sentinel_client = {
+          if let Some(certs) = tls_certs {
+            // SentinelClientBuilder expects ConnectionAddr values for sentinels
+            let addrs: Vec<redis::ConnectionAddr> = sentinels.iter().map(|ci| ci.addr.clone()).collect();
+            let mut builder = redis::sentinel::SentinelClientBuilder::new(
+              addrs,
+              master_name.clone(),
+              SentinelServerType::Master,
+            )?;
+            builder = builder.set_client_to_redis_certificates(certs);
+            builder.build()?
+          } else {
+            // No certs provided; fall back to simple builder
+            SentinelClient::build(sentinels, master_name.clone(), node_conn_info, SentinelServerType::Master)?
+          }
+        };
+        let client = std::sync::Arc::new(tokio::sync::Mutex::new(sentinel_client));
+
+        let mut broker = Self {
+          client: RedisClient::Sentinel { client },
           script_manager: ScriptManager::default(),
         };
         broker.init_scripts().await?;
@@ -102,6 +181,14 @@ impl RedisBroker {
             "Cluster PubSub receiver has already been taken. You can only create one PubSub connection for cluster mode."
           ))
         }
+      }
+      #[cfg(feature = "sentinel")]
+      RedisClient::Sentinel { client, .. } => {
+        // Lock the sentinel client and obtain an async pubsub from the resolved master
+        let mut guard = client.lock().await;
+        let master_client = guard.async_get_client().await?;
+        let pubsub = master_client.get_async_pubsub().await?;
+        Ok(RedisPubSub::Sentinel(pubsub))
       }
     }
   }

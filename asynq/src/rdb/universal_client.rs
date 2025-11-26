@@ -3,7 +3,10 @@ use crate::redis::RedisConnection;
 use futures::Stream;
 #[cfg(feature = "cluster")]
 use redis::cluster::ClusterClient;
+#[cfg(feature = "sentinel")]
+use redis::sentinel::SentinelClient;
 use redis::Client;
+
 #[cfg(feature = "cluster")]
 /// 集群模式的 PubSub 连接封装
 /// Cluster mode PubSub connection wrapper
@@ -103,6 +106,10 @@ pub enum RedisPubSub {
   /// Redis Cluster 的 PubSub 需要连接到特定节点
   /// Redis Cluster PubSub requires connection to a specific node
   Cluster(ClusterPubSubConnection),
+  #[cfg(feature = "sentinel")]
+  /// Sentinel 模式的 PubSub（通过 Sentinel 获取主节点后与主节点建立的 PubSub）
+  /// Sentinel mode PubSub (obtained by Sentinel and connected to the master node)
+  Sentinel(redis::aio::PubSub),
 }
 
 impl RedisPubSub {
@@ -124,6 +131,13 @@ impl RedisPubSub {
         cluster_pubsub.connection.subscribe(channel).await?;
         Ok(())
       }
+      #[cfg(feature = "sentinel")]
+      RedisPubSub::Sentinel(pubsub) => {
+        // Sentinel 情况下，Sentinel 已经解析到主节点并返回了一个普通 PubSub
+        // For Sentinel, we use the PubSub obtained after resolving master via Sentinel
+        pubsub.subscribe(channel).await?;
+        Ok(())
+      }
     }
   }
 
@@ -134,6 +148,8 @@ impl RedisPubSub {
       RedisPubSub::Single(pubsub) => Box::new(pubsub.into_on_message()),
       #[cfg(feature = "cluster")]
       RedisPubSub::Cluster(pubsub) => Box::new(pubsub.into_on_message()),
+      #[cfg(feature = "sentinel")]
+      RedisPubSub::Sentinel(pubsub) => Box::new(pubsub.into_on_message()),
     }
   }
 }
@@ -150,6 +166,12 @@ pub enum RedisClient {
       tokio::sync::Mutex<Option<tokio::sync::mpsc::UnboundedReceiver<redis::PushInfo>>>,
     >,
   },
+  #[cfg(feature = "sentinel")]
+  Sentinel {
+    /// Sentinel 模式下保存的客户端（使用 Arc<Mutex<>> 包装以允许在异步上下文中可变调用）
+    /// Sentinel client wrapped in Arc<Mutex<>> so we can call &mut methods on it when needed
+    client: std::sync::Arc<tokio::sync::Mutex<SentinelClient>>,
+  },
 }
 
 impl RedisClient {
@@ -164,9 +186,17 @@ impl RedisClient {
         let conn = client.get_async_connection().await?;
         Ok(RedisConnection::Cluster(conn))
       }
+      #[cfg(feature = "sentinel")]
+      RedisClient::Sentinel { client, .. } => {
+        // Sentinel: lock the inner SentinelClient (requires &mut) and resolve/get an async connection on demand
+        let mut guard = client.lock().await;
+        let conn = guard.get_async_connection().await?;
+        Ok(RedisConnection::Single(conn))
+      }
     }
   }
 }
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -221,6 +251,8 @@ mod tests {
           RedisPubSub::Single(_) => {}
           #[cfg(feature = "cluster")]
           RedisPubSub::Cluster(_) => {}
+          #[cfg(feature = "sentinel")]
+          RedisPubSub::Sentinel(_) => {}
         }
       }
     }
