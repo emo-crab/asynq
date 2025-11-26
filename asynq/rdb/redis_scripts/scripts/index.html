@@ -1,0 +1,230 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Redis Lua 脚本集合 - 与 Go 版本完全兼容"><title>asynq::rdb::redis_scripts::scripts - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-e56847b5.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="asynq" data-themes="" data-resource-suffix="" data-rustdoc-version="1.91.1 (ed61e7d7e 2025-11-07)" data-channel="1.91.1" data-search-js="search-e256b49e.js" data-stringdex-js="stringdex-c3e638e9.js" data-settings-js="settings-c38705f0.js" ><script src="../../../../static.files/storage-e2aeef58.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../../../static.files/main-6dc2a7f3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module scripts</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../asynq/index.html">asynq</a><span class="version">0.1.4</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module scripts</a></h2><h3><a href="#constants">Module Items</a></h3><ul class="block"><li><a href="#constants" title="Constants">Constants</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="../index.html">In asynq::<wbr>rdb::<wbr>redis_<wbr>scripts</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../../index.html">asynq</a>::<wbr><a href="../../index.html">rdb</a>::<wbr><a href="../index.html">redis_scripts</a></div><h1>Module <span>scripts</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../../../src/asynq/rdb/redis_scripts.rs.html#37">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>Redis Lua 脚本集合 - 与 Go 版本完全兼容</p>
+</div></details><h2 id="constants" class="section-header">Constants<a href="#constants" class="anchor">§</a></h2><dl class="item-table"><dt><a class="constant" href="constant.ADD_TO_GROUP.html" title="constant asynq::rdb::redis_scripts::scripts::ADD_TO_GROUP">ADD_<wbr>TO_<wbr>GROUP</a></dt><dd>添加到组脚本 - Go: addToGroupCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:g:&lt;group_key&gt;
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:groups
+<code>ARGV[1]</code> -&gt; task message data
+<code>ARGV[2]</code> -&gt; task ID
+<code>ARGV[3]</code> -&gt; current time in Unix time
+<code>ARGV[4]</code> -&gt; group key</dd><dt><a class="constant" href="constant.ADD_TO_GROUP_UNIQUE.html" title="constant asynq::rdb::redis_scripts::scripts::ADD_TO_GROUP_UNIQUE">ADD_<wbr>TO_<wbr>GROUP_<wbr>UNIQUE</a></dt><dd>添加唯一任务到组脚本 - Go: addToGroupUniqueCmd
+<code>KEYS[1]</code> -&gt; unique key
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:g:&lt;group_key&gt;
+<code>KEYS[4]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:groups
+<code>ARGV[1]</code> -&gt; task ID
+<code>ARGV[2]</code> -&gt; 唯一锁TTL / Uniqueness lock TTL
+<code>ARGV[3]</code> -&gt; task message data
+<code>ARGV[4]</code> -&gt; current time in Unix time
+<code>ARGV[5]</code> -&gt; group key</dd><dt><a class="constant" href="constant.AGGREGATION_CHECK.html" title="constant asynq::rdb::redis_scripts::scripts::AGGREGATION_CHECK">AGGREGATION_<wbr>CHECK</a></dt><dd>AGGREGATION_CHECK checks the given group for whether to create an aggregation set.
+An aggregation set is created if one of the aggregation criteria is met:</dd><dt><a class="constant" href="constant.ARCHIVE.html" title="constant asynq::rdb::redis_scripts::scripts::ARCHIVE">ARCHIVE</a></dt><dd>归档任务脚本 - 与 Go 版本兼容 archiveCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:active
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:lease
+<code>KEYS[4]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:archived
+<code>KEYS[5]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:processed:<code>&lt;yyyy-mm-dd&gt;</code>
+<code>KEYS[6]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:failed:<code>&lt;yyyy-mm-dd&gt;</code>
+<code>KEYS[7]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:processed
+<code>KEYS[8]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:failed
+<code>KEYS[9]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:</dd><dt><a class="constant" href="constant.ARCHIVE_ALL.html" title="constant asynq::rdb::redis_scripts::scripts::ARCHIVE_ALL">ARCHIVE_<wbr>ALL</a></dt><dd>归档所有任务脚本 - Go: archiveAllCmd
+archiveAllCmd is a Lua script that archives all tasks in either scheduled
+or retry state from the given queue.</dd><dt><a class="constant" href="constant.ARCHIVE_ALL_AGGREGATING.html" title="constant asynq::rdb::redis_scripts::scripts::ARCHIVE_ALL_AGGREGATING">ARCHIVE_<wbr>ALL_<wbr>AGGREGATING</a></dt><dd>归档所有聚合任务脚本 - Go: archiveAllAggregatingCmd
+archiveAllAggregatingCmd archives all tasks in the given group.</dd><dt><a class="constant" href="constant.ARCHIVE_ALL_PENDING.html" title="constant asynq::rdb::redis_scripts::scripts::ARCHIVE_ALL_PENDING">ARCHIVE_<wbr>ALL_<wbr>PENDING</a></dt><dd>归档所有等待任务脚本 - Go: archiveAllPendingCmd
+archiveAllPendingCmd is a Lua script that moves all pending tasks from
+the given queue to archived state.</dd><dt><a class="constant" href="constant.ARCHIVE_TASK.html" title="constant asynq::rdb::redis_scripts::scripts::ARCHIVE_TASK">ARCHIVE_<wbr>TASK</a></dt><dd>归档任务脚本 - Go: archiveTaskCmd
+archiveTaskCmd is a Lua script that archives a task given a task id.</dd><dt><a class="constant" href="constant.CLEANUP_COMPLETED.html" title="constant asynq::rdb::redis_scripts::scripts::CLEANUP_COMPLETED">CLEANUP_<wbr>COMPLETED</a></dt><dd>清理过期任务脚本 - 与 Go 版本兼容
+参数: <code>KEYS[1]</code> = 完成键, <code>ARGV[1]</code> = 当前时间戳</dd><dt><a class="constant" href="constant.CLEAR_SERVER_STATE.html" title="constant asynq::rdb::redis_scripts::scripts::CLEAR_SERVER_STATE">CLEAR_<wbr>SERVER_<wbr>STATE</a></dt><dd>清除服务器状态脚本 - Go: clearServerStateCmd
+<code>KEYS[1]</code> -&gt; asynq:servers:{<a href="host:pid:sid">host:pid:sid</a>}
+<code>KEYS[2]</code> -&gt; asynq:workers:{<a href="host:pid:sid">host:pid:sid</a>}</dd><dt><a class="constant" href="constant.CURRENT_STATS.html" title="constant asynq::rdb::redis_scripts::scripts::CURRENT_STATS">CURRENT_<wbr>STATS</a></dt><dd>Go currentStatsCmd
+<code>KEYS[1]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:pending
+<code>KEYS[2]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:active
+<code>KEYS[3]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:scheduled
+<code>KEYS[4]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:retry
+<code>KEYS[5]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:archived
+<code>KEYS[6]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:completed
+<code>KEYS[7]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:processed:<code>&lt;yyyy-mm-dd&gt;</code>
+<code>KEYS[8]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:failed:<code>&lt;yyyy-mm-dd&gt;</code>
+<code>KEYS[9]</code> -&gt;  asynq:<code>&lt;qname&gt;</code>:processed
+<code>KEYS[10]</code> -&gt; asynq:<code>&lt;qname&gt;</code>:failed
+<code>KEYS[11]</code> -&gt; asynq:<code>&lt;qname&gt;</code>:paused
+<code>KEYS[12]</code> -&gt; asynq:<code>&lt;qname&gt;</code>:groups</dd><dt><a class="constant" href="constant.DELETE_AGGREGATION_SET.html" title="constant asynq::rdb::redis_scripts::scripts::DELETE_AGGREGATION_SET">DELETE_<wbr>AGGREGATION_<wbr>SET</a></dt><dd><code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:g:<code>&lt;group_name&gt;</code>:&lt;aggregation_set_id&gt;
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:aggregation_sets</dd><dt><a class="constant" href="constant.DELETE_ALL.html" title="constant asynq::rdb::redis_scripts::scripts::DELETE_ALL">DELETE_<wbr>ALL</a></dt><dd>删除所有任务脚本 - Go: deleteAllCmd
+deleteAllCmd deletes tasks from the given zset.</dd><dt><a class="constant" href="constant.DELETE_ALL_AGGREGATING.html" title="constant asynq::rdb::redis_scripts::scripts::DELETE_ALL_AGGREGATING">DELETE_<wbr>ALL_<wbr>AGGREGATING</a></dt><dd>删除所有聚合任务脚本 - Go: deleteAllAggregatingCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:g:&lt;group_key&gt;
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:groups
+<code>ARGV[1]</code> -&gt; task key prefix
+<code>ARGV[2]</code> -&gt; group key</dd><dt><a class="constant" href="constant.DELETE_ALL_PENDING.html" title="constant asynq::rdb::redis_scripts::scripts::DELETE_ALL_PENDING">DELETE_<wbr>ALL_<wbr>PENDING</a></dt><dd>删除所有等待任务脚本 - Go: deleteAllPendingCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:pending
+<code>ARGV[1]</code> -&gt; task key prefix</dd><dt><a class="constant" href="constant.DELETE_EXPIRED_COMPLETED_TASKS.html" title="constant asynq::rdb::redis_scripts::scripts::DELETE_EXPIRED_COMPLETED_TASKS">DELETE_<wbr>EXPIRED_<wbr>COMPLETED_<wbr>TASKS</a></dt><dd>删除过期完成任务脚本 - Go: deleteExpiredCompletedTasksCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:completed
+<code>ARGV[1]</code> -&gt; current time in unix time
+<code>ARGV[2]</code> -&gt; task key prefix
+<code>ARGV[3]</code> -&gt; batch size (i.e. maximum number of tasks to delete)</dd><dt><a class="constant" href="constant.DELETE_TASK.html" title="constant asynq::rdb::redis_scripts::scripts::DELETE_TASK">DELETE_<wbr>TASK</a></dt><dd>删除任务脚本 - Go: deleteTaskCmd
+Input:
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:groups</dd><dt><a class="constant" href="constant.DEQUEUE.html" title="constant asynq::rdb::redis_scripts::scripts::DEQUEUE">DEQUEUE</a></dt><dd>出队任务脚本 - Go: dequeueCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:pending
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:paused
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:active
+<code>KEYS[4]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:lease
+<code>ARGV[1]</code> -&gt; lease expiration unix time
+<code>ARGV[2]</code> -&gt; task key prefix</dd><dt><a class="constant" href="constant.DONE.html" title="constant asynq::rdb::redis_scripts::scripts::DONE">DONE</a></dt><dd>完成任务脚本 - Go: doneCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:active
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:lease
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>KEYS[4]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:processed:<code>&lt;yyyy-mm-dd&gt;</code>
+<code>KEYS[5]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:processed
+<code>ARGV[1]</code> -&gt; task ID
+<code>ARGV[2]</code> -&gt; stats expiration timestamp
+<code>ARGV[3]</code> -&gt; max int64 value</dd><dt><a class="constant" href="constant.DONE_UNIQUE.html" title="constant asynq::rdb::redis_scripts::scripts::DONE_UNIQUE">DONE_<wbr>UNIQUE</a></dt><dd>完成唯一任务脚本 - Go: doneUniqueCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:active
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:lease
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>KEYS[4]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:processed:<code>&lt;yyyy-mm-dd&gt;</code>
+<code>KEYS[5]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:processed
+<code>KEYS[6]</code> -&gt; unique key
+<code>ARGV[1]</code> -&gt; task ID
+<code>ARGV[2]</code> -&gt; stats expiration timestamp
+<code>ARGV[3]</code> -&gt; max int64 value</dd><dt><a class="constant" href="constant.ENQUEUE.html" title="constant asynq::rdb::redis_scripts::scripts::ENQUEUE">ENQUEUE</a></dt><dd>入队任务脚本 - 基于 Go 版本的 enqueueCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:pending
+<code>ARGV[1]</code> -&gt; task message data
+<code>ARGV[2]</code> -&gt; task ID
+<code>ARGV[3]</code> -&gt; current unix time in nsec
+Returns 1 if successfully enqueued, 0 if task ID already exists</dd><dt><a class="constant" href="constant.ENQUEUE_UNIQUE.html" title="constant asynq::rdb::redis_scripts::scripts::ENQUEUE_UNIQUE">ENQUEUE_<wbr>UNIQUE</a></dt><dd>入队唯一任务脚本 - 基于 Go 版本的 enqueueUniqueCmd
+Enqueue unique task script - based on Go version’s enqueueUniqueCmd
+<code>KEYS[1]</code> -&gt; unique key
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:<code>&lt;task_id&gt;</code>
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:pending
+<code>ARGV[1]</code> -&gt; 任务ID / Task ID
+<code>ARGV[2]</code> -&gt; 唯一锁TTL / Uniqueness lock TTL
+<code>ARGV[3]</code> -&gt; 任务消息数据 / Task message data
+<code>ARGV[4]</code> -&gt; 当前时间（纳秒）/ Current unix time in nsec
+返回值：1=成功，0=ID冲突，-1=唯一键已存在
+Returns: 1 if successfully enqueued, 0 if task ID conflicts, -1 if unique key exists</dd><dt><a class="constant" href="constant.EXTEND_LEASE.html" title="constant asynq::rdb::redis_scripts::scripts::EXTEND_LEASE">EXTEND_<wbr>LEASE</a></dt><dd>延长租约脚本 - Go: ExtendLease
+<code>KEYS[1]</code> -&gt; lease key
+<code>ARGV[1]</code> -&gt; task_id
+<code>ARGV[2]</code> -&gt; lease duration (seconds)</dd><dt><a class="constant" href="constant.FORWARD.html" title="constant asynq::rdb::redis_scripts::scripts::FORWARD">FORWARD</a></dt><dd>转发脚本 - Go: forwardCmd
+<code>KEYS[1]</code> -&gt; source queue (e.g. asynq:{<code>&lt;qname&gt;</code>:scheduled or asynq:{<code>&lt;qname&gt;</code>}:retry})
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:pending
+<code>ARGV[1]</code> -&gt; current unix time in seconds
+<code>ARGV[2]</code> -&gt; task key prefix
+<code>ARGV[3]</code> -&gt; current unix time in nsec
+<code>ARGV[4]</code> -&gt; group key prefix
+Note: Script moves tasks up to 100 at a time to keep the runtime of script short.</dd><dt><a class="constant" href="constant.FORWARD_RETRY.html" title="constant asynq::rdb::redis_scripts::scripts::FORWARD_RETRY">FORWARD_<wbr>RETRY</a></dt><dd>转发重试任务脚本 - 与 Go 版本兼容
+参数: <code>KEYS[1]</code> = 重试键, <code>KEYS[2]</code> = 队列键, <code>ARGV[1]</code> = 当前时间戳</dd><dt><a class="constant" href="constant.FORWARD_SCHEDULED.html" title="constant asynq::rdb::redis_scripts::scripts::FORWARD_SCHEDULED">FORWARD_<wbr>SCHEDULED</a></dt><dd>转发调度任务脚本 - 与 Go 版本兼容
+参数: <code>KEYS[1]</code> = 调度键, <code>KEYS[2]</code> = 队列键, <code>ARGV[1]</code> = 当前时间戳</dd><dt><a class="constant" href="constant.GET_TASK_INFO.html" title="constant asynq::rdb::redis_scripts::scripts::GET_TASK_INFO">GET_<wbr>TASK_<wbr>INFO</a></dt><dd>获取任务信息脚本 - Go: getTaskInfoCmd
+Input:
+<code>KEYS[1]</code> -&gt; task key (asynq:{<code>&lt;qname&gt;</code>}:t:<code>&lt;task_id&gt;</code>)
+<code>ARGV[1]</code> -&gt; task id
+<code>ARGV[2]</code> -&gt; current time in Unix time (seconds)
+<code>ARGV[3]</code> -&gt; queue key prefix (asynq:{<code>&lt;qname&gt;</code>}:)</dd><dt><a class="constant" href="constant.GROUP_STATS.html" title="constant asynq::rdb::redis_scripts::scripts::GROUP_STATS">GROUP_<wbr>STATS</a></dt><dd>组统计脚本 - Go: groupStatsCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:g:&lt;group_key&gt;
+<code>ARGV[1]</code> -&gt; group key</dd><dt><a class="constant" href="constant.HISTORICAL_STATS.html" title="constant asynq::rdb::redis_scripts::scripts::HISTORICAL_STATS">HISTORICAL_<wbr>STATS</a></dt><dd>历史统计脚本 - Go: historicalStatsCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:processed:<code>&lt;date&gt;</code>
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:failed:<code>&lt;date&gt;</code></dd><dt><a class="constant" href="constant.LIST_LEASE_EXPIRED.html" title="constant asynq::rdb::redis_scripts::scripts::LIST_LEASE_EXPIRED">LIST_<wbr>LEASE_<wbr>EXPIRED</a></dt><dd>列出租约过期脚本 - Go: listLeaseExpiredCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:lease
+<code>ARGV[1]</code> -&gt; cutoff in unix time
+<code>ARGV[2]</code> -&gt; task key prefix</dd><dt><a class="constant" href="constant.LIST_MESSAGES.html" title="constant asynq::rdb::redis_scripts::scripts::LIST_MESSAGES">LIST_<wbr>MESSAGES</a></dt><dd>列出消息脚本 - Go: listMessagesCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:pending or active
+<code>ARGV[1]</code> -&gt; task key prefix
+<code>ARGV[2]</code> -&gt; page size
+<code>ARGV[3]</code> -&gt; page number (0-based)</dd><dt><a class="constant" href="constant.LIST_SCHEDULER_KEYS.html" title="constant asynq::rdb::redis_scripts::scripts::LIST_SCHEDULER_KEYS">LIST_<wbr>SCHEDULER_<wbr>KEYS</a></dt><dd>列出调度器键脚本 - Go: listSchedulerKeysCmd
+<code>KEYS[1]</code> -&gt; asynq:schedulers</dd><dt><a class="constant" href="constant.LIST_SERVER_KEYS.html" title="constant asynq::rdb::redis_scripts::scripts::LIST_SERVER_KEYS">LIST_<wbr>SERVER_<wbr>KEYS</a></dt><dd>列出服务器键脚本 - Go: listServerKeysCmd
+<code>KEYS[1]</code> -&gt; asynq:servers</dd><dt><a class="constant" href="constant.LIST_WORKERS.html" title="constant asynq::rdb::redis_scripts::scripts::LIST_WORKERS">LIST_<wbr>WORKERS</a></dt><dd>列出工作者脚本 - Go: listWorkersCmd
+<code>KEYS[1]</code> -&gt; asynq:workers:{<a href="host:pid:sid">host:pid:sid</a>}</dd><dt><a class="constant" href="constant.LIST_ZSET_ENTRIES.html" title="constant asynq::rdb::redis_scripts::scripts::LIST_ZSET_ENTRIES">LIST_<wbr>ZSET_<wbr>ENTRIES</a></dt><dd>列出有序集合条目脚本 - Go: listZSetEntriesCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:scheduled, retry, archived, or completed
+<code>ARGV[1]</code> -&gt; task key prefix
+<code>ARGV[2]</code> -&gt; page size
+<code>ARGV[3]</code> -&gt; page number (0-based)</dd><dt><a class="constant" href="constant.MARK_AS_COMPLETE.html" title="constant asynq::rdb::redis_scripts::scripts::MARK_AS_COMPLETE">MARK_<wbr>AS_<wbr>COMPLETE</a></dt><dd>标志完成任务脚本 - Go: markAsCompleteCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:active
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:lease
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:completed
+<code>KEYS[4]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>KEYS[5]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:processed:<code>&lt;yyyy-mm-dd&gt;</code>
+<code>KEYS[6]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:processed</dd><dt><a class="constant" href="constant.MARK_AS_COMPLETE_UNIQUE.html" title="constant asynq::rdb::redis_scripts::scripts::MARK_AS_COMPLETE_UNIQUE">MARK_<wbr>AS_<wbr>COMPLETE_<wbr>UNIQUE</a></dt><dd>标记唯一任务完成脚本 - Go: markAsCompleteUniqueCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:active
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:lease
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:completed
+<code>KEYS[4]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>KEYS[5]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:processed:<code>&lt;yyyy-mm-dd&gt;</code>
+<code>KEYS[6]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:processed
+<code>KEYS[7]</code> -&gt; unique key
+<code>ARGV[1]</code> -&gt; task ID
+<code>ARGV[2]</code> -&gt; stats expiration timestamp
+<code>ARGV[3]</code> -&gt; completed at timestamp + retention
+<code>ARGV[4]</code> -&gt; task message data
+<code>ARGV[5]</code> -&gt; max int64 value</dd><dt><a class="constant" href="constant.MEMORY_USAGE.html" title="constant asynq::rdb::redis_scripts::scripts::MEMORY_USAGE">MEMORY_<wbr>USAGE</a></dt><dd>内存使用脚本 - Go: memoryUsageCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:pending
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:active
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:scheduled
+<code>KEYS[4]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:retry
+<code>KEYS[5]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:archived
+<code>KEYS[6]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:completed
+<code>ARGV[1]</code> -&gt; task key prefix
+<code>ARGV[2]</code> -&gt; sample size</dd><dt><a class="constant" href="constant.RATE_LIMIT.html" title="constant asynq::rdb::redis_scripts::scripts::RATE_LIMIT">RATE_<wbr>LIMIT</a></dt><dd>速率限制脚本 - 滑动窗口实现
+参数: <code>KEYS[1]</code> = 速率限制键, <code>ARGV[1]</code> = 窗口大小(秒), <code>ARGV[2]</code> = 限制数量, <code>ARGV[3]</code> = 当前时间戳</dd><dt><a class="constant" href="constant.READ_AGGREGATION_SET.html" title="constant asynq::rdb::redis_scripts::scripts::READ_AGGREGATION_SET">READ_<wbr>AGGREGATION_<wbr>SET</a></dt><dd><code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:g:<code>&lt;group_name&gt;</code>:&lt;aggregation_set_id&gt;</dd><dt><a class="constant" href="constant.RECLAIM_STALE_AGGREGATION_SETS.html" title="constant asynq::rdb::redis_scripts::scripts::RECLAIM_STALE_AGGREGATION_SETS">RECLAIM_<wbr>STALE_<wbr>AGGREGATION_<wbr>SETS</a></dt><dd>回收陈旧聚合集合脚本 - Go: ReclaimStaleAggregationSets
+<code>KEYS[1]</code> -&gt; all aggregation sets key
+<code>KEYS[2]</code> -&gt; group key prefix
+<code>ARGV[1]</code> -&gt; cutoff timestamp</dd><dt><a class="constant" href="constant.RECLAIM_STATE_AGGREGATION_SETS.html" title="constant asynq::rdb::redis_scripts::scripts::RECLAIM_STATE_AGGREGATION_SETS">RECLAIM_<wbr>STATE_<wbr>AGGREGATION_<wbr>SETS</a></dt><dd><code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:aggregation_sets</dd><dt><a class="constant" href="constant.RECORD_SCHEDULER_ENQUEUE_EVENT.html" title="constant asynq::rdb::redis_scripts::scripts::RECORD_SCHEDULER_ENQUEUE_EVENT">RECORD_<wbr>SCHEDULER_<wbr>ENQUEUE_<wbr>EVENT</a></dt><dd>记录调度器入队事件脚本 - Go: recordSchedulerEnqueueEventCmd
+<code>KEYS[1]</code> -&gt; asynq:scheduler_history:<code>&lt;entryID&gt;</code>
+<code>ARGV[1]</code> -&gt; enqueued_at timestamp
+<code>ARGV[2]</code> -&gt; serialized SchedulerEnqueueEvent data
+<code>ARGV[3]</code> -&gt; max number of events to be persisted</dd><dt><a class="constant" href="constant.RECOVER_ORPHANED.html" title="constant asynq::rdb::redis_scripts::scripts::RECOVER_ORPHANED">RECOVER_<wbr>ORPHANED</a></dt><dd>恢复孤儿任务脚本 - 与 Go 版本兼容
+参数: <code>KEYS[1]</code> = 活跃键, <code>KEYS[2]</code> = 队列键, <code>ARGV[1]</code> = 超时时间戳</dd><dt><a class="constant" href="constant.REMOVE_QUEUE.html" title="constant asynq::rdb::redis_scripts::scripts::REMOVE_QUEUE">REMOVE_<wbr>QUEUE</a></dt><dd>删除队列脚本 - Go: removeQueueCmd
+removeQueueCmd removes the given queue.
+It checks whether queue is empty before removing.</dd><dt><a class="constant" href="constant.REMOVE_QUEUE_FORCE.html" title="constant asynq::rdb::redis_scripts::scripts::REMOVE_QUEUE_FORCE">REMOVE_<wbr>QUEUE_<wbr>FORCE</a></dt><dd>强制删除队列脚本 - Go: removeQueueForceCmd
+removeQueueForceCmd removes the given queue regardless of
+whether the queue is empty.
+It only check whether active queue is empty before removing.</dd><dt><a class="constant" href="constant.REQUEUE.html" title="constant asynq::rdb::redis_scripts::scripts::REQUEUE">REQUEUE</a></dt><dd>重新入队脚本 - Go: requeueCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:active
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:lease
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:pending
+<code>KEYS[4]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>ARGV[1]</code> -&gt; task ID</dd><dt><a class="constant" href="constant.RETRY.html" title="constant asynq::rdb::redis_scripts::scripts::RETRY">RETRY</a></dt><dd>重试任务脚本 - Go: retryCmd
+Retry task script - Go: retryCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:active
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:lease
+<code>KEYS[4]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:retry
+<code>KEYS[5]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:processed:<code>&lt;yyyy-mm-dd&gt;</code>
+<code>KEYS[6]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:failed:<code>&lt;yyyy-mm-dd&gt;</code>
+<code>KEYS[7]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:processed
+<code>KEYS[8]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:failed
+<code>ARGV[1]</code> -&gt; 任务ID / Task ID
+<code>ARGV[2]</code> -&gt; 更新后的任务消息数据 / Updated task message data
+<code>ARGV[3]</code> -&gt; 重试时间（Unix时间戳）/ retry at (unix timestamp)
+<code>ARGV[4]</code> -&gt; 统计过期时间戳 / stats expiration timestamp
+<code>ARGV[5]</code> -&gt; 是否失败 / is_failure (1 or 0)
+<code>ARGV[6]</code> -&gt; 最大int64值 / max int64 value</dd><dt><a class="constant" href="constant.RUN_ALL.html" title="constant asynq::rdb::redis_scripts::scripts::RUN_ALL">RUN_ALL</a></dt><dd>运行所有任务脚本 - Go: runAllCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:scheduled, retry, or archived
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:pending
+<code>ARGV[1]</code> -&gt; task key prefix</dd><dt><a class="constant" href="constant.RUN_ALL_AGGREGATING.html" title="constant asynq::rdb::redis_scripts::scripts::RUN_ALL_AGGREGATING">RUN_<wbr>ALL_<wbr>AGGREGATING</a></dt><dd>运行所有聚合任务脚本 - Go: runAllAggregatingCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:g:&lt;group_key&gt;
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:pending
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:groups
+<code>ARGV[1]</code> -&gt; task key prefix
+<code>ARGV[2]</code> -&gt; group key</dd><dt><a class="constant" href="constant.RUN_TASK.html" title="constant asynq::rdb::redis_scripts::scripts::RUN_TASK">RUN_<wbr>TASK</a></dt><dd>运行任务脚本 - Go: runTaskCmd
+runTaskCmd is a Lua script that updates the given task to pending state.</dd><dt><a class="constant" href="constant.SCHEDULE.html" title="constant asynq::rdb::redis_scripts::scripts::SCHEDULE">SCHEDULE</a></dt><dd>调度任务脚本 - 基于 Go 版本的 scheduleCmd
+Schedule task script - based on Go version’s scheduleCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:scheduled
+<code>ARGV[1]</code> -&gt; 任务消息数据 / Task message data
+<code>ARGV[2]</code> -&gt; 执行时间（Unix时间戳）/ process_at time in Unix time
+<code>ARGV[3]</code> -&gt; 任务ID / Task ID
+返回值：1=成功，0=ID已存在
+Returns: 1 if successfully enqueued, 0 if task ID already exists</dd><dt><a class="constant" href="constant.SCHEDULE_UNIQUE.html" title="constant asynq::rdb::redis_scripts::scripts::SCHEDULE_UNIQUE">SCHEDULE_<wbr>UNIQUE</a></dt><dd>调度唯一任务脚本 - Go: scheduleUniqueCmd
+<code>KEYS[1]</code> -&gt; unique key
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:scheduled
+<code>ARGV[1]</code> -&gt; task ID
+<code>ARGV[2]</code> -&gt; 唯一锁TTL / Uniqueness lock TTL
+<code>ARGV[3]</code> -&gt; task message data
+<code>ARGV[4]</code> -&gt; process_at time in Unix time</dd><dt><a class="constant" href="constant.WRITE_SCHEDULER_ENTRIES.html" title="constant asynq::rdb::redis_scripts::scripts::WRITE_SCHEDULER_ENTRIES">WRITE_<wbr>SCHEDULER_<wbr>ENTRIES</a></dt><dd>写入调度器条目脚本 - Go: writeSchedulerEntriesCmd
+<code>KEYS[1]</code> -&gt; asynq:schedulers:{&lt;scheduler_id&gt;}
+<code>ARGV[1]</code> -&gt; TTL in seconds
+ARGV[2..] -&gt; scheduler entries</dd><dt><a class="constant" href="constant.WRITE_SERVER_STATE.html" title="constant asynq::rdb::redis_scripts::scripts::WRITE_SERVER_STATE">WRITE_<wbr>SERVER_<wbr>STATE</a></dt><dd>写入服务器状态脚本 - Go: writeServerStateCmd
+<code>KEYS[1]</code> -&gt; asynq:servers:{<a href="host:pid:sid">host:pid:sid</a>}
+<code>KEYS[2]</code> -&gt; asynq:workers:{<a href="host:pid:sid">host:pid:sid</a>}
+<code>ARGV[1]</code> -&gt; TTL in seconds
+<code>ARGV[2]</code> -&gt; server info
+<code>ARGV[3]</code> -&gt; worker info</dd></dl></section></div></main></body></html>
