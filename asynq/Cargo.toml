@@ -76,7 +76,7 @@ prost-build = "0.14"
 
 [dev-dependencies]
 serde_json = { version = "1.0" }
-tracing-subscriber = { version = "=0.3.20", features = ["env-filter", "fmt"] }
+tracing-subscriber = { version = "=0.3.22", features = ["env-filter", "fmt"] }
 
 
 [[example]]
