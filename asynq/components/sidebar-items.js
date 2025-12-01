@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"mod":["aggregator","forwarder","healthcheck","heartbeat","janitor","periodic_task_manager","processor","recoverer","subscriber"],"trait":["ComponentLifecycle"]};

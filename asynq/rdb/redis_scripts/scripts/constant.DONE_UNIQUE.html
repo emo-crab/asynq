@@ -1,0 +1,35 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="完成唯一任务脚本 - Go: doneUniqueCmd `KEYS[1]` -&#62; asynq:{`&#60;qname&#62;`}:active `KEYS[2]` -&#62; asynq:{`&#60;qname&#62;`}:lease `KEYS[3]` -&#62; asynq:{`&#60;qname&#62;`}:t:&#60;task_id&#62; `KEYS[4]` -&#62; asynq:{`&#60;qname&#62;`}:processed:`&#60;yyyy-mm-dd&#62;` `KEYS[5]` -&#62; asynq:{`&#60;qname&#62;`}:processed `KEYS[6]` -&#62; unique key `ARGV[1]` -&#62; task ID `ARGV[2]` -&#62; stats expiration timestamp `ARGV[3]` -&#62; max int64 value"><title>DONE_UNIQUE in asynq::rdb::redis_scripts::scripts - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-e56847b5.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="asynq" data-themes="" data-resource-suffix="" data-rustdoc-version="1.91.1 (ed61e7d7e 2025-11-07)" data-channel="1.91.1" data-search-js="search-e256b49e.js" data-stringdex-js="stringdex-c3e638e9.js" data-settings-js="settings-c38705f0.js" ><script src="../../../../static.files/storage-e2aeef58.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../../../static.files/main-6dc2a7f3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc constant"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">DONE_UNIQUE</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../../asynq/index.html">asynq</a><span class="version">0.1.4</span></h2></div><div class="sidebar-elems"><div id="rustdoc-modnav"><h2><a href="index.html">In asynq::<wbr>rdb::<wbr>redis_<wbr>scripts::<wbr>scripts</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../../index.html">asynq</a>::<wbr><a href="../../index.html">rdb</a>::<wbr><a href="../index.html">redis_scripts</a>::<wbr><a href="index.html">scripts</a></div><h1>Constant <span class="constant">DONE_<wbr>UNIQUE</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../../../src/asynq/rdb/redis_scripts.rs.html#442-466">Source</a> </span></div><pre class="rust item-decl"><code>pub const DONE_UNIQUE: &amp;<a class="primitive" href="https://doc.rust-lang.org/1.91.1/std/primitive.str.html">str</a> = r#&quot;
+        if redis.call(&quot;LREM&quot;, KEYS[1], 0, ARGV[1]) == 0 then
+          return redis.error_reply(&quot;NOT FOUND&quot;)
+        end
+        if redis.call(&quot;ZREM&quot;, KEYS[2], ARGV[1]) == 0 then
+          return redis.error_reply(&quot;NOT FOUND&quot;)
+        end
+        if redis.call(&quot;DEL&quot;, KEYS[3]) == 0 then
+          return redis.error_reply(&quot;NOT FOUND&quot;)
+        end
+        local n = redis.call(&quot;INCR&quot;, KEYS[4])
+        if tonumber(n) == 1 then
+            redis.call(&quot;EXPIREAT&quot;, KEYS[4], ARGV[2])
+        end
+        local total = redis.call(&quot;GET&quot;, KEYS[5])
+        if tonumber(total) == tonumber(ARGV[3]) then
+            redis.call(&quot;SET&quot;, KEYS[5], 1)
+        else
+            redis.call(&quot;INCR&quot;, KEYS[5])
+        end
+        if redis.call(&quot;GET&quot;, KEYS[6]) == ARGV[1] then
+          redis.call(&quot;DEL&quot;, KEYS[6])
+        end
+        return redis.status_reply(&quot;OK&quot;)
+    &quot;#;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>完成唯一任务脚本 - Go: doneUniqueCmd
+<code>KEYS[1]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:active
+<code>KEYS[2]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:lease
+<code>KEYS[3]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:t:&lt;task_id&gt;
+<code>KEYS[4]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:processed:<code>&lt;yyyy-mm-dd&gt;</code>
+<code>KEYS[5]</code> -&gt; asynq:{<code>&lt;qname&gt;</code>}:processed
+<code>KEYS[6]</code> -&gt; unique key
+<code>ARGV[1]</code> -&gt; task ID
+<code>ARGV[2]</code> -&gt; stats expiration timestamp
+<code>ARGV[3]</code> -&gt; max int64 value</p>
+</div></details></section></div></main></body></html>
