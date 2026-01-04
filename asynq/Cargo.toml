@@ -17,7 +17,7 @@ path = "src/lib.rs"
 
 [dependencies]
 # Redis 连接池和客户端
-redis = { version = "0.32.7", features = ["tokio-comp", "aio", "connection-manager", "streams"] }
+redis = { version = "1.0.2", features = ["tokio-comp", "aio", "connection-manager", "streams"] }
 # 宏
 asynq-macros = { version = "0.1.0", optional = true }
 # 序列化和反序列化
