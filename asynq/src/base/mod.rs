@@ -48,7 +48,7 @@ pub trait Broker: Send + Sync {
 
   /// 标记任务为完成状态 - Go: MarkAsComplete
   /// Mark a task as complete - Go: MarkAsComplete
-  async fn mark_as_complete(&self, msg: &TaskMessage, result: &[u8]) -> Result<()>;
+  async fn mark_as_complete(&self, msg: &TaskMessage) -> Result<()>;
 
   /// 重新排队任务进行重试 - Go: Requeue
   /// Requeue a task for retry - Go: Requeue
