@@ -11,6 +11,7 @@ use crate::components::subscriber::SubscriberConfig;
 use crate::components::ComponentLifecycle;
 pub use crate::config::ServerConfig;
 use crate::error::{Error, Result};
+use crate::inspector::Inspector;
 use crate::rdb::RedisBroker;
 use crate::redis::RedisConnectionType;
 use crate::task::Task;
@@ -21,7 +22,6 @@ use std::time::Duration;
 use tokio::signal;
 use tokio::task::JoinHandle;
 use uuid::Uuid;
-use crate::inspector::Inspector;
 
 /// 任务处理器特性
 /// Task handler trait
@@ -110,7 +110,7 @@ enum ServerState {
 /// Asynq server, responsible for processing tasks
 pub struct Server {
   broker: Arc<dyn Broker>,
-  inspector:Arc<Inspector>,
+  inspector: Arc<Inspector>,
   config: ServerConfig,
   state: ServerState,
   // 原先仅保存 uuid，现在按照 Go 版语义分别保存

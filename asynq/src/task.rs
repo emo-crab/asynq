@@ -6,9 +6,9 @@
 
 use crate::base::{keys::TaskState, Broker};
 use crate::error::{Error, Result};
+use crate::inspector::Inspector;
 use crate::proto;
 use crate::rdb::option::{RateLimit, RetryPolicy, TaskOptions};
-use crate::inspector::Inspector;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -112,15 +112,15 @@ pub struct Task {
   /// None for newly created tasks (created via Task::new)
   /// Only tasks passed to Handler::process_task have a valid ResultWriter
   result_writer: Option<Arc<ResultWriter>>,
-  inspector: Option<Arc<Inspector>>
+  inspector: Option<Arc<Inspector>>,
 }
 impl Debug for Task {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("Task")
       .field("task_type", &self.task_type)
-      .field("payload",&self.payload)
-      .field("headers",&self.headers)
-      .field("options",&self.options)
+      .field("payload", &self.payload)
+      .field("headers", &self.headers)
+      .field("options", &self.options)
       .finish()
   }
 }
