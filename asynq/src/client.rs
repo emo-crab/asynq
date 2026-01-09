@@ -144,7 +144,7 @@ mod tests {
     // Here we only test configuration parsing, not the actual connection
     // 由于客户端创建需要连接Redis，我们只测试配置解析和基础结构
     // Since client creation requires a connection to Redis, we only test configuration parsing and basic structure
-    assert_eq!(redis_config.addr.to_string(), "127.0.0.1:6379");
+    assert_eq!(redis_config.addr().to_string(), "127.0.0.1:6379");
     assert_eq!(config.max_retries, 3);
   }
 

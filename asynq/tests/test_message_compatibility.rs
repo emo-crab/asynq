@@ -81,7 +81,7 @@ mod message_compatibility_tests {
   #[test]
   fn test_json_payload_compatibility() {
     // Test various JSON payload types that Go asynq commonly uses
-    let test_payloads = vec![
+    let test_payloads = [
       // Simple object
       serde_json::json!({
         "action": "send_email",

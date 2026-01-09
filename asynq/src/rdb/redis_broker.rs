@@ -111,18 +111,17 @@ impl RedisBroker {
         // the SentinelNodeConnectionInfo so the resolved master connection will use auth.
         let mut node_conn_info: Option<SentinelNodeConnectionInfo> = None;
         if let Some(conn_info) = redis_connection_info {
-          node_conn_info = Some(SentinelNodeConnectionInfo {
-            #[cfg(feature = "tls")]
-            tls_mode: None, // node_conn_info is used for resolved master; we will pass tls via builder when possible
-            redis_connection_info: Some(conn_info),
-          });
+          let sentinel_node_connection_info =
+            SentinelNodeConnectionInfo::default().set_redis_connection_info(conn_info);
+          node_conn_info = Some(sentinel_node_connection_info);
         }
         // If TLS certificates are provided, use SentinelClientBuilder to attach them
         #[cfg(feature = "tls")]
         let sentinel_client = {
           if let Some(certs) = tls_certs {
             // SentinelClientBuilder expects ConnectionAddr values for sentinels
-            let addrs: Vec<redis::ConnectionAddr> = sentinels.iter().map(|ci| ci.addr.clone()).collect();
+            let addrs: Vec<redis::ConnectionAddr> =
+              sentinels.iter().map(|ci| ci.addr().clone()).collect();
             let mut builder = redis::sentinel::SentinelClientBuilder::new(
               addrs,
               master_name.clone(),
@@ -132,7 +131,12 @@ impl RedisBroker {
             builder.build()?
           } else {
             // No certs provided; fall back to simple builder
-            SentinelClient::build(sentinels, master_name.clone(), node_conn_info, SentinelServerType::Master)?
+            SentinelClient::build(
+              sentinels,
+              master_name.clone(),
+              node_conn_info,
+              SentinelServerType::Master,
+            )?
           }
         };
         let client = std::sync::Arc::new(tokio::sync::Mutex::new(sentinel_client));

@@ -134,7 +134,7 @@ impl TaskProcessor {
     let redis_url =
       std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
     let client = redis::Client::open(redis_url)?;
-    let mut conn = client.get_multiplexed_tokio_connection().await?;
+    let mut conn = client.get_multiplexed_async_connection().await?;
 
     // 每处理一个任务，计数器+1
     let count: i32 = conn.incr(format!("group:{group}:count"), 1).await?;

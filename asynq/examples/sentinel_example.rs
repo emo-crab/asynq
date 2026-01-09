@@ -7,7 +7,7 @@ struct EmailPayload {
   subject: String,
   body: String,
 }
-#[cfg(feature = "sentinel")]
+#[cfg(all(feature = "sentinel", feature = "json"))]
 #[tokio::main]
 async fn main() -> Result<()> {
   // Assumptions:
@@ -16,14 +16,14 @@ async fn main() -> Result<()> {
   let master_name = "mymaster";
   // sentinel addresses (change as needed)
   let sentinels = vec!["redis://localhost:26379"];
-  let redis_connection_info = Some(RedisConnectionInfo {
-    db: 0,
-    username: None,
-    password: Some("mypassword".to_string()),
-    protocol: Default::default(),
-  });
-  let redis_config = RedisConnectionType::sentinel(master_name, sentinels, redis_connection_info)?;
-  let client = Client::new(redis_config).await?;
+  let redis_connection_info = Some(
+    redis::RedisConnectionInfo::default()
+      .set_db(0)
+      .set_password("mypassword"),
+  );
+  let redis_config =
+    asynq::redis::RedisConnectionType::sentinel(master_name, sentinels, redis_connection_info)?;
+  let client = asynq::client::Client::new(redis_config).await?;
   // Create task
   let payload = EmailPayload {
     to: "user@example.com".to_string(),
@@ -31,15 +31,15 @@ async fn main() -> Result<()> {
     body: "Welcome to our service!".to_string(),
   };
 
-  let task = Task::new_with_json("email:send", &payload)?;
+  let task = asynq::task::Task::new_with_json("email:send", &payload)?;
 
   // Enqueue task
   let task_info = client.enqueue(task).await?;
   println!("Task enqueued with ID: {}", task_info.id);
   Ok(())
 }
-#[cfg(not(feature = "sentinel"))]
+#[cfg(not(all(feature = "sentinel", feature = "json")))]
 #[tokio::main]
 async fn main() -> Result<()> {
-Ok(())
+  Ok(())
 }

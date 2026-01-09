@@ -106,7 +106,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // etc.
 
   match inspector.list_pending_tasks("default").await {
-    Ok(tasks) => println!("✅ list_pending_tasks(): {} tasks", tasks.len()),
+    Ok(tasks) => {
+      println!("✅ list_pending_tasks(): {} tasks", tasks.len());
+      for task in tasks {
+        println!("{:?}", task);
+      }
+    }
     Err(e) => println!("❌ list_pending_tasks() error: {e}"),
   }
 
@@ -114,7 +119,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(tasks) => println!("✅ list_active_tasks(): {} tasks", tasks.len()),
     Err(e) => println!("❌ list_active_tasks() error: {e}"),
   }
-
+  match inspector.list_completed_tasks("default").await {
+    Ok(tasks) => {
+      println!("✅ list_completed_tasks(): {} tasks", tasks.len());
+      for task in tasks {
+        let task_info = inspector.get_task_info("default", &task.id).await?;
+        println!("task_info: {:?}", task_info);
+      }
+    }
+    Err(e) => println!("❌ list_completed_tasks() error: {e}"),
+  }
   println!("\n✨ Inspector API is fully compatible with Go asynq!");
   println!("   All Go inspector methods have Rust equivalents.");
 
