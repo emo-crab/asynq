@@ -14,10 +14,13 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// Asynq error type
 #[derive(Error, Debug)]
 pub enum Error {
-  /// Redis 连接错误
   /// Redis connection error
   #[error("Redis connection error: {0}")]
   Redis(#[from] redis::RedisError),
+
+  /// Redis parsing error
+  #[error("Redis parsing error: {0}")]
+  RedisParsing(#[from] redis::ParsingError),
   #[cfg(feature = "json")]
   /// 序列化错误
   /// Serialization error

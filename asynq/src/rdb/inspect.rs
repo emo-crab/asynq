@@ -253,8 +253,8 @@ impl RedisBroker {
     let mut result = Vec::new();
     for chunk in raw_result.chunks(2) {
       if let [name_val, size_val] = chunk {
-        let name: String = redis::from_redis_value(name_val)?;
-        let size: i64 = redis::from_redis_value(size_val)?;
+        let name: String = redis::from_redis_value(name_val.clone())?;
+        let size: i64 = redis::from_redis_value(size_val.clone())?;
         result.push((name, size));
       }
     }
@@ -332,8 +332,8 @@ impl RedisBroker {
     let mut result = Vec::new();
     for chunk in raw_result.chunks(3) {
       if let [msg_val, score_val, res_val] = chunk {
-        let msg: Vec<u8> = redis::from_redis_value(msg_val)?;
-        let score: f64 = redis::from_redis_value(score_val)?;
+        let msg: Vec<u8> = redis::from_redis_value(msg_val.clone())?;
+        let score: f64 = redis::from_redis_value(score_val.clone())?;
         let next_process_at = if score > 0.0 {
           Some(
             Utc
@@ -344,7 +344,7 @@ impl RedisBroker {
         } else {
           None
         };
-        let res_bytes: Vec<u8> = redis::from_redis_value(res_val)?;
+        let res_bytes: Vec<u8> = redis::from_redis_value(res_val.clone())?;
         let res_opt = if res_bytes.is_empty() {
           None
         } else {
