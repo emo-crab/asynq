@@ -408,8 +408,16 @@ impl Processor {
                   Ok(()) => {
                     // 任务成功
                     // Task succeeded
-                    if let Err(e) = broker.done(&task_msg).await {
-                      tracing::error!("Failed to mark task as done: {}", e);
+                    if task_msg.retention > 0 {
+                      // Task has retention set, use mark_as_complete to preserve result
+                      if let Err(e) = broker.mark_as_complete(&task_msg, &[]).await {
+                        tracing::error!("Failed to mark task as complete: {}", e);
+                      }
+                    } else {
+                      // No retention, just mark as done
+                      if let Err(e) = broker.done(&task_msg).await {
+                        tracing::error!("Failed to mark task as done: {}", e);
+                      }
                     }
                   }
                   Err(e) => {
