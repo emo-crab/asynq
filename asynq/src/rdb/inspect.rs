@@ -5,9 +5,10 @@ use crate::proto::{ServerInfo, TaskMessage};
 use crate::rdb::redis_scripts::RedisArg;
 use crate::rdb::RedisBroker;
 use crate::task::{DailyStats, QueueInfo, QueueStats, Task, TaskInfo};
-use chrono::{TimeZone, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use prost::Message;
 use redis::AsyncCommands;
+use std::str::FromStr;
 use std::time::Duration;
 
 /// Pagination specifies the page size and page number for list operations.
@@ -171,65 +172,55 @@ impl RedisBroker {
   }
   /// 获取任务信息。
   /// Get task information.
-  pub async fn get_task_info(&self, queue: &str, task_id: &str) -> Result<Option<TaskInfo>> {
+  pub async fn get_task_info(&self, queue: &str, task_id: &str) -> Result<TaskInfo> {
     let mut conn = self.get_async_connection().await?;
-
-    // 检查各个队列中的任务
-    // Check tasks in various queues
-    let keys_to_check = vec![
-      (keys::pending_key(queue), TaskState::Pending),
-      (keys::active_key(queue), TaskState::Active),
-      (keys::scheduled_key(queue), TaskState::Scheduled),
-      (keys::retry_key(queue), TaskState::Retry),
-      (keys::archived_key(queue), TaskState::Archived),
-      (keys::completed_key(queue), TaskState::Completed),
+    if !self.queue_exists(queue).await? {
+      return Err(Error::other(format!("Queue '{queue}' does not exist")));
+    }
+    let now = Utc::now();
+    let keys = vec![keys::task_key(queue, task_id)];
+    let args = vec![
+      RedisArg::Str(task_id.to_string()),
+      RedisArg::Int(now.timestamp()),
+      RedisArg::Str(keys::queue_key_prefix(queue)),
     ];
+    let raw_result: Vec<redis::Value> = self
+      .script_manager
+      .eval_script(&mut conn, "get_task_info", &keys, &args)
+      .await?;
+    let [encoded, state, process_at, result]: [redis::Value; 4] =
+      raw_result.try_into().map_err(|_| {
+        Error::other("unexpected number of values returned from Lua script".to_string())
+      })?;
+    // 转换 encoded 为 Vec<u8>（二进制）
+    let encoded: Vec<u8> = redis::from_redis_value(encoded)
+      .map_err(|e| Error::other(format!("failed to parse encoded: {}", e)))?;
 
-    for (key, state) in keys_to_check {
-      // 对于列表类型的键（pending, active）
-      if matches!(state, TaskState::Pending | TaskState::Active) {
-        let tasks: Vec<Vec<u8>> = conn.lrange(&key, 0, -1).await?;
-        for task_data in tasks {
-          if let Ok(msg) = self.decode_task_message(&task_data) {
-            if msg.id == task_id {
-              return Ok(Some(TaskInfo::from_proto(&msg, state, None, None)));
-            }
-          }
-        }
-      } else {
-        // 对于有序集合类型的键（scheduled, retry, archived, completed）
-        let tasks: Vec<Vec<u8>> = conn.zrange(&key, 0, -1).await?;
-        for task_data in tasks {
-          if let Ok(msg) = self.decode_task_message(&task_data) {
-            if msg.id == task_id {
-              return Ok(Some(TaskInfo::from_proto(&msg, state, None, None)));
-            }
-          }
-        }
-      }
-    }
+    // 转换 state 为 String
+    let state: String = redis::from_redis_value(state)
+      .map_err(|e| Error::other(format!("failed to parse state: {}", e)))?;
 
-    // 检查聚合队列
-    // Check aggregation queues
-    let aggregating_pattern = format!("{}{}:*", keys::AGGREGATING_PREFIX, queue);
-    let aggregating_keys: Vec<String> = conn.keys(&aggregating_pattern).await?;
-    for key in aggregating_keys {
-      let tasks: Vec<Vec<u8>> = conn.lrange(&key, 0, -1).await?;
-      for task_data in tasks {
-        if let Ok(msg) = self.decode_task_message(&task_data) {
-          if msg.id == task_id {
-            return Ok(Some(TaskInfo::from_proto(
-              &msg,
-              TaskState::Aggregating,
-              None,
-              None,
-            )));
-          }
-        }
-      }
-    }
+    // 转换 process_at 为 i64
+    let process_at: i64 = redis::from_redis_value(process_at)
+      .map_err(|e| Error::other(format!("failed to parse process_at: {}", e)))?;
 
-    Ok(None)
+    // 转换 result 为 String
+    let result: String = redis::from_redis_value(result)
+      .map_err(|e| Error::other(format!("failed to parse result: {}", e)))?;
+    let task_msg = self.decode_task_message(&encoded)?;
+    let state = TaskState::from_str(&state)
+      .map_err(|_| Error::other("failed to parse TaskState".to_string()))?;
+    let result = if result.is_empty() {
+      None
+    } else {
+      Some(result.as_bytes().to_vec())
+    };
+    let process_at = if process_at == 0 {
+      None
+    } else {
+      DateTime::from_timestamp(process_at, 0)
+    };
+    Ok(TaskInfo::from_proto(&task_msg, state, process_at, result))
   }
 }
 impl RedisBroker {
@@ -299,7 +290,12 @@ impl RedisBroker {
     for chunk in raw_result.chunks(2) {
       if let [msg, res] = chunk {
         let task = self.decode_task_message(msg)?;
-        result.push(TaskInfo::from_proto(&task, state, None, Some(res.clone())));
+        let task_result = if res.is_empty() {
+          None
+        } else {
+          Some(res.clone())
+        };
+        result.push(TaskInfo::from_proto(&task, state, None, task_result));
       }
     }
     Ok(result)
@@ -1158,14 +1154,6 @@ impl RedisBroker {
 
     // Check if task exists and get its current state
     let task_info = self.get_task_info(queue, task_id).await?;
-    if task_info.is_none() {
-      return Err(Error::other("Task not found"));
-    }
-
-    let task_info = match task_info {
-      Some(info) => info,
-      None => return Err(Error::other("Task not found")),
-    };
     let task_key = keys::task_key(queue, task_id);
     let archived_key = keys::archived_key(queue);
     let current_time = Utc::now().timestamp();

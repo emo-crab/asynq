@@ -239,7 +239,11 @@ impl Aggregator {
                 // Convert TaskMessage to Task
                 let mut tasks = Vec::new();
                 for task_msg in task_messages {
-                  match Task::new_with_headers(&task_msg.r#type, &task_msg.payload,task_msg.headers) {
+                  match Task::new_with_headers(
+                    &task_msg.r#type,
+                    &task_msg.payload,
+                    task_msg.headers,
+                  ) {
                     Ok(task) => tasks.push(task),
                     Err(e) => {
                       tracing::warn!("Aggregator: failed to create task from message: {}", e);
