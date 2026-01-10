@@ -13,7 +13,7 @@ use prost::Message;
 use redis::AsyncCommands;
 use std::time::Duration;
 
-const STATS_TTL: i32 = 90 * 24 * 60 * 60; // 90 days in seconds
+const STATS_TTL: i64 = 90 * 24 * 60 * 60; // 90 days in seconds
 const LEASE_DURATION: i64 = 3600;
 /// RedisBroker 实现 Broker trait，提供与 Redis 的任务存储和调度交互。
 /// RedisBroker implements the Broker trait, providing task storage and scheduling interaction with Redis.
@@ -221,18 +221,20 @@ impl Broker for RedisBroker {
   /// 标记任务为完成状态 - Go: MarkAsComplete
   async fn mark_as_complete(&self, msg: &TaskMessage) -> Result<()> {
     let mut conn = self.get_async_connection().await?;
+    let mut msg = msg.clone();
     let queue = &msg.queue;
     let now = Utc::now();
+    msg.completed_at = now.timestamp();
     let completed_key = keys::completed_key(queue);
     let active_key = keys::active_key(queue);
     let lease_key = keys::lease_key(queue);
     let task_key = keys::task_key(queue, &msg.id);
     let processed_key = keys::processed_key(queue, &now);
     let processed_total_key = keys::processed_total_key(queue);
-    let stats_expiration = Utc::now() + chrono::Duration::seconds(86400);
-    let completed_at = Utc::now();
+    let stats_expiration = now + chrono::Duration::seconds(STATS_TTL);
+    let completed_at = now;
     let retention = msg.retention;
-    let encoded = self.encode_task_message(msg)?;
+    let encoded = self.encode_task_message(&msg)?;
     let mut keys = vec![
       active_key,
       lease_key,
@@ -395,7 +397,7 @@ impl Broker for RedisBroker {
     let failed_key = keys::failed_key(queue, &now);
     let process_total_key = keys::processed_total_key(queue);
     let failed_total_key = keys::failed_total_key(queue);
-    let expire_at = Utc::now().timestamp() + STATS_TTL as i64;
+    let expire_at = Utc::now().timestamp() + STATS_TTL;
 
     let keys = vec![
       task_key,
@@ -428,7 +430,7 @@ impl Broker for RedisBroker {
     let mut conn = self.get_async_connection().await?;
     let now = Utc::now();
     let cutoff = now - chrono::Duration::days(DEFAULT_ARCHIVED_EXPIRATION_IN_DAYS);
-    let expire_at = now.timestamp() + STATS_TTL as i64;
+    let expire_at = now.timestamp() + STATS_TTL;
 
     let mut archived_msg = msg.clone();
     archived_msg.error_msg = error_msg.to_string();
@@ -648,7 +650,7 @@ impl Broker for RedisBroker {
       keys::all_aggregation_sets(queue),
       keys::all_groups(queue),
     ];
-    let expire_at = Utc::now().timestamp() + STATS_TTL as i64;
+    let expire_at = Utc::now().timestamp() + STATS_TTL;
 
     let args = vec![
       RedisArg::Int(max_size as i64),

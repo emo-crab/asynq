@@ -39,7 +39,7 @@ impl Handler for ResultWriterHandler {
   async fn process_task(&self, task: Task) -> Result<()> {
     match task.get_type() {
       "default:sum" | "default:multiply" => {
-        let payload: ComputePayload = serde_json::from_slice(task.get_payload())?;
+        let payload: ComputePayload = serde_json::from_slice(task.get_payload()).unwrap();
         self.handle_compute(task, payload).await
       }
       _ => {
@@ -79,7 +79,7 @@ impl ResultWriterHandler {
         timestamp: chrono::Utc::now().to_rfc3339(),
       };
 
-      let result_json = serde_json::to_vec(&compute_result)?;
+      let result_json = serde_json::to_vec(&compute_result).unwrap();
 
       match writer.write(&result_json).await {
         Ok(bytes_written) => {
