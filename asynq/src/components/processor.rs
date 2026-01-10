@@ -53,7 +53,7 @@
 //! use std::sync::atomic::AtomicUsize;
 //! use std::time::Duration;
 //!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // 创建 broker 和其他必要组件
 //! // Create broker and other necessary components
 //! # use asynq::redis::RedisConnectionType;
@@ -67,6 +67,7 @@
 //!
 //! let params = ProcessorParams {
 //!   broker: broker.clone(),
+//!   inspector: Arc::new(asynq::inspector::Inspector::from_broker(broker)),
 //!   queues,
 //!   concurrency: 10,
 //!   strict_priority: false,
@@ -95,6 +96,7 @@
 
 use crate::base::Broker;
 use crate::error::Error;
+use crate::inspector::Inspector;
 use crate::server::Handler;
 use crate::task::Task;
 use std::collections::HashMap;
@@ -109,6 +111,7 @@ use tokio_util::sync::CancellationToken;
 /// Processor parameters
 pub struct ProcessorParams {
   pub broker: Arc<dyn Broker>,
+  pub inspector: Arc<Inspector>,
   pub queues: HashMap<String, i32>,
   pub concurrency: usize,
   pub strict_priority: bool,
@@ -199,6 +202,7 @@ impl Default for CancellationMap {
 /// Processor - responsible for dequeuing and processing tasks
 pub struct Processor {
   broker: Arc<dyn Broker>,
+  inspector: Arc<Inspector>,
   queue_config: HashMap<String, i32>,
   ordered_queues: Option<Vec<String>>,
   task_check_interval: Duration,
@@ -252,6 +256,7 @@ impl Processor {
 
     Self {
       broker: params.broker,
+      inspector: params.inspector,
       queue_config: queues,
       ordered_queues,
       task_check_interval: params.task_check_interval,
@@ -285,6 +290,7 @@ impl Processor {
     self.running.store(true, Ordering::SeqCst);
 
     let broker = Arc::clone(&self.broker);
+    let inspector = Arc::clone(&self.inspector);
     let running = Arc::clone(&self.running);
     let sema = Arc::clone(&self.sema);
     let queue_config = self.queue_config.clone();
@@ -332,6 +338,7 @@ impl Processor {
 
               let handler = Arc::clone(&handler);
               let broker = Arc::clone(&broker);
+              let inspector = Arc::clone(&inspector);
               let active_workers = Arc::clone(&active_workers);
               let cancelations = cancelations.clone();
 
@@ -340,9 +347,13 @@ impl Processor {
               tokio::spawn(async move {
                 let _permit = permit; // 持有许可直到任务完成
 
-                // 创建任务
-                // Create task
-                let task = match Task::new(&task_msg.r#type, &task_msg.payload) {
+                // 创建任务，包含头部信息
+                // Create task with headers to preserve workflow path and other metadata
+                let mut task = match Task::new_with_headers(
+                  &task_msg.r#type,
+                  &task_msg.payload,
+                  task_msg.headers.clone(),
+                ) {
                   Ok(task) => task,
                   Err(e) => {
                     tracing::error!("Failed to create task: {}", e);
@@ -351,6 +362,17 @@ impl Processor {
                   }
                 };
 
+                // 创建并附加 ResultWriter
+                // Create and attach ResultWriter
+                // Note: ResultWriter is created for every task to match Go asynq behavior.
+                // The broker's write_result will only persist data when retention is configured.
+                let result_writer = Arc::new(crate::task::ResultWriter::new(
+                  task_msg.id.clone(),
+                  task_msg.queue.clone(),
+                  broker.clone(),
+                ));
+                task = task.with_result_writer(result_writer);
+                task = task.with_inspector(inspector);
                 // 创建取消令牌
                 // Create cancellation token
                 let cancel_token = CancellationToken::new();
@@ -408,8 +430,12 @@ impl Processor {
                   Ok(()) => {
                     // 任务成功
                     // Task succeeded
-                    if let Err(e) = broker.done(&task_msg).await {
-                      tracing::error!("Failed to mark task as done: {}", e);
+                    if task_msg.retention == 0 {
+                      if let Err(e) = broker.done(&task_msg).await {
+                        tracing::error!("Failed to mark task as done: {}", e);
+                      }
+                    } else if let Err(e) = broker.mark_as_complete(&task_msg).await {
+                      tracing::error!("Failed to mark task as complete: {}", e);
                     }
                   }
                   Err(e) => {
@@ -509,7 +535,6 @@ impl Processor {
     tracing::info!("All workers have finished");
   }
 }
-
 /// 标准化队列配置，确保优先级为正数
 /// Normalize queue config, ensure priorities are positive
 fn normalize_queues(queues: HashMap<String, i32>) -> HashMap<String, i32> {

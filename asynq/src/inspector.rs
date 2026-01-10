@@ -160,12 +160,7 @@ impl Inspector {
   /// 获取任务信息（若不存在返回 TaskNotFound）
   /// Get task information (return TaskNotFound if not exists)
   pub async fn get_task_info(&self, queue: &str, task_id: &str) -> Result<TaskInfo> {
-    match self.rdb.get_task_info(queue, task_id).await? {
-      Some(info) => Ok(info),
-      None => Err(Error::TaskNotFound {
-        id: task_id.to_string(),
-      }),
-    }
+    self.rdb.get_task_info(queue, task_id).await
   }
 
   /// 删除任务

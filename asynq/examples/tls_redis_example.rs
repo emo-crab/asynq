@@ -53,3 +53,5 @@ async fn main() -> Result<()> {
   println!("PING -> {pong}");
   Ok(())
 }
+#[cfg(not(feature = "tls"))]
+fn main() {}

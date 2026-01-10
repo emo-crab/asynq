@@ -12,7 +12,7 @@ pub enum OptionType {
   ProcessAtOpt(u64),        // 处理时间
   ProcessInOpt(u64),        // 处理间隔
   TaskIDOpt(String),        // 任务ID
-  RetentionOpt(u64),        // 保留时间
+  RetentionOpt(u64),        // 保留任务结果时间
   GroupOpt(String),         // 组名
   RateLimitOpt(u32),        // 速率限制
   GroupGracePeriodOpt(u64), // 组聚合宽限期
@@ -194,7 +194,7 @@ pub struct TaskOptions {
   pub process_at: Option<DateTime<Utc>>,
   /// 延迟处理时间（相对于当前时间）
   pub process_in: Option<Duration>,
-  /// 保留期限
+  /// 任务结果保留期限
   pub retention: Option<Duration>,
   /// 任务组
   pub group: Option<String>,

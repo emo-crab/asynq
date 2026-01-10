@@ -11,6 +11,7 @@ use crate::components::subscriber::SubscriberConfig;
 use crate::components::ComponentLifecycle;
 pub use crate::config::ServerConfig;
 use crate::error::{Error, Result};
+use crate::inspector::Inspector;
 use crate::rdb::RedisBroker;
 use crate::redis::RedisConnectionType;
 use crate::task::Task;
@@ -109,6 +110,7 @@ enum ServerState {
 /// Asynq server, responsible for processing tasks
 pub struct Server {
   broker: Arc<dyn Broker>,
+  inspector: Arc<Inspector>,
   config: ServerConfig,
   state: ServerState,
   // 原先仅保存 uuid，现在按照 Go 版语义分别保存
@@ -161,9 +163,10 @@ impl Server {
       .to_string();
     let pid = std::process::id() as i32;
     let server_uuid = Uuid::new_v4().to_string();
-
+    let inspector = Arc::new(Inspector::from_broker(broker.clone()));
     Ok(Self {
       broker,
+      inspector,
       config,
       state: ServerState::New,
       host,
@@ -231,6 +234,7 @@ impl Server {
     // Create and start processor
     let processor_params = ProcessorParams {
       broker: Arc::clone(&self.broker),
+      inspector: Arc::clone(&self.inspector),
       queues: self.config.queues.clone(),
       concurrency: self.config.concurrency,
       strict_priority: self.config.strict_priority,

@@ -1,0 +1,120 @@
+name: Publish
+on:
+  push:
+    tags:
+      - "v*"
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: full
+jobs:
+  publish:
+    name: Publish to crates.io
+    if: startsWith(github.repository, 'emo-crab/') && github.actor != 'dependabot[bot]'
+    needs: [ test,rustfmt,clippy ]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable  # MSRV
+          profile: minimal
+          override: true
+          components: clippy
+      - uses: Swatinem/rust-cache@v1
+      - name: Publish to crates.io
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          # Helper function to publish a crate only if not already published
+          publish_if_needed() {
+            local crate_name="$1"
+            local version
+
+            # Extract version from local Cargo.toml via cargo metadata
+            version=$(cargo metadata --format-version=1 --no-deps | \
+                      jq -r ".packages[] | select(.name == \"${crate_name}\") | .version")
+
+            if [ -z "$version" ]; then
+              echo "ERROR: Could not determine version for crate '${crate_name}'"
+              exit 1
+            fi
+
+            echo "Checking if ${crate_name} v${version} is already published..."
+
+            if curl -sf "https://crates.io/api/v1/crates/${crate_name}/${version}" > /dev/null; then
+              echo "${crate_name} v${version} already exists on crates.io – skipping publish."
+            else
+              echo "Publishing ${crate_name} v${version}..."
+              cargo publish -vv -p "${crate_name}"
+            fi
+          }
+
+          publish_if_needed "asynq"
+          publish_if_needed "asynq-macros"
+      - name: Done
+        run: exit 0
+  test:
+    name: Test
+    if: startsWith(github.repository, 'emo-crab/') && github.actor != 'dependabot[bot]'
+    strategy:
+      matrix:
+        os: [ "ubuntu-latest" ]
+        rust: [ "stable" ]
+    continue-on-error: ${{ matrix.rust != 'stable' }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          profile: minimal
+          override: true
+      - uses: Swatinem/rust-cache@v1
+      - name: Build
+        run: cargo test --no-run --workspace --all-features --all
+      - name: Default features
+        run: cargo test --workspace
+  rustfmt:
+    name: rustfmt
+    if: startsWith(github.repository, 'emo-crab/') && github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          # Not MSRV because its harder to jump between versions and people are
+          # more likely to have stable
+          toolchain: stable
+          profile: minimal
+          override: true
+          components: rustfmt
+      - uses: Swatinem/rust-cache@v1
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+  clippy:
+    name: clippy
+    if: startsWith(github.repository, 'emo-crab/') && github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable  # MSRV
+          profile: minimal
+          override: true
+          components: clippy
+      - uses: Swatinem/rust-cache@v1
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --workspace --all-features --all-targets -- -D warnings --allow deprecated

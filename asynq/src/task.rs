@@ -4,19 +4,93 @@
 //! 定义了任务相关的数据结构和功能
 //! Defines data structures and functions related to tasks
 
-use crate::base::keys::TaskState;
+use crate::base::{keys::TaskState, Broker};
 use crate::error::{Error, Result};
+use crate::inspector::Inspector;
 use crate::proto;
 use crate::rdb::option::{RateLimit, RetryPolicy, TaskOptions};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt::{Debug, Formatter};
+use std::sync::Arc;
 use std::time::Duration;
 use uuid::Uuid;
 
+/// 任务结果写入器
+/// Task result writer
+///
+/// 用于写入任务执行结果，对应 Go asynq 的 ResultWriter
+/// Used to write task execution results, corresponding to Go asynq's ResultWriter
+#[derive(Clone)]
+pub struct ResultWriter {
+  /// 任务 ID
+  /// Task ID
+  task_id: String,
+  /// 队列名称
+  /// Queue name
+  queue: String,
+  /// Broker 实例
+  /// Broker instance
+  broker: Arc<dyn Broker>,
+}
+
+impl std::fmt::Debug for ResultWriter {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("ResultWriter")
+      .field("task_id", &self.task_id)
+      .field("queue", &self.queue)
+      .field("broker", &"<Broker>")
+      .finish()
+  }
+}
+
+impl ResultWriter {
+  /// 创建新的 ResultWriter
+  /// Create a new ResultWriter
+  pub fn new(task_id: String, queue: String, broker: Arc<dyn Broker>) -> Self {
+    Self {
+      task_id,
+      queue,
+      broker,
+    }
+  }
+
+  /// 写入任务结果
+  /// Write task result
+  ///
+  /// 将给定的数据作为任务结果写入，返回写入的字节数
+  /// Writes the given data as task result, returns the number of bytes written
+  pub async fn write(&self, data: &[u8]) -> Result<usize> {
+    self
+      .broker
+      .write_result(&self.queue, &self.task_id, data)
+      .await?;
+    Ok(data.len())
+  }
+
+  /// 获取任务 ID
+  /// Get task ID
+  pub fn task_id(&self) -> &str {
+    &self.task_id
+  }
+}
+
 /// 表示要执行的工作单元的任务
 /// Represents a task as a unit of work to be executed
-#[derive(Debug, Clone, PartialEq)]
+///
+/// # Note on Equality
+/// The `PartialEq` implementation compares all fields except `result_writer`.
+/// This means two tasks with different result_writers can be considered equal
+/// if all other fields match, which is the expected behavior since result_writer
+/// is a runtime attachment and not part of the task's logical identity.
+///
+///
+/// # 关于相等性的说明
+/// `PartialEq` 实现比较除 `result_writer` 之外的所有字段。
+/// 这意味着如果所有其他字段匹配，两个具有不同 result_writer 的任务可以被认为是相等的，
+/// 这是预期的行为，因为 result_writer 是运行时附件，而不是任务逻辑身份的一部分。
+#[derive(Clone)]
 pub struct Task {
   /// 任务类型名称
   /// Task type name
@@ -30,8 +104,26 @@ pub struct Task {
   /// 任务选项
   /// Task options
   pub options: TaskOptions,
+  /// 任务结果写入器
+  /// Task result writer
+  ///
+  /// 对于新创建的任务（通过 Task::new 创建）为 None
+  /// 只有传递给 Handler::process_task 的任务才有有效的 ResultWriter
+  /// None for newly created tasks (created via Task::new)
+  /// Only tasks passed to Handler::process_task have a valid ResultWriter
+  result_writer: Option<Arc<ResultWriter>>,
+  inspector: Option<Arc<Inspector>>,
 }
-
+impl Debug for Task {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("Task")
+      .field("task_type", &self.task_type)
+      .field("payload", &self.payload)
+      .field("headers", &self.headers)
+      .field("options", &self.options)
+      .finish()
+  }
+}
 impl Task {
   /// 创建新任务
   /// Create a new task
@@ -48,6 +140,8 @@ impl Task {
       payload: payload.to_vec(),
       headers: Default::default(),
       options: TaskOptions::default(),
+      result_writer: None,
+      inspector: None,
     })
   }
   pub fn new_with_headers<T: AsRef<str>>(
@@ -181,11 +275,56 @@ impl Task {
   pub fn get_headers(&self) -> &HashMap<String, String> {
     &self.headers
   }
+
+  /// 获取任务结果写入器
+  /// Get task result writer
+  ///
+  /// 对于新创建的任务（通过 Task::new 创建）返回 None
+  /// 只有传递给 Handler::process_task 的任务才有有效的 ResultWriter
+  /// Returns None for newly created tasks (created via Task::new)
+  /// Only tasks passed to Handler::process_task have a valid ResultWriter
+  pub fn result_writer(&self) -> Option<&Arc<ResultWriter>> {
+    self.result_writer.as_ref()
+  }
+  /// 获取检查客户端到任务
+  /// Get task inspector
+  pub fn inspector(&self) -> Option<&Arc<Inspector>> {
+    self.inspector.as_ref()
+  }
+  /// 附加结果写入器到任务
+  /// Attach result writer to task
+  ///
+  /// 这是一个内部方法，用于在任务处理前附加 ResultWriter
+  /// This is an internal method used to attach ResultWriter before task processing
+  pub(crate) fn with_result_writer(mut self, writer: Arc<ResultWriter>) -> Self {
+    self.result_writer = Some(writer);
+    self
+  }
+  /// 附加检查客户端到任务
+  /// Attach inspector to task
+  ///
+  /// 这是一个内部方法，用于在任务处理前附加 inspector
+  /// This is an internal method used to attach inspector before task processing
+  pub(crate) fn with_inspector(mut self, inspector: Arc<Inspector>) -> Self {
+    self.inspector = Some(inspector);
+    self
+  }
   #[cfg(feature = "json")]
   /// 获取任务负载作为 JSON
   /// Get task payload as JSON
   pub fn get_payload_with_json<T: for<'de> Deserialize<'de>>(&self) -> Result<T> {
     serde_json::from_slice(&self.payload).map_err(Into::into)
+  }
+}
+
+impl PartialEq for Task {
+  fn eq(&self, other: &Self) -> bool {
+    // 比较所有字段，除了 result_writer
+    // Compare all fields except result_writer
+    self.task_type == other.task_type
+      && self.payload == other.payload
+      && self.headers == other.headers
+      && self.options == other.options
   }
 }
 
@@ -607,5 +746,69 @@ mod tests {
       .with_rate_limit(rate_limit.clone());
 
     assert_eq!(task.options.rate_limit, Some(rate_limit));
+  }
+
+  #[test]
+  fn test_task_result_writer_none_on_new_task() {
+    // 新创建的任务应该没有 ResultWriter
+    // Newly created tasks should not have a ResultWriter
+    let task = Task::new("test:task", b"payload").unwrap();
+    assert!(task.result_writer().is_none());
+  }
+
+  #[tokio::test]
+  async fn test_result_writer_functionality() {
+    use crate::rdb::RedisBroker;
+    use crate::redis::RedisConnectionType;
+
+    // 跳过测试如果没有 Redis 连接
+    // Skip test if no Redis connection
+    let redis_url =
+      std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+
+    let redis_config = match RedisConnectionType::single(redis_url) {
+      Ok(config) => config,
+      Err(_) => {
+        println!("Skipping test: Redis not available");
+        return;
+      }
+    };
+
+    let broker = match RedisBroker::new(redis_config).await {
+      Ok(broker) => Arc::new(broker),
+      Err(_) => {
+        println!("Skipping test: Could not connect to Redis");
+        return;
+      }
+    };
+
+    // 创建 ResultWriter
+    // Create ResultWriter
+    let task_id = generate_task_id();
+    let queue = "test_queue";
+    let result_writer = ResultWriter::new(task_id.clone(), queue.to_string(), broker.clone());
+
+    // 测试 task_id 方法
+    // Test task_id method
+    assert_eq!(result_writer.task_id(), task_id);
+
+    // 测试写入结果
+    // Test writing result
+    let result_data = b"test result data";
+    let bytes_written = result_writer.write(result_data).await.unwrap();
+    assert_eq!(bytes_written, result_data.len());
+  }
+
+  #[test]
+  fn test_task_with_result_writer() {
+    // 创建任务
+    // Create task
+    let task = Task::new("test:task", b"payload").unwrap();
+    assert!(task.result_writer().is_none());
+
+    // 注意：在实际测试中，我们需要一个真实的 broker
+    // 这里我们只是测试 API 的存在
+    // Note: In actual tests, we would need a real broker
+    // Here we're just testing the API exists
   }
 }
