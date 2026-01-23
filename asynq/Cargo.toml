@@ -17,7 +17,7 @@ path = "src/lib.rs"
 
 [dependencies]
 # Redis 连接池和客户端
-redis = { version = "1.0.2", features = ["tokio-comp", "aio", "connection-manager", "streams"] }
+redis = { version = "1.0.2", features = ["tokio-comp", "aio", "connection-manager", "streams", "acl"] }
 # 宏
 asynq-macros = { version = "0.1.0", optional = true }
 # 序列化和反序列化
@@ -61,7 +61,12 @@ num_cpus = "1.0"
 rand = "0.9"
 cron = "0.15.0"
 phf = { version = "0.13.1", features = ["macros"] }
-# Optional dependencies for the macros feature
+# PostgresSQL support (optional)
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "chrono"], optional = true }
+sea-orm = { version = "1.1", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"], optional = true }
+# Optional dependencies for WebSocket backend
+tokio-tungstenite = { version = "0.28", optional = true }
+base64 = { version = "0.22", optional = true }
 
 [features]
 default = []
@@ -70,6 +75,9 @@ macros = ["asynq-macros"]
 cluster = ["redis/cluster-async"]
 sentinel = ["redis/sentinel"]
 tls = ["rustls", "redis/tls-rustls", "redis/tokio-rustls-comp", "redis/tls-rustls-webpki-roots", "redis/tls-rustls-insecure"]
+postgresql = ["sqlx", "sea-orm"]
+websocket = ["tokio-tungstenite", "base64", "serde_json"]
+acl = []
 
 [build-dependencies]
 prost-build = "0.14"
@@ -116,3 +124,28 @@ required-features = ["macros"]
 name = "pattern_matching_example"
 path = "examples/pattern_matching_example.rs"
 required-features = ["macros"]
+
+[[example]]
+name = "postgres_producer"
+path = "examples/postgres_producer.rs"
+required-features = ["postgresql", "json"]
+
+[[example]]
+name = "postgres_consumer"
+path = "examples/postgres_consumer.rs"
+required-features = ["postgresql", "json"]
+
+[[example]]
+name = "websocket_producer"
+path = "examples/websocket_producer.rs"
+required-features = ["websocket", "json"]
+
+[[example]]
+name = "websocket_consumer"
+path = "examples/websocket_consumer.rs"
+required-features = ["websocket", "json"]
+
+[[example]]
+name = "acl_example"
+path = "examples/acl_example.rs"
+required-features = ["acl"]
