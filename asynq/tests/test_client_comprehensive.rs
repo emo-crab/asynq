@@ -262,7 +262,7 @@ mod client_comprehensive_tests {
       .await
       .expect("Client creation should succeed");
 
-    let custom_id = "custom_task_id_123";
+    let custom_id = uuid::Uuid::new_v4().to_string();
     let task = create_test_task("id_task", b"id_payload").with_task_id(custom_id);
     let info = client.enqueue(task).await.expect("Enqueue should succeed");
     // 只断言 id 非空或为自定义 id
@@ -495,6 +495,7 @@ mod client_comprehensive_tests {
 #[cfg(test)]
 mod integration_tests {
   use super::*;
+  use asynq::inspector::InspectorTrait;
 
   /// Test client close behavior
   #[tokio::test]

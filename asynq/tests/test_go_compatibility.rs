@@ -15,6 +15,7 @@ use std::time::Duration;
 mod go_compatibility_tests {
   use super::*;
   use asynq::base::Broker;
+  use asynq::inspector::InspectorTrait;
   use asynq::rdb::option::RetryPolicy;
 
   /// Test that our Redis key generation exactly matches Go asynq format
