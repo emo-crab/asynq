@@ -8,7 +8,9 @@ mod broker;
 pub mod inspect;
 pub mod option;
 pub mod redis_broker;
+pub mod redis_inspector;
 pub mod redis_scripts;
 mod universal_client;
 
 pub use redis_broker::RedisBroker;
+pub use redis_inspector::RedisInspector;

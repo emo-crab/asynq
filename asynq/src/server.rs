@@ -11,7 +11,7 @@ use crate::components::subscriber::SubscriberConfig;
 use crate::components::ComponentLifecycle;
 pub use crate::config::ServerConfig;
 use crate::error::{Error, Result};
-use crate::inspector::Inspector;
+use crate::inspector::{InspectorTrait, RedisInspector};
 use crate::rdb::RedisBroker;
 use crate::redis::RedisConnectionType;
 use crate::task::Task;
@@ -110,7 +110,7 @@ enum ServerState {
 /// Asynq server, responsible for processing tasks
 pub struct Server {
   broker: Arc<dyn Broker>,
-  inspector: Arc<Inspector>,
+  inspector: Arc<dyn InspectorTrait>,
   config: ServerConfig,
   state: ServerState,
   // 原先仅保存 uuid，现在按照 Go 版语义分别保存
@@ -155,6 +155,20 @@ impl Server {
     // Initialize scripts
     let broker = Arc::new(redis_broker);
 
+    Self::with_broker(broker, config).await
+  }
+
+  /// 使用自定义 Broker 和 Inspector 创建新的服务器实例
+  /// Create a new server instance with a custom Broker and Inspector
+  pub async fn with_broker_and_inspector(
+    broker: Arc<dyn Broker>,
+    inspector: Arc<dyn InspectorTrait>,
+    config: ServerConfig,
+  ) -> Result<Self> {
+    // 验证配置
+    // Validate configuration
+    config.validate()?;
+
     // 与 Go heartbeater 初始化保持一致：获取 host、pid、生成 uuid
     // Consistent with Go heartbeater initialization: get host, pid, generate uuid
     let host = hostname::get()
@@ -163,7 +177,6 @@ impl Server {
       .to_string();
     let pid = std::process::id() as i32;
     let server_uuid = Uuid::new_v4().to_string();
-    let inspector = Arc::new(Inspector::from_broker(broker.clone()));
     Ok(Self {
       broker,
       inspector,
@@ -177,6 +190,16 @@ impl Server {
       components: Vec::new(),
       group_aggregator: None,
     })
+  }
+
+  /// 使用自定义 RedisBroker 创建新的服务器实例
+  /// Create a new server instance with a custom RedisBroker
+  ///
+  /// 这是一个便利方法，自动创建 RedisInspector
+  /// This is a convenience method that automatically creates a RedisInspector
+  pub async fn with_broker(broker: Arc<RedisBroker>, config: ServerConfig) -> Result<Self> {
+    let inspector = Arc::new(RedisInspector::from_broker(broker.clone()));
+    Self::with_broker_and_inspector(broker, inspector, config).await
   }
 
   /// 设置组聚合器
@@ -235,7 +258,7 @@ impl Server {
     let processor_params = ProcessorParams {
       broker: Arc::clone(&self.broker),
       inspector: Arc::clone(&self.inspector),
-      queues: self.config.queues.clone(),
+      queues: self.config.get_queues_with_prefix(),
       concurrency: self.config.concurrency,
       strict_priority: self.config.strict_priority,
       task_check_interval: self.config.task_check_interval,
@@ -380,7 +403,7 @@ impl Server {
       pid: self.pid,
       server_id: self.server_uuid.clone(),
       concurrency: self.config.concurrency as i32,
-      queues: self.config.queues.clone(),
+      queues: self.config.get_queues_with_prefix(),
       strict_priority: self.config.strict_priority,
       status: "active".to_string(),
       start_time: Some(prost_types::Timestamp::from(std::time::SystemTime::now())),
@@ -401,7 +424,7 @@ impl Server {
       pid: self.pid,
       server_uuid: self.server_uuid.clone(),
       concurrency: self.config.concurrency,
-      queues: self.config.queues.clone(),
+      queues: self.config.get_queues_with_prefix(),
       strict_priority: self.config.strict_priority,
       started: std::time::SystemTime::now(),
     };
@@ -423,7 +446,12 @@ impl Server {
     let janitor_config = crate::components::janitor::JanitorConfig {
       interval: self.config.janitor_interval,
       batch_size: self.config.janitor_batch_size,
-      queues: self.config.queues.keys().cloned().collect(),
+      queues: self
+        .config
+        .get_queues_with_prefix()
+        .keys()
+        .cloned()
+        .collect(),
     };
     let janitor = Arc::new(crate::components::janitor::Janitor::new(
       Arc::clone(&self.broker),
@@ -465,7 +493,12 @@ impl Server {
   fn init_recoverer(&mut self) {
     let recoverer_config = crate::components::recoverer::RecovererConfig {
       interval: self.config.janitor_interval, // 使用相同的间隔
-      queues: self.config.queues.keys().cloned().collect(),
+      queues: self
+        .config
+        .get_queues_with_prefix()
+        .keys()
+        .cloned()
+        .collect(),
     };
     let recoverer = Arc::new(crate::components::recoverer::Recoverer::new(
       Arc::clone(&self.broker),
@@ -483,7 +516,12 @@ impl Server {
   fn init_forwarder(&mut self) {
     let forwarder_config = crate::components::forwarder::ForwarderConfig {
       interval: self.config.delayed_task_check_interval,
-      queues: self.config.queues.keys().cloned().collect(),
+      queues: self
+        .config
+        .get_queues_with_prefix()
+        .keys()
+        .cloned()
+        .collect(),
     };
     let forwarder = Arc::new(crate::components::forwarder::Forwarder::new(
       Arc::clone(&self.broker),
@@ -519,7 +557,12 @@ impl Server {
     if self.config.group_aggregator_enabled {
       let aggregator_config = crate::components::aggregator::AggregatorConfig {
         interval: Duration::from_secs(5),
-        queues: self.config.queues.keys().cloned().collect(),
+        queues: self
+          .config
+          .get_queues_with_prefix()
+          .keys()
+          .cloned()
+          .collect(),
         grace_period: self.config.group_grace_period,
         max_delay: self.config.group_max_delay,
         max_size: self.config.group_max_size,
@@ -601,6 +644,8 @@ impl Drop for Server {
 /// Server builder
 pub struct ServerBuilder {
   redis_config: Option<RedisConnectionType>,
+  broker: Option<Arc<dyn Broker>>,
+  inspector: Option<Arc<dyn InspectorTrait>>,
   config: ServerConfig,
 }
 
@@ -610,6 +655,8 @@ impl ServerBuilder {
   pub fn new() -> Self {
     Self {
       redis_config: None,
+      broker: None,
+      inspector: None,
       config: ServerConfig::default(),
     }
   }
@@ -618,6 +665,26 @@ impl ServerBuilder {
   /// Set Redis configuration
   pub fn redis_config(mut self, config: RedisConnectionType) -> Self {
     self.redis_config = Some(config);
+    self
+  }
+
+  /// 设置 PostgresSQL Broker (PostgresSQL feature required)
+  /// Set PostgresSQL Broker (requires postgresql feature)
+  ///
+  /// 这是一个便利方法，自动创建 PostgresInspector
+  /// This is a convenience method that automatically creates a PostgresInspector
+  #[cfg(feature = "postgresql")]
+  pub fn postgres_broker(mut self, broker: Arc<crate::pgdb::PostgresBroker>) -> Self {
+    let inspector = Arc::new(crate::pgdb::PostgresInspector::from_broker(broker.clone()));
+    self.broker = Some(broker);
+    self.inspector = Some(inspector);
+    self
+  }
+
+  /// 设置自定义 Inspector
+  /// Set custom Inspector
+  pub fn inspector<I: InspectorTrait + 'static>(mut self, inspector: Arc<I>) -> Self {
+    self.inspector = Some(inspector);
     self
   }
 
@@ -645,6 +712,18 @@ impl ServerBuilder {
   /// 构建服务器
   /// Build the server
   pub async fn build(self) -> Result<Server> {
+    // If both custom broker and inspector are provided, use them
+    if let Some(broker) = self.broker {
+      if let Some(inspector) = self.inspector {
+        return Server::with_broker_and_inspector(broker, inspector, self.config).await;
+      }
+      // If only broker is provided, inspector is required
+      return Err(Error::config(
+        "When providing a custom broker, you must also provide an inspector using .inspector(). Example: .broker(my_broker).inspector(my_inspector)",
+      ));
+    }
+
+    // Otherwise, use Redis configuration
     let redis_config = self
       .redis_config
       .ok_or_else(|| Error::config("Redis configuration is required"))?;

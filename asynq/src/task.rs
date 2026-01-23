@@ -6,7 +6,7 @@
 
 use crate::base::{keys::TaskState, Broker};
 use crate::error::{Error, Result};
-use crate::inspector::Inspector;
+use crate::inspector::InspectorTrait;
 use crate::proto;
 use crate::rdb::option::{RateLimit, RetryPolicy, TaskOptions};
 use chrono::{DateTime, Utc};
@@ -112,7 +112,7 @@ pub struct Task {
   /// None for newly created tasks (created via Task::new)
   /// Only tasks passed to Handler::process_task have a valid ResultWriter
   result_writer: Option<Arc<ResultWriter>>,
-  inspector: Option<Arc<Inspector>>,
+  inspector: Option<Arc<dyn InspectorTrait>>,
 }
 impl Debug for Task {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -265,6 +265,12 @@ impl Task {
     &self.task_type
   }
 
+  /// 获取队列名称
+  /// Get queue name
+  pub fn get_queue(&self) -> &str {
+    &self.options.queue
+  }
+
   /// 获取任务负载
   /// Get task payload
   pub fn get_payload(&self) -> &[u8] {
@@ -288,7 +294,7 @@ impl Task {
   }
   /// 获取检查客户端到任务
   /// Get task inspector
-  pub fn inspector(&self) -> Option<&Arc<Inspector>> {
+  pub fn inspector(&self) -> Option<&Arc<dyn InspectorTrait>> {
     self.inspector.as_ref()
   }
   /// 附加结果写入器到任务
@@ -305,7 +311,7 @@ impl Task {
   ///
   /// 这是一个内部方法，用于在任务处理前附加 inspector
   /// This is an internal method used to attach inspector before task processing
-  pub(crate) fn with_inspector(mut self, inspector: Arc<Inspector>) -> Self {
+  pub(crate) fn with_inspector(mut self, inspector: Arc<dyn InspectorTrait>) -> Self {
     self.inspector = Some(inspector);
     self
   }

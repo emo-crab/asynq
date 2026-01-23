@@ -61,6 +61,10 @@ pub struct ServerConfig {
   /// 周期性任务管理器检查间隔
   /// Periodic task manager check interval
   pub periodic_task_manager_check_interval: Duration,
+  /// ACL 租户名称（用户名），用作 ACL 前缀
+  /// ACL tenant name (username), used as ACL prefix
+  /// When set, ACL feature is automatically enabled
+  pub acl_tenant: Option<String>,
 }
 
 impl Default for ServerConfig {
@@ -85,6 +89,7 @@ impl Default for ServerConfig {
       group_aggregator_enabled: false,
       periodic_task_manager_enabled: false,
       periodic_task_manager_check_interval: Duration::from_secs(60),
+      acl_tenant: None,
     }
   }
 }
@@ -228,6 +233,53 @@ impl ServerConfig {
     self
   }
 
+  /// 设置 ACL 租户名称
+  /// Set ACL tenant name
+  ///
+  /// 当设置租户名称时，ACL 特性会自动启用，队列名称将自动添加租户前缀
+  /// When tenant name is set, ACL feature is automatically enabled and queue names will have the tenant prefix added
+  pub fn acl_tenant<S: Into<String>>(mut self, tenant: S) -> Self {
+    self.acl_tenant = Some(tenant.into());
+    self
+  }
+
+  /// 获取带 ACL 前缀的队列名称
+  /// Get queue name with ACL prefix
+  ///
+  /// 如果配置了租户，返回 `{tenant}:{queue}`，否则返回原始队列名
+  /// If tenant is configured, returns `{tenant}:{queue}`, otherwise returns original queue name
+  /// 注意：默认队列（DEFAULT_QUEUE_NAME）不添加前缀，这是所有租户共享的公共队列
+  /// Note: Default queue (DEFAULT_QUEUE_NAME) is not prefixed, it's a shared public queue for all tenants
+  pub fn get_queue_name_with_prefix(&self, queue: &str) -> String {
+    // 默认队列不添加前缀
+    // Default queue is not prefixed
+    if queue == DEFAULT_QUEUE_NAME {
+      return queue.to_string();
+    }
+
+    if let Some(tenant) = &self.acl_tenant {
+      return format!("{}:{}", tenant, queue);
+    }
+    queue.to_string()
+  }
+
+  /// 获取所有带 ACL 前缀的队列
+  /// Get all queues with ACL prefix
+  ///
+  /// 返回一个新的 HashMap，其中所有队列名称都添加了 ACL 前缀（如果配置了租户）
+  /// Returns a new HashMap where all queue names have the ACL prefix added (if tenant is configured)
+  pub fn get_queues_with_prefix(&self) -> HashMap<String, i32> {
+    if self.acl_tenant.is_some() {
+      self
+        .queues
+        .iter()
+        .map(|(name, priority)| (self.get_queue_name_with_prefix(name), *priority))
+        .collect()
+    } else {
+      self.queues.clone()
+    }
+  }
+
   /// 验证配置
   /// Validate the configuration
   pub fn validate(&self) -> Result<()> {
@@ -274,6 +326,10 @@ pub struct ClientConfig {
   /// 重试间隔
   /// Retry interval
   pub retry_interval: Duration,
+  /// ACL 租户名称（用户名），用作 ACL 前缀
+  /// ACL tenant name (username), used as ACL prefix
+  /// When set, ACL feature is automatically enabled
+  pub acl_tenant: Option<String>,
 }
 
 impl Default for ClientConfig {
@@ -283,6 +339,7 @@ impl Default for ClientConfig {
       request_timeout: Duration::from_secs(60),
       max_retries: 3,
       retry_interval: Duration::from_secs(1),
+      acl_tenant: None,
     }
   }
 }
@@ -320,6 +377,36 @@ impl ClientConfig {
   pub fn retry_interval(mut self, interval: Duration) -> Self {
     self.retry_interval = interval;
     self
+  }
+
+  /// 设置 ACL 租户名称
+  /// Set ACL tenant name
+  ///
+  /// 当设置租户名称时，ACL 特性会自动启用，队列名称将自动添加租户前缀
+  /// When tenant name is set, ACL feature is automatically enabled and queue names will have the tenant prefix added
+  pub fn acl_tenant<S: Into<String>>(mut self, tenant: S) -> Self {
+    self.acl_tenant = Some(tenant.into());
+    self
+  }
+
+  /// 获取带 ACL 前缀的队列名称
+  /// Get queue name with ACL prefix
+  ///
+  /// 如果配置了租户，返回 `{tenant}:{queue}`，否则返回原始队列名
+  /// If tenant is configured, returns `{tenant}:{queue}`, otherwise returns original queue name
+  /// 注意：默认队列（DEFAULT_QUEUE_NAME）不添加前缀，这是所有租户共享的公共队列
+  /// Note: Default queue (DEFAULT_QUEUE_NAME) is not prefixed, it's a shared public queue for all tenants
+  pub fn get_queue_name_with_prefix(&self, queue: &str) -> String {
+    // 默认队列不添加前缀
+    // Default queue is not prefixed
+    if queue == DEFAULT_QUEUE_NAME {
+      return queue.to_string();
+    }
+
+    if let Some(tenant) = &self.acl_tenant {
+      return format!("{}:{}", tenant, queue);
+    }
+    queue.to_string()
   }
 }
 
@@ -482,6 +569,127 @@ mod tests {
     assert_eq!(
       config.periodic_task_manager_check_interval,
       Duration::from_secs(30)
+    );
+  }
+
+  #[test]
+  fn test_acl_disabled_by_default() {
+    // Test that ACL is disabled by default in both configs
+    let server_config = ServerConfig::default();
+    assert!(server_config.acl_tenant.is_none());
+
+    let client_config = ClientConfig::default();
+    assert!(client_config.acl_tenant.is_none());
+  }
+
+  #[test]
+  fn test_server_config_acl_configuration() {
+    // Test that ACL can be enabled in server config
+    let config = ServerConfig::new().acl_tenant("tenant1");
+
+    assert_eq!(config.acl_tenant, Some("tenant1".to_string()));
+  }
+
+  #[test]
+  fn test_client_config_acl_configuration() {
+    // Test that ACL can be enabled in client config
+    let config = ClientConfig::new().acl_tenant("tenant1");
+
+    assert_eq!(config.acl_tenant, Some("tenant1".to_string()));
+  }
+
+  #[test]
+  fn test_server_config_queue_name_with_prefix() {
+    // Test queue name transformation with ACL prefix
+    let config = ServerConfig::new().acl_tenant("tenant1");
+
+    // Default queue should NOT be prefixed (shared public queue)
+    assert_eq!(config.get_queue_name_with_prefix("default"), "default");
+    // Other queues should be prefixed
+    assert_eq!(
+      config.get_queue_name_with_prefix("critical"),
+      "tenant1:critical"
+    );
+  }
+
+  #[test]
+  fn test_server_config_queue_name_without_acl() {
+    // Test that queue names are unchanged when ACL is disabled
+    let config = ServerConfig::new();
+
+    assert_eq!(config.get_queue_name_with_prefix("default"), "default");
+    assert_eq!(config.get_queue_name_with_prefix("critical"), "critical");
+  }
+
+  #[test]
+  fn test_server_config_get_queues_with_prefix() {
+    // Test get_queues_with_prefix method
+    let mut queues = HashMap::new();
+    queues.insert("default".to_string(), 3);
+    queues.insert("critical".to_string(), 6);
+
+    let config = ServerConfig::new().queues(queues).acl_tenant("tenant1");
+
+    let prefixed_queues = config.get_queues_with_prefix();
+    assert_eq!(prefixed_queues.len(), 2);
+    // Default queue should NOT be prefixed
+    assert_eq!(prefixed_queues.get("default"), Some(&3));
+    assert_eq!(prefixed_queues.get("tenant1:critical"), Some(&6));
+    assert!(!prefixed_queues.contains_key("tenant1:default"));
+  }
+
+  #[test]
+  fn test_server_config_get_queues_without_acl() {
+    // Test that get_queues_with_prefix returns original queues when ACL is disabled
+    let mut queues = HashMap::new();
+    queues.insert("default".to_string(), 3);
+    queues.insert("critical".to_string(), 6);
+
+    let config = ServerConfig::new().queues(queues.clone());
+
+    let result_queues = config.get_queues_with_prefix();
+    assert_eq!(result_queues, queues);
+  }
+
+  #[test]
+  fn test_client_config_queue_name_with_prefix() {
+    // Test queue name transformation with ACL prefix for client
+    let config = ClientConfig::new().acl_tenant("tenant1");
+
+    // Default queue should NOT be prefixed (shared public queue)
+    assert_eq!(config.get_queue_name_with_prefix("default"), "default");
+    // Other queues should be prefixed
+    assert_eq!(
+      config.get_queue_name_with_prefix("critical"),
+      "tenant1:critical"
+    );
+  }
+
+  #[test]
+  fn test_client_config_queue_name_without_acl() {
+    // Test that queue names are unchanged when ACL is disabled for client
+    let config = ClientConfig::new();
+
+    assert_eq!(config.get_queue_name_with_prefix("default"), "default");
+    assert_eq!(config.get_queue_name_with_prefix("critical"), "critical");
+  }
+
+  #[test]
+  fn test_default_queue_not_prefixed() {
+    // Test that DEFAULT_QUEUE_NAME is never prefixed, even with ACL enabled
+    // This is a shared public queue for all tenants
+    let server_config = ServerConfig::new().acl_tenant("tenant1");
+
+    assert_eq!(
+      server_config.get_queue_name_with_prefix(DEFAULT_QUEUE_NAME),
+      DEFAULT_QUEUE_NAME
+    );
+
+    let client_config = ClientConfig::new().acl_tenant("tenant1");
+
+    assert_eq!(
+      client_config.get_queue_name_with_prefix(DEFAULT_QUEUE_NAME),
+      DEFAULT_QUEUE_NAME
     );
   }
 }

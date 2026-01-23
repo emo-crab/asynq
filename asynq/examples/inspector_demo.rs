@@ -5,7 +5,7 @@
 //! Demonstrates how to use the Inspector API to monitor and manage tasks and queues, fully compatible with Go asynq Inspector.
 
 use asynq::base::keys::TaskState;
-use asynq::inspector::Inspector;
+use asynq::inspector::{Inspector, InspectorTrait};
 use asynq::proto::ServerInfo;
 use asynq::rdb::inspect::Pagination;
 use asynq::rdb::RedisBroker;

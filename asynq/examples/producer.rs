@@ -30,14 +30,31 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 创建 Redis 配置 - 优先从环境变量中读取，否则使用默认的测试 Redis 服务器
   // Create Redis config - first read from environment variable, otherwise use the default test Redis server
-  let redis_url =
-    std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+  let redis_url = std::env::var("REDIS_URL")
+    .unwrap_or_else(|_| "redis://tenant1:secure_pass123@localhost:6379".to_string());
   println!("🔗 Using Redis URL: {redis_url}");
-  let redis_config = RedisConnectionType::single(redis_url)?;
+  let redis_config = RedisConnectionType::single(redis_url.clone())?;
+
+  // 创建客户端配置
+  // Create client config
+  let mut client_config = asynq::config::ClientConfig::new();
+
+  // 如果启用了 acl 特性，配置 ACL
+  // If acl feature is enabled, configure ACL
+  #[cfg(feature = "acl")]
+  {
+    // 从 Redis URL 中提取用户名作为租户
+    // Extract username from Redis URL as tenant
+    // 格式: redis://username:password@host:port
+    if let Some(username) = extract_username_from_redis_url(&redis_url) {
+      println!("🔐 ACL enabled with tenant: {username}");
+      client_config = client_config.acl_tenant(username);
+    }
+  }
 
   // 创建客户端
   // Create client
-  let client = Client::new(redis_config).await?;
+  let client = Client::with_config(redis_config, client_config).await?;
 
   // 示例 1: 创建邮件发送任务
   // Example 1: Create email sending task
@@ -95,7 +112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // 5 分钟后执行
   // Execute after 5 minutes
   match client
-    .enqueue_in(delayed_email, Duration::from_secs(300))
+    .enqueue_in(delayed_email, Duration::from_secs(30))
     .await
   {
     Ok(task_info) => {
@@ -204,4 +221,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   println!("All tasks have been enqueued successfully!");
 
   Ok(())
+}
+
+/// 从 Redis URL 中提取用户名
+/// Extract username from Redis URL
+/// 格式: redis://username:password@host:port
+#[cfg(feature = "acl")]
+fn extract_username_from_redis_url(url: &str) -> Option<String> {
+  // 查找 "://" 之后和 "@" 之前的部分
+  if let Some(start_idx) = url.find("://") {
+    let after_scheme = &url[start_idx + 3..];
+    if let Some(at_idx) = after_scheme.find('@') {
+      let credentials = &after_scheme[..at_idx];
+      // 分离用户名和密码
+      if let Some(colon_idx) = credentials.find(':') {
+        let username = &credentials[..colon_idx];
+        if !username.is_empty() {
+          return Some(username.to_string());
+        }
+      }
+    }
+  }
+  None
 }

@@ -129,21 +129,6 @@ impl TaskProcessor {
   }
 
   async fn handle_batch_process(&self, payload: serde_json::Value) -> Result<()> {
-    use redis::AsyncCommands;
-    let group = "daily_batch";
-    let redis_url =
-      std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
-    let client = redis::Client::open(redis_url)?;
-    let mut conn = client.get_multiplexed_async_connection().await?;
-
-    // 每处理一个任务，计数器+1
-    let count: i32 = conn.incr(format!("group:{group}:count"), 1).await?;
-    // 假设你知道组内任务总数为5
-    if count == 5 {
-      println!("Group {group} completed! Do aggregation here.");
-      // 执行聚合逻辑
-    }
-    let _: () = conn.expire(format!("group:{group}:count"), 120).await?;
     println!("🔄 Processing batch item: {payload}");
     // 模拟批处理
     tokio::time::sleep(Duration::from_secs(50)).await;
@@ -224,10 +209,10 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   println!("🚀 Starting Asynq worker server...");
 
   // 创建 Redis 配置 - 优先从环境变量中读取，否则使用本地 Redis
-  let redis_url =
-    std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+  let redis_url = std::env::var("REDIS_URL")
+    .unwrap_or_else(|_| "redis://tenant1:secure_pass123@localhost:6379".to_string());
   println!("🔗 Using Redis URL: {redis_url}");
-  let redis_config = RedisConnectionType::single(redis_url)?;
+  let redis_config = RedisConnectionType::single(redis_url.clone())?;
 
   // 配置队列优先级
   let mut queues = HashMap::new();
@@ -236,8 +221,9 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   queues.insert("image_processing".to_string(), 2); // 图片处理队列
   queues.insert("low".to_string(), 1); // 低优先级
   let aggregator = GroupAggregatorFunc::new(aggregate_tasks);
+
   // 创建服务器配置
-  let server_config = ServerConfig::new()
+  let mut server_config = ServerConfig::new()
     .concurrency(4) // 4 个并发工作者
     .queues(queues)
     .strict_priority(false) // 不使用严格优先级
@@ -246,6 +232,18 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     .group_grace_period(Duration::from_secs(5))? // 组聚合宽限期
     .group_max_size(10) // 组最大大小
     .enable_group_aggregator(true); // 启用组聚合器 / Enable group aggregator
+
+  // 如果启用了 acl 特性，配置 ACL
+  // If acl feature is enabled, configure ACL
+  #[cfg(feature = "acl")]
+  {
+    // 从 Redis URL 中提取用户名作为租户
+    // Extract username from Redis URL as tenant
+    if let Some(username) = extract_username_from_redis_url(&redis_url) {
+      println!("🔐 ACL enabled with tenant: {username}");
+      server_config = server_config.acl_tenant(username);
+    }
+  }
 
   // 创建服务器
   let mut server = ServerBuilder::new()
@@ -266,4 +264,26 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   println!("👋 Server shutdown complete");
 
   Ok(())
+}
+
+/// 从 Redis URL 中提取用户名
+/// Extract username from Redis URL
+/// 格式: redis://username:password@host:port
+#[cfg(feature = "acl")]
+fn extract_username_from_redis_url(url: &str) -> Option<String> {
+  // 查找 "://" 之后和 "@" 之前的部分
+  if let Some(start_idx) = url.find("://") {
+    let after_scheme = &url[start_idx + 3..];
+    if let Some(at_idx) = after_scheme.find('@') {
+      let credentials = &after_scheme[..at_idx];
+      // 分离用户名和密码
+      if let Some(colon_idx) = credentials.find(':') {
+        let username = &credentials[..colon_idx];
+        if !username.is_empty() {
+          return Some(username.to_string());
+        }
+      }
+    }
+  }
+  None
 }

@@ -96,7 +96,7 @@
 
 use crate::base::Broker;
 use crate::error::Error;
-use crate::inspector::Inspector;
+use crate::inspector::InspectorTrait;
 use crate::server::Handler;
 use crate::task::Task;
 use std::collections::HashMap;
@@ -111,7 +111,7 @@ use tokio_util::sync::CancellationToken;
 /// Processor parameters
 pub struct ProcessorParams {
   pub broker: Arc<dyn Broker>,
-  pub inspector: Arc<Inspector>,
+  pub inspector: Arc<dyn InspectorTrait>,
   pub queues: HashMap<String, i32>,
   pub concurrency: usize,
   pub strict_priority: bool,
@@ -202,7 +202,7 @@ impl Default for CancellationMap {
 /// Processor - responsible for dequeuing and processing tasks
 pub struct Processor {
   broker: Arc<dyn Broker>,
-  inspector: Arc<Inspector>,
+  inspector: Arc<dyn InspectorTrait>,
   queue_config: HashMap<String, i32>,
   ordered_queues: Option<Vec<String>>,
   task_check_interval: Duration,

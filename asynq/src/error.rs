@@ -21,6 +21,19 @@ pub enum Error {
   /// Redis parsing error
   #[error("Redis parsing error: {0}")]
   RedisParsing(#[from] redis::ParsingError),
+
+  #[cfg(feature = "postgresql")]
+  /// PostgresSQL 错误 (sqlx)
+  /// PostgresSQL error (sqlx)
+  #[error("PostgresSQL error: {0}")]
+  Postgres(#[from] sqlx::Error),
+
+  #[cfg(feature = "postgresql")]
+  /// SeaORM 数据库错误
+  /// SeaORM database error
+  #[error("SeaORM database error: {0}")]
+  SeaOrm(#[from] sea_orm::DbErr),
+
   #[cfg(feature = "json")]
   /// 序列化错误
   /// Serialization error
@@ -106,6 +119,26 @@ pub enum Error {
   /// Not implemented error
   #[error("Not implemented: {0}")]
   NotImplemented(String),
+
+  /// 不支持的操作
+  /// Not supported operation
+  #[error("Not supported: {0}")]
+  NotSupported(String),
+
+  /// WebSocket 错误
+  /// WebSocket error
+  #[error("WebSocket error: {0}")]
+  WebSocket(String),
+
+  /// 无效消息
+  /// Invalid message
+  #[error("Invalid message: {0}")]
+  InvalidMessage(String),
+
+  /// Broker 错误
+  /// Broker error
+  #[error("Broker error: {0}")]
+  Broker(String),
 }
 
 impl Error {
@@ -133,10 +166,37 @@ impl Error {
     }
   }
 
+  /// 创建不支持错误
+  /// Create a not supported error
+  pub fn not_supported<S: Into<String>>(message: S) -> Self {
+    Self::NotSupported(message.into())
+  }
+
+  /// 创建 WebSocket 错误
+  /// Create a WebSocket error
+  pub fn websocket<S: Into<String>>(message: S) -> Self {
+    Self::WebSocket(message.into())
+  }
+
+  /// 创建无效消息错误
+  /// Create an invalid message error
+  pub fn invalid_message<S: Into<String>>(message: S) -> Self {
+    Self::InvalidMessage(message.into())
+  }
+
+  /// 创建 Broker 错误
+  /// Create a broker error
+  pub fn broker<S: Into<String>>(message: S) -> Self {
+    Self::Broker(message.into())
+  }
+
   /// 检查是否为重试错误
   /// Check if the error is retriable
   pub fn is_retriable(&self) -> bool {
-    matches!(self, Self::Redis(_) | Self::Timeout | Self::Io(_))
+    matches!(
+      self,
+      Self::Redis(_) | Self::Timeout | Self::Io(_) | Self::WebSocket(_)
+    )
   }
 
   /// 检查是否为致命错误

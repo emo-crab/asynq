@@ -4,7 +4,7 @@
 //! 这个示例展示如何使用 Inspector 取消正在运行的任务
 //! This example demonstrates how to use Inspector to cancel running tasks
 
-use asynq::inspector::Inspector;
+use asynq::inspector::{Inspector, InspectorTrait};
 use asynq::redis::RedisConnectionType;
 use std::sync::Arc;
 

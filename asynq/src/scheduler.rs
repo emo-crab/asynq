@@ -275,13 +275,14 @@ impl Scheduler {
                 nanos: now.timestamp_subsec_nanos() as i32,
               }),
             };
-            let broker = client.get_broker();
-            let entry_id = entry_id.clone();
-            tokio::spawn(async move {
-              let _ = broker
-                .record_scheduler_enqueue_event(&event, &entry_id)
-                .await;
-            });
+            if let Some(broker) = client.get_redis_broker() {
+              let entry_id = entry_id.clone();
+              tokio::spawn(async move {
+                let _ = broker
+                  .record_scheduler_enqueue_event(&event, &entry_id)
+                  .await;
+              });
+            }
           }
         }
         let sleep_dur = min_next
@@ -310,7 +311,10 @@ impl Scheduler {
     let scheduler_id = self.id.clone();
     let heartbeat_interval = self.heartbeat_interval;
     tokio::spawn(async move {
-      let broker = client.get_broker();
+      let Some(broker) = client.get_redis_broker() else {
+        tracing::error!("Scheduler requires Redis backend. Please create Client using Client::new() or Client::with_config() with Redis connection instead of PostgresSQL");
+        return;
+      };
       let mut ticker = tokio::time::interval(heartbeat_interval);
       loop {
         tokio::select! {
@@ -358,7 +362,10 @@ impl Scheduler {
 
   /// 查询所有注册的 SchedulerEntry，兼容 Go 版 asynq Inspector
   pub async fn list_entries(&self, scheduler_id: &str) -> Vec<SchedulerEntry> {
-    let broker = self.client.get_broker();
+    let Some(broker) = self.client.get_redis_broker() else {
+      tracing::warn!("Scheduler entries are only available with Redis backend. This feature is not supported with PostgresSQL");
+      return Vec::new();
+    };
     let raw_map = broker
       .scheduler_entries_script(scheduler_id)
       .await
@@ -374,7 +381,10 @@ impl Scheduler {
 
   /// 查询调度历史事件，兼容 Go 版 asynq Inspector
   pub async fn list_events(&self, count: usize) -> Vec<SchedulerEnqueueEvent> {
-    let broker = self.client.get_broker();
+    let Some(broker) = self.client.get_redis_broker() else {
+      tracing::warn!("Scheduler events history is only available with Redis backend. This feature is not supported with PostgresSQL");
+      return Vec::new();
+    };
     let raw_list = broker
       .scheduler_events_script(count)
       .await
@@ -408,8 +418,9 @@ impl Scheduler {
     }
 
     // 正确清理 redis 中的 entry（只需用 scheduler_id）
-    let broker = self.client.get_broker();
-    let _ = broker.clear_scheduler_entries(&self.id).await;
+    if let Some(broker) = self.client.get_redis_broker() {
+      let _ = broker.clear_scheduler_entries(&self.id).await;
+    }
   }
 
   /// 生成与 Go 版一致的调度选项字符串
