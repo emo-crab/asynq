@@ -58,9 +58,9 @@
 //! 如需补充上述功能，可参考 Go 版实现进一步扩展。
 //! For additional features, refer to the Go implementation for further extension。
 
+use crate::backend::option::{OptionType, TaskOptions};
 use crate::client::Client;
 use crate::proto::{SchedulerEnqueueEvent, SchedulerEntry};
-use crate::rdb::option::{OptionType, TaskOptions};
 use crate::task::Task;
 use chrono::{DateTime, Utc};
 use cron::Schedule;
@@ -275,14 +275,16 @@ impl Scheduler {
                 nanos: now.timestamp_subsec_nanos() as i32,
               }),
             };
-            if let Some(broker) = client.get_redis_broker() {
-              let entry_id = entry_id.clone();
-              tokio::spawn(async move {
-                let _ = broker
-                  .record_scheduler_enqueue_event(&event, &entry_id)
-                  .await;
-              });
-            }
+
+            // Record using unified SchedulerBroker interface
+            let broker = client.get_scheduler_broker();
+            let entry_id = entry_id.clone();
+            let event_clone = event.clone();
+            tokio::spawn(async move {
+              let _ = broker
+                .record_scheduler_enqueue_event(&event_clone, &entry_id)
+                .await;
+            });
           }
         }
         let sleep_dur = min_next
@@ -303,7 +305,7 @@ impl Scheduler {
     *handles_guard = Some((main_handle, heartbeat_handle));
   }
 
-  /// 心跳循环，定期写入所有 entry 到 redis
+  /// 心跳循环，定期写入所有 entry 到后端（Redis 或 PostgreSQL）
   fn spawn_heartbeat(&self) -> JoinHandle<()> {
     let tasks = self.tasks.clone();
     let running = self.running.clone();
@@ -311,10 +313,9 @@ impl Scheduler {
     let scheduler_id = self.id.clone();
     let heartbeat_interval = self.heartbeat_interval;
     tokio::spawn(async move {
-      let Some(broker) = client.get_redis_broker() else {
-        tracing::error!("Scheduler requires Redis backend. Please create Client using Client::new() or Client::with_config() with Redis connection instead of PostgresSQL");
-        return;
-      };
+      // Get unified SchedulerBroker interface
+      let scheduler_broker = client.get_scheduler_broker();
+
       let mut ticker = tokio::time::interval(heartbeat_interval);
       loop {
         tokio::select! {
@@ -322,7 +323,7 @@ impl Scheduler {
             if !running.load(Ordering::Relaxed) {
               break;
             }
-            // 快照写入 redis
+            // 快照写入后端
             let mut all_entries = Vec::new();
             {
               if let Ok(tasks) = tasks.read() {
@@ -344,15 +345,17 @@ impl Scheduler {
                 }
               }
             }
-            let _ = broker.write_scheduler_entries(&all_entries, &scheduler_id, (heartbeat_interval * 2).as_secs()).await;
+
+            // Write using unified SchedulerBroker interface
+            let _ = scheduler_broker.write_scheduler_entries(&all_entries, &scheduler_id, (heartbeat_interval * 2).as_secs()).await;
           }
           _ = async {
             while running.load(Ordering::Relaxed) {
               tokio::time::sleep(heartbeat_interval).await;
             }
           } => {
-            // 清理 redis
-            let _ = broker.clear_scheduler_entries(&scheduler_id).await;
+            // 清理后端
+            let _ = scheduler_broker.clear_scheduler_entries(&scheduler_id).await;
             break;
           }
         }
@@ -362,11 +365,8 @@ impl Scheduler {
 
   /// 查询所有注册的 SchedulerEntry，兼容 Go 版 asynq Inspector
   pub async fn list_entries(&self, scheduler_id: &str) -> Vec<SchedulerEntry> {
-    let Some(broker) = self.client.get_redis_broker() else {
-      tracing::warn!("Scheduler entries are only available with Redis backend. This feature is not supported with PostgresSQL");
-      return Vec::new();
-    };
-    let raw_map = broker
+    let scheduler_broker = self.client.get_scheduler_broker();
+    let raw_map = scheduler_broker
       .scheduler_entries_script(scheduler_id)
       .await
       .unwrap_or_default();
@@ -381,11 +381,8 @@ impl Scheduler {
 
   /// 查询调度历史事件，兼容 Go 版 asynq Inspector
   pub async fn list_events(&self, count: usize) -> Vec<SchedulerEnqueueEvent> {
-    let Some(broker) = self.client.get_redis_broker() else {
-      tracing::warn!("Scheduler events history is only available with Redis backend. This feature is not supported with PostgresSQL");
-      return Vec::new();
-    };
-    let raw_list = broker
+    let scheduler_broker = self.client.get_scheduler_broker();
+    let raw_list = scheduler_broker
       .scheduler_events_script(count)
       .await
       .unwrap_or_default();
@@ -398,7 +395,7 @@ impl Scheduler {
     events
   }
 
-  /// 停止调度器并清理 redis entry
+  /// 停止调度器并清理后端 entry
   /// 这个方法现在是 pub(crate)，只能被 PeriodicTaskManager 调用
   /// 在测试环境中也可以直接调用
   #[cfg_attr(not(test), doc(hidden))]
@@ -417,10 +414,9 @@ impl Scheduler {
       let _ = heartbeat_handle.await;
     }
 
-    // 正确清理 redis 中的 entry（只需用 scheduler_id）
-    if let Some(broker) = self.client.get_redis_broker() {
-      let _ = broker.clear_scheduler_entries(&self.id).await;
-    }
+    // 清理后端中的 entry
+    let scheduler_broker = self.client.get_scheduler_broker();
+    let _ = scheduler_broker.clear_scheduler_entries(&self.id).await;
   }
 
   /// 生成与 Go 版一致的调度选项字符串

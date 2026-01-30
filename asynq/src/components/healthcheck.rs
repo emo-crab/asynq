@@ -158,11 +158,10 @@ impl ComponentLifecycle for Healthcheck {
     Healthcheck::is_done(self)
   }
 }
-
+#[cfg(feature = "default")]
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::redis::RedisConnectionType;
 
   #[test]
   fn test_healthcheck_config_default() {
@@ -172,7 +171,7 @@ mod tests {
 
   #[tokio::test]
   async fn test_healthcheck_shutdown() {
-    use crate::rdb::RedisBroker;
+    use crate::backend::{RedisBroker, RedisConnectionType};
     let redis_connection_config = RedisConnectionType::single("redis://localhost:6379").unwrap();
     let broker = Arc::new(RedisBroker::new(redis_connection_config).await.unwrap());
     let config = HealthcheckConfig::default();
@@ -186,7 +185,7 @@ mod tests {
 
   #[tokio::test]
   async fn test_healthcheck_with_custom_check() {
-    use crate::rdb::RedisBroker;
+    use crate::backend::{RedisBroker, RedisConnectionType};
     let redis_connection_config = RedisConnectionType::single("redis://localhost:6379").unwrap();
     let broker = Arc::new(RedisBroker::new(redis_connection_config).await.unwrap());
     let config = HealthcheckConfig::default();

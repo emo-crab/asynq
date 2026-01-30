@@ -130,12 +130,14 @@ impl PostgresAclManager {
   /// Enable RLS for all asynq tables
   async fn enable_rls_for_all_tables(&self) -> Result<()> {
     let tables = vec![
-      "asynq_tasks",
-      "asynq_queues",
-      "asynq_servers",
-      "asynq_workers",
-      "asynq_stats",
-      "asynq_schedulers",
+      "tasks",
+      "queues",
+      "servers",
+      "workers",
+      "stats",
+      "schedulers",
+      "scheduler_entries",
+      "scheduler_events",
     ];
 
     for table in tables {
@@ -149,12 +151,14 @@ impl PostgresAclManager {
   /// Create policies for all tables for a tenant
   async fn create_all_tenant_policies(&self, tenant_user: &str) -> Result<()> {
     let tables = vec![
-      "asynq_tasks",
-      "asynq_queues",
-      "asynq_servers",
-      "asynq_workers",
-      "asynq_stats",
-      "asynq_schedulers",
+      "tasks",
+      "queues",
+      "servers",
+      "workers",
+      "stats",
+      "schedulers",
+      "scheduler_entries",
+      "scheduler_events",
     ];
 
     for table in tables {
@@ -168,12 +172,14 @@ impl PostgresAclManager {
   /// Delete all policies for a tenant
   async fn drop_all_tenant_policies(&self, tenant_user: &str) -> Result<()> {
     let tables = vec![
-      "asynq_tasks",
-      "asynq_queues",
-      "asynq_servers",
-      "asynq_workers",
-      "asynq_stats",
-      "asynq_schedulers",
+      "tasks",
+      "queues",
+      "servers",
+      "workers",
+      "stats",
+      "schedulers",
+      "scheduler_entries",
+      "scheduler_events",
     ];
 
     for table in tables {

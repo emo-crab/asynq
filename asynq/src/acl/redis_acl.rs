@@ -5,9 +5,9 @@
 //! Implements multi-tenant user management based on Redis ACL
 
 use crate::acl::{AclConfig, AclManager};
+use crate::backend::RedisConnectionType;
 use crate::base::constants::DEFAULT_QUEUE_NAME;
 use crate::error::{Error, Result};
-use crate::redis::RedisConnectionType;
 use async_trait::async_trait;
 use redis::acl::Rule;
 use redis::aio::MultiplexedConnection;
@@ -27,7 +27,7 @@ impl RedisAclManager {
   /// Create a new ACL manager from Redis connection type
   pub async fn new(conn: RedisConnectionType) -> Result<Self> {
     match conn {
-      RedisConnectionType::Single {
+      crate::backend::RedisConnectionType::Single {
         connection_info,
         #[cfg(feature = "tls")]
         tls_certs,
@@ -46,11 +46,11 @@ impl RedisAclManager {
         Ok(Self { client })
       }
       #[cfg(feature = "cluster")]
-      RedisConnectionType::Cluster(_) => Err(Error::not_supported(
+      crate::backend::RedisConnectionType::Cluster(_) => Err(Error::not_supported(
         "ACL management is not supported in cluster mode",
       )),
       #[cfg(feature = "sentinel")]
-      RedisConnectionType::Sentinel { .. } => Err(Error::not_supported(
+      crate::backend::RedisConnectionType::Sentinel { .. } => Err(Error::not_supported(
         "ACL management is not yet supported in sentinel mode",
       )),
     }
@@ -59,7 +59,7 @@ impl RedisAclManager {
   /// 从 Redis URL 创建新的 ACL 管理器
   /// Create a new ACL manager from Redis URL
   pub async fn from_url(url: &str) -> Result<Self> {
-    let conn = RedisConnectionType::single(url)?;
+    let conn = crate::backend::RedisConnectionType::single(url)?;
     Self::new(conn).await
   }
 

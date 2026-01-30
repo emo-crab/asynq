@@ -4,10 +4,10 @@
 //! 提供队列和任务的检查和管理功能
 //! Provides inspection and management functions for queues and tasks
 
+use crate::backend::pagination::Pagination;
 use crate::base::keys::TaskState;
 use crate::error::Result;
 use crate::proto::ServerInfo;
-use crate::rdb::inspect::Pagination;
 use crate::task::{DailyStats, QueueInfo, QueueStats, TaskInfo};
 use async_trait::async_trait;
 
@@ -141,10 +141,29 @@ pub trait InspectorTrait: Send + Sync {
   async fn cancel_processing(&self, task_id: &str) -> Result<()>;
 }
 
-// Re-export RedisInspector from rdb module
-// 从 rdb 模块重新导出 RedisInspector
-pub use crate::rdb::RedisInspector;
+// Re-export RedisInspector from backend module (always available as the default backend)
+// 从 backend 模块重新导出 RedisInspector（始终可用作为默认后端）
+pub use crate::backend::RedisInspector;
 
-/// 向后兼容的类型别名
-/// Backward compatible type alias
-pub type Inspector = RedisInspector;
+// Re-export PostgresInspector when postgresql feature is enabled
+// 当启用 postgresql 特性时重新导出 PostgresInspector
+#[cfg(feature = "postgresql")]
+pub use crate::backend::PostgresInspector;
+
+// Re-export WebSocketInspector when websocket feature is enabled
+// 当启用 websocket 特性时重新导出 WebSocketInspector
+#[cfg(feature = "websocket")]
+pub use crate::backend::WebSocketInspector;
+
+/// 默认的 Inspector 类型别名
+/// Default Inspector type alias
+///
+/// 始终使用 Redis 后端作为默认实现。
+/// Always uses Redis backend as the default implementation.
+///
+/// 如需使用其他后端，请直接使用具体类型：
+/// To use other backends, use the specific types directly:
+///
+/// - PostgreSQL: `PostgresInspector` (需要 `postgresql` feature)
+/// - WebSocket: `WebSocketInspector` (需要 `websocket` feature)
+pub use crate::backend::Inspector;

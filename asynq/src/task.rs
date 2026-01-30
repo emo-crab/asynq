@@ -4,11 +4,11 @@
 //! 定义了任务相关的数据结构和功能
 //! Defines data structures and functions related to tasks
 
+use crate::backend::option::{RateLimit, RetryPolicy, TaskOptions};
 use crate::base::{keys::TaskState, Broker};
 use crate::error::{Error, Result};
 use crate::inspector::InspectorTrait;
 use crate::proto;
-use crate::rdb::option::{RateLimit, RetryPolicy, TaskOptions};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -602,8 +602,8 @@ pub fn generate_task_id() -> String {
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::backend::option::RetryPolicy;
   use crate::base::constants::DEFAULT_QUEUE_NAME;
-  use crate::rdb::option::RetryPolicy;
 
   #[test]
   fn test_task_creation() {
@@ -764,8 +764,7 @@ mod tests {
 
   #[tokio::test]
   async fn test_result_writer_functionality() {
-    use crate::rdb::RedisBroker;
-    use crate::redis::RedisConnectionType;
+    use crate::backend::{RedisBroker, RedisConnectionType};
 
     // 跳过测试如果没有 Redis 连接
     // Skip test if no Redis connection

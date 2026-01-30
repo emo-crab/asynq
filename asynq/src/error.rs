@@ -17,7 +17,6 @@ pub enum Error {
   /// Redis connection error
   #[error("Redis connection error: {0}")]
   Redis(#[from] redis::RedisError),
-
   /// Redis parsing error
   #[error("Redis parsing error: {0}")]
   RedisParsing(#[from] redis::ParsingError),
@@ -193,10 +192,37 @@ impl Error {
   /// 检查是否为重试错误
   /// Check if the error is retriable
   pub fn is_retriable(&self) -> bool {
-    matches!(
-      self,
-      Self::Redis(_) | Self::Timeout | Self::Io(_) | Self::WebSocket(_)
-    )
+    match self {
+      Error::Redis(_) => return true,
+      Error::RedisParsing(_) => {}
+      Error::ProtoEncode(_) => {}
+      Error::ProtoDecode(_) => {}
+      Error::TaskDuplicate => {}
+      Error::TaskIdConflict => {}
+      Error::TaskNotFound { .. } => {}
+      Error::Queue { .. } => {}
+      Error::InvalidQueueName { .. } => {}
+      Error::InvalidTaskType { .. } => {}
+      Error::ServerClosed => {}
+      Error::ServerRunning => {}
+      Error::Cancelled => {}
+      Error::Config { .. } => {}
+      Error::Io(_) | Error::Timeout | Error::WebSocket(_) => {
+        return true;
+      }
+      Error::Other { .. } => {}
+      Error::NotImplemented(_) => {}
+      Error::NotSupported(_) => {}
+      Error::InvalidMessage(_) => {}
+      Error::Broker(_) => {}
+      #[cfg(feature = "postgresql")]
+      Error::Postgres(_) => {}
+      #[cfg(feature = "postgresql")]
+      Error::SeaOrm(_) => {}
+      #[cfg(feature = "json")]
+      Error::Serialization(_) => {}
+    }
+    false
   }
 
   /// 检查是否为致命错误
