@@ -24,8 +24,7 @@ use asynq::client::Client;
 use asynq::task::Task;
 use serde::{Deserialize, Serialize};
 use std::env;
-use std::time::Duration;
-use tracing::info;
+use tracing::{error, info};
 
 #[derive(Serialize, Deserialize, Debug)]
 struct EmailPayload {
@@ -112,7 +111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   let scheduled_task = Task::new_with_json("email:send", &scheduled_payload)?;
   let task_info = client
-    .enqueue_in(scheduled_task, Duration::from_secs(300))
+    .enqueue_in(scheduled_task, std::time::Duration::from_secs(300))
     .await?;
   info!(
     "Scheduled task enqueued: ID={}, will run in 5 minutes",
@@ -128,7 +127,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   let unique_task = Task::new_with_json("report:daily", &unique_payload)?;
   match client
-    .enqueue_unique(unique_task, Duration::from_secs(3600))
+    .enqueue_unique(unique_task, std::time::Duration::from_secs(3600))
     .await
   {
     Ok(task_info) => {
@@ -138,7 +137,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       info!("Unique task already exists or error: {}", e);
     }
   }
+  // 示例 3: 调度延迟任务
+  // Example 3: Schedule delayed task
+  let delayed_email_bin = serde_json::to_vec(&email_payload)?;
+  let delayed_email = asynq::task::Task::new("email:reminder", &delayed_email_bin).unwrap();
 
+  // 5 分钟后执行
+  // Execute after 5 minutes
+  match client
+    .enqueue_in(delayed_email, std::time::Duration::from_secs(30))
+    .await
+  {
+    Ok(task_info) => {
+      info!("Delayed email task scheduled: ID = {}", task_info.id);
+    }
+    Err(e) => {
+      error!("Failed to schedule delayed task: {e}");
+    }
+  }
   info!("All tasks enqueued successfully!");
 
   // Close the WebSocket connection properly to avoid "Connection reset without closing handshake" error

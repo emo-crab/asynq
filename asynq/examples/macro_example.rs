@@ -8,14 +8,14 @@
 //! cargo run --example macro_example --features macros
 //! ```
 
-use asynq::redis::RedisConnectionType;
+use asynq::error::Result;
+
 use asynq::{
-  config::ServerConfig, error::Result, register_async_handlers, register_handlers,
-  serve_mux::ServeMux, server::ServerBuilder, task::Task, task_handler, task_handler_async,
+  register_async_handlers, register_handlers, serve_mux::ServeMux, task::Task, task_handler,
+  task_handler_async,
 };
+
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::Duration;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct EmailPayload {
@@ -64,7 +64,7 @@ async fn handle_image_resize(task: Task) -> Result<()> {
     println!("   Target size: {}x{}", payload.width, payload.height);
 
     // Simulate async image processing
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
   } else {
     println!(
       "   Raw payload: {:?}",
@@ -86,7 +86,7 @@ async fn handle_payment(task: Task) -> Result<()> {
   );
 
   // Simulate async payment processing
-  tokio::time::sleep(Duration::from_millis(50)).await;
+  tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
   println!("✅ Payment processed");
   Ok(())
@@ -101,6 +101,10 @@ fn handle_daily_report(task: Task) -> Result<()> {
     String::from_utf8_lossy(task.get_payload())
   );
   println!("✅ Daily report generated");
+  Ok(())
+}
+#[cfg(not(feature = "default"))]
+fn main() -> Result<()> {
   Ok(())
 }
 
@@ -122,21 +126,21 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   println!("🔗 Redis URL: {redis_url}");
 
   // Create Redis configuration
-  let redis_config = RedisConnectionType::single(redis_url)?;
+  let redis_config = asynq::backend::RedisConnectionType::single(redis_url)?;
 
   // Create queue configuration
-  let mut queues = HashMap::new();
+  let mut queues = std::collections::HashMap::new();
   queues.insert("critical".to_string(), 6);
   queues.insert("default".to_string(), 3);
   queues.insert("low".to_string(), 1);
 
   // Create server configuration
-  let server_config = ServerConfig::new()
+  let server_config = asynq::config::ServerConfig::new()
     .concurrency(2)
     .queues(queues)
     .strict_priority(false)
-    .task_check_interval(Duration::from_secs(1))
-    .shutdown_timeout(Duration::from_secs(10));
+    .task_check_interval(std::time::Duration::from_secs(1))
+    .shutdown_timeout(std::time::Duration::from_secs(10));
 
   println!();
   println!("⚙️  Server Configuration:");
@@ -159,7 +163,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   println!();
 
   // Create and start the server
-  let mut server = ServerBuilder::new()
+  let mut server = asynq::server::ServerBuilder::new()
     .redis_config(redis_config)
     .server_config(server_config)
     .build()

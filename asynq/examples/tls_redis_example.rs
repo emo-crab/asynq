@@ -1,12 +1,8 @@
-use anyhow::Result;
-use asynq::redis::RedisConnectionType;
-use std::fs::File;
-
 // This example is compiled/run only when the crate is built with the `tls` feature.
 // Run with: `cargo run -p asynq --example tls_redis_example --features tls`.
 #[cfg(feature = "tls")]
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> anyhow::Result<()> {
   // Expect first CLI arg to be the Redis URL, e.g. rediss://127.0.0.1:6380
   let mut args = std::env::args().skip(1);
   let redis_url = args
@@ -20,7 +16,7 @@ async fn main() -> Result<()> {
   // Helper: read file to Vec<u8>
   fn read_bytes(path: &str) -> anyhow::Result<Vec<u8>> {
     use std::io::Read;
-    let mut f = File::open(path)?;
+    let mut f = std::fs::File::open(path)?;
     let mut buf = Vec::new();
     f.read_to_end(&mut buf)?;
     Ok(buf)
@@ -44,9 +40,9 @@ async fn main() -> Result<()> {
     root_cert,
   };
   // Build a RedisConnectionType with TLS certs
-  let conn = RedisConnectionType::single_with_tls(redis_url.as_str(), tls_certs)?;
+  let conn = asynq::backend::RedisConnectionType::single_with_tls(redis_url.as_str(), tls_certs)?;
   // Create a broker via the client APIs in asynq
-  let broker = asynq::rdb::redis_broker::RedisBroker::new(conn).await?;
+  let broker = asynq::backend::RedisBroker::new(conn).await?;
   // Get a connection and PING
   let mut conn = broker.get_async_connection().await?;
   let pong: String = redis::cmd("PING").query_async(&mut conn).await?;

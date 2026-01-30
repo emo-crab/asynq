@@ -4,20 +4,15 @@
 //! 演示如何创建任务并稍后检查结果
 //! Demonstrates how to create tasks and check results later
 
-use asynq::client::Client;
-use asynq::redis::RedisConnectionType;
-use asynq::task::Task;
-use serde::{Deserialize, Serialize};
-use std::time::Duration;
-
-#[derive(Serialize, Deserialize, Debug)]
-struct ComputePayload {
-  operation: String,
-  values: Vec<i32>,
-}
-
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+  use serde::{Deserialize, Serialize};
+
+  #[derive(Serialize, Deserialize, Debug)]
+  struct ComputePayload {
+    operation: String,
+    values: Vec<i32>,
+  }
   tracing_subscriber::fmt::init();
 
   println!("🚀 ResultWriter Producer Example");
@@ -27,11 +22,11 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   let redis_url =
     std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
   println!("🔗 Using Redis URL: {redis_url}");
-  let redis_config = RedisConnectionType::single(redis_url)?;
+  let redis_config = asynq::backend::RedisConnectionType::single(redis_url)?;
 
   // 创建客户端
   // Create client
-  let client = Client::new(redis_config).await?;
+  let client = asynq::client::Client::new(redis_config).await?;
 
   println!("\n📤 Enqueuing compute tasks...\n");
 
@@ -42,9 +37,9 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     values: vec![1, 2, 3, 4, 5],
   };
 
-  let sum_task = Task::new("default:sum", &serde_json::to_vec(&sum_payload)?)?
+  let sum_task = asynq::task::Task::new("default:sum", &serde_json::to_vec(&sum_payload)?)?
     .with_queue("default")
-    .with_retention(Duration::from_secs(3600)); // 保留结果 1 小时 / Retain result for 1 hour
+    .with_retention(std::time::Duration::from_secs(3600)); // 保留结果 1 小时 / Retain result for 1 hour
 
   let sum_info = client.enqueue(sum_task).await?;
   println!("✅ Enqueued sum task:");
@@ -60,9 +55,10 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     values: vec![2, 3, 4],
   };
 
-  let multiply_task = Task::new("default:multiply", &serde_json::to_vec(&multiply_payload)?)?
-    .with_queue("default")
-    .with_retention(Duration::from_secs(3600)); // 保留结果 1 小时 / Retain result for 1 hour
+  let multiply_task =
+    asynq::task::Task::new("default:multiply", &serde_json::to_vec(&multiply_payload)?)?
+      .with_queue("default")
+      .with_retention(std::time::Duration::from_secs(3600)); // 保留结果 1 小时 / Retain result for 1 hour
 
   let multiply_info = client.enqueue(multiply_task).await?;
   println!("\n✅ Enqueued multiply task:");

@@ -16,7 +16,8 @@ name = "asynq"
 path = "src/lib.rs"
 
 [dependencies]
-# Redis 连接池和客户端
+# Redis 连接池和客户端（始终启用作为默认后端）
+# Redis connection pool and client (always enabled as the default backend)
 redis = { version = "1.0.2", features = ["tokio-comp", "aio", "connection-manager", "streams", "acl"] }
 # 宏
 asynq-macros = { version = "0.1.0", optional = true }
@@ -25,7 +26,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1.0", optional = true }
 
 # 异步运行时
-tokio = { version = "1.0", features = ["rt", "macros", "signal", "rt-multi-thread"], default-features = false }
+tokio = { version = "1.0", features = ["rt", "macros", "signal", "rt-multi-thread", "time"], default-features = false }
 tokio-util = "0.7"
 
 # 日志
@@ -75,7 +76,7 @@ macros = ["asynq-macros"]
 cluster = ["redis/cluster-async"]
 sentinel = ["redis/sentinel"]
 tls = ["rustls", "redis/tls-rustls", "redis/tokio-rustls-comp", "redis/tls-rustls-webpki-roots", "redis/tls-rustls-insecure"]
-postgresql = ["sqlx", "sea-orm"]
+postgresql = ["sqlx", "sea-orm", "serde_json"]
 websocket = ["tokio-tungstenite", "base64", "serde_json"]
 acl = []
 
@@ -133,6 +134,11 @@ required-features = ["postgresql", "json"]
 [[example]]
 name = "postgres_consumer"
 path = "examples/postgres_consumer.rs"
+required-features = ["postgresql", "json"]
+
+[[example]]
+name = "postgres_scheduler_example"
+path = "examples/postgres_scheduler_example.rs"
 required-features = ["postgresql", "json"]
 
 [[example]]

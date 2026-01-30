@@ -4,18 +4,10 @@
 //! 演示如何使用 asynq 服务器处理任务
 //! Demonstrates how to use asynq server to process tasks
 
-use async_trait::async_trait;
-use asynq::components::aggregator::GroupAggregatorFunc;
 use asynq::error::{Error, Result};
-use asynq::redis::RedisConnectionType;
+use asynq::server::Handler;
 use asynq::task::Task;
-use asynq::{
-  config::ServerConfig,
-  server::{Handler, ServerBuilder},
-};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::Duration;
 
 #[derive(Serialize, Deserialize)]
 struct EmailPayload {
@@ -33,7 +25,7 @@ struct ImageResizePayload {
 /// 任务处理器
 pub struct TaskProcessor;
 
-#[async_trait]
+#[async_trait::async_trait]
 impl Handler for TaskProcessor {
   async fn process_task(&self, task: Task) -> Result<()> {
     match task.get_type() {
@@ -90,7 +82,7 @@ impl TaskProcessor {
     println!("   Body: {}", payload.body);
 
     // 模拟邮件发送处理（延长耗时以测试任务取消）
-    tokio::time::sleep(Duration::from_secs(10)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(10)).await;
 
     println!("✅ Email sent successfully to {}", payload.to);
     Ok(())
@@ -101,7 +93,7 @@ impl TaskProcessor {
     println!("   Subject: {}", payload.subject);
 
     // 模拟提醒邮件处理
-    tokio::time::sleep(Duration::from_secs(50)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(50)).await;
 
     println!("✅ Reminder email sent to {}", payload.to);
     Ok(())
@@ -112,7 +104,7 @@ impl TaskProcessor {
     println!("   Target size: {}x{}", payload.width, payload.height);
 
     // 模拟图片处理（延长耗时以测试任务取消）
-    tokio::time::sleep(Duration::from_secs(60)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(60)).await;
 
     println!("✅ Image resized successfully: {}", payload.src_url);
     Ok(())
@@ -122,7 +114,7 @@ impl TaskProcessor {
     println!("📊 Generating daily report for: {payload}");
 
     // 模拟报告生成
-    tokio::time::sleep(Duration::from_secs(20)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(20)).await;
 
     println!("✅ Daily report generated successfully");
     Ok(())
@@ -131,7 +123,7 @@ impl TaskProcessor {
   async fn handle_batch_process(&self, payload: serde_json::Value) -> Result<()> {
     println!("🔄 Processing batch item: {payload}");
     // 模拟批处理
-    tokio::time::sleep(Duration::from_secs(50)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(50)).await;
     println!("✅ Batch item processed: {payload}");
     Ok(())
   }
@@ -142,7 +134,7 @@ impl TaskProcessor {
     // 模拟支付处理 - 可能需要重试
     let success_rate = 0.8; // 80% 成功率
     if rand::random::<f64>() < success_rate {
-      tokio::time::sleep(Duration::from_secs(20)).await;
+      tokio::time::sleep(std::time::Duration::from_secs(20)).await;
       println!("✅ Payment processed successfully: {payload}");
       Ok(())
     } else {
@@ -161,7 +153,7 @@ impl TaskProcessor {
     // 模拟可能失败的图片处理
     let success_rate = 0.7; // 70% 成功率
     if rand::random::<f64>() < success_rate {
-      tokio::time::sleep(Duration::from_secs(80)).await;
+      tokio::time::sleep(std::time::Duration::from_secs(80)).await;
       println!("✅ Image processed successfully: {}", payload.src_url);
       Ok(())
     } else {
@@ -170,6 +162,7 @@ impl TaskProcessor {
     }
   }
 }
+
 /// 自定义聚合器示例 - 将多个任务的 payload 合并
 /// Custom aggregator example - combines payloads from multiple tasks
 fn aggregate_tasks(group: &str, tasks: Vec<Task>) -> Result<Task> {
@@ -196,7 +189,7 @@ fn aggregate_tasks(group: &str, tasks: Vec<Task>) -> Result<Task> {
 
   // 创建聚合后的任务
   // Create the aggregated task
-  Task::new(
+  asynq::task::Task::new(
     "batch:process",
     &serde_json::to_vec(&combined_payload).unwrap_or_default(),
   )
@@ -212,24 +205,24 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   let redis_url = std::env::var("REDIS_URL")
     .unwrap_or_else(|_| "redis://tenant1:secure_pass123@localhost:6379".to_string());
   println!("🔗 Using Redis URL: {redis_url}");
-  let redis_config = RedisConnectionType::single(redis_url.clone())?;
+  let redis_config = asynq::backend::RedisConnectionType::single(redis_url.clone())?;
 
   // 配置队列优先级
-  let mut queues = HashMap::new();
+  let mut queues = std::collections::HashMap::new();
   queues.insert("critical".to_string(), 6); // 最高优先级
   queues.insert("default".to_string(), 3); // 默认优先级
   queues.insert("image_processing".to_string(), 2); // 图片处理队列
   queues.insert("low".to_string(), 1); // 低优先级
-  let aggregator = GroupAggregatorFunc::new(aggregate_tasks);
+  let aggregator = asynq::components::aggregator::GroupAggregatorFunc::new(aggregate_tasks);
 
   // 创建服务器配置
-  let mut server_config = ServerConfig::new()
+  let mut server_config = asynq::config::ServerConfig::new()
     .concurrency(4) // 4 个并发工作者
     .queues(queues)
     .strict_priority(false) // 不使用严格优先级
-    .task_check_interval(Duration::from_secs(1))
-    .shutdown_timeout(Duration::from_secs(10))
-    .group_grace_period(Duration::from_secs(5))? // 组聚合宽限期
+    .task_check_interval(std::time::Duration::from_secs(1))
+    .shutdown_timeout(std::time::Duration::from_secs(10))
+    .group_grace_period(std::time::Duration::from_secs(5))? // 组聚合宽限期
     .group_max_size(10) // 组最大大小
     .enable_group_aggregator(true); // 启用组聚合器 / Enable group aggregator
 
@@ -246,7 +239,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   }
 
   // 创建服务器
-  let mut server = ServerBuilder::new()
+  let mut server = asynq::server::ServerBuilder::new()
     .redis_config(redis_config)
     .server_config(server_config)
     .build()

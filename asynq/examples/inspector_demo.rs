@@ -4,25 +4,22 @@
 //! 演示如何使用 Inspector API 监控和管理任务与队列，兼容 Go asynq Inspector。
 //! Demonstrates how to use the Inspector API to monitor and manage tasks and queues, fully compatible with Go asynq Inspector.
 
-use asynq::base::keys::TaskState;
-use asynq::inspector::{Inspector, InspectorTrait};
-use asynq::proto::ServerInfo;
-use asynq::rdb::inspect::Pagination;
-use asynq::rdb::RedisBroker;
-use asynq::redis::RedisConnectionType;
-use asynq::task::{DailyStats, QueueInfo};
-use std::sync::Arc;
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+  use asynq::backend::pagination::Pagination;
+  use asynq::backend::RedisBroker;
+  use asynq::base::keys::TaskState;
+  use asynq::inspector::{Inspector, InspectorTrait};
+
+  use std::sync::Arc;
   println!("🔍 Asynq Inspector API Demo");
   println!("==========================");
 
   // Create Redis configuration (this would connect to a real Redis instance)
-  let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
+  let redis_config = asynq::backend::RedisConnectionType::single("redis://127.0.0.1:6379")?;
 
   // Create rdb and inspector
-  let broker: Arc<RedisBroker> = Arc::new(RedisBroker::new(redis_config).await?);
+  let broker: Arc<RedisBroker> = std::sync::Arc::new(RedisBroker::new(redis_config).await?);
   let inspector = Inspector::from_broker(broker);
 
   println!("\n📊 Queue Information:");
@@ -135,7 +132,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   Ok(())
 }
 
-fn print_queue_info(info: &QueueInfo) {
+fn print_queue_info(info: &asynq::task::QueueInfo) {
   println!("   📊 Size: {}, Groups: {}", info.size, info.groups);
   println!(
     "   📈 Pending: {}, Active: {}, Scheduled: {}",
@@ -152,7 +149,7 @@ fn print_queue_info(info: &QueueInfo) {
   println!("   ⏸️  Paused: {}", info.paused);
 }
 
-fn print_server_info(server: &ServerInfo) {
+fn print_server_info(server: &asynq::proto::ServerInfo) {
   println!(
     "🖥️  Server: {} ({}:{})",
     server.server_id, server.host, server.pid
@@ -166,7 +163,7 @@ fn print_server_info(server: &ServerInfo) {
   println!("   🔄 Strict Priority: {}", server.strict_priority);
 }
 
-fn print_daily_stats(stats: &DailyStats) {
+fn print_daily_stats(stats: &asynq::task::DailyStats) {
   println!(
     "📅 {}: {} processed, {} failed (Queue: {})",
     stats.date.format("%Y-%m-%d"),

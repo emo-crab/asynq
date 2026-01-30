@@ -4,14 +4,14 @@
 //! 这个示例展示如何使用 Subscriber 订阅任务取消事件
 //! This example demonstrates how to use Subscriber to subscribe to task cancellation events
 
-use asynq::base::Broker;
-use asynq::components::subscriber::{Subscriber, SubscriberConfig, SubscriptionEvent};
-use asynq::rdb::RedisBroker;
-use asynq::redis::RedisConnectionType;
-use std::sync::Arc;
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+  use asynq::backend::RedisBroker;
+  use asynq::backend::RedisConnectionType;
+  use asynq::base::Broker;
+  use asynq::components::subscriber::{Subscriber, SubscriberConfig, SubscriptionEvent};
+  use std::sync::Arc;
+
   // 初始化日志
   // Initialize logging
   tracing_subscriber::fmt::init();
@@ -22,7 +22,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // 1. 创建 Redis 配置
   // 1. Create Redis configuration
   let redis_config = RedisConnectionType::single("redis://localhost:6379")?;
-  let broker: Arc<dyn Broker> = Arc::new(RedisBroker::new(redis_config).await?);
+  let broker: Arc<dyn Broker> = std::sync::Arc::new(RedisBroker::new(redis_config).await?);
   println!("✅ Connected to Redis\n");
 
   // 2. 创建并启动 Subscriber
@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .take_receiver()
     .expect("Failed to get event receiver");
 
-  let subscriber_arc = Arc::new(subscriber);
+  let subscriber_arc = std::sync::Arc::new(subscriber);
   let handle = subscriber_arc.clone().start();
   println!("📢 Subscriber started and listening for cancellation events\n");
 

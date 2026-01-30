@@ -7,17 +7,8 @@
 //! 对应 Go asynq 的 GroupAggregator 接口
 //! Corresponds to Go asynq's GroupAggregator interface
 
-use async_trait::async_trait;
 use asynq::error::{Error, Result};
-use asynq::redis::RedisConnectionType;
-use asynq::{
-  components::aggregator::GroupAggregatorFunc,
-  config::ServerConfig,
-  server::{Handler, ServerBuilder},
-  task::Task,
-};
-use std::collections::HashMap;
-use std::time::Duration;
+use asynq::{server::Handler, task::Task};
 
 /// 自定义聚合器示例 - 将多个任务的 payload 合并
 /// Custom aggregator example - combines payloads from multiple tasks
@@ -51,14 +42,14 @@ fn aggregate_tasks(group: &str, tasks: Vec<Task>) -> Result<Task> {
 
   // 创建聚合后的任务
   // Create the aggregated task
-  Task::new("batch:process", combined_payload.as_bytes())
+  asynq::task::Task::new("batch:process", combined_payload.as_bytes())
 }
 
 /// 批处理任务处理器
 /// Batch processing task handler
 pub struct BatchProcessor;
 
-#[async_trait]
+#[async_trait::async_trait]
 impl Handler for BatchProcessor {
   async fn process_task(&self, task: Task) -> Result<()> {
     match task.get_type() {
@@ -92,6 +83,10 @@ impl Handler for BatchProcessor {
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+  use asynq::backend::RedisConnectionType;
+
+  use asynq::config::ServerConfig;
+
   tracing_subscriber::fmt::init();
 
   println!("🚀 Starting Asynq server with Group Aggregator...");
@@ -107,7 +102,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
   // 配置队列
   // Configure queues
-  let mut queues = HashMap::new();
+  let mut queues = std::collections::HashMap::new();
   queues.insert("default".to_string(), 1);
 
   // 创建服务器配置，启用组聚合器
@@ -116,9 +111,9 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     .concurrency(2)
     .queues(queues)
     .enable_group_aggregator(true) // 启用组聚合器 / Enable group aggregator
-    .group_grace_period(Duration::from_secs(10))? // 聚合宽限期 / Aggregation grace period
+    .group_grace_period(std::time::Duration::from_secs(10))? // 聚合宽限期 / Aggregation grace period
     .group_max_size(5) // 最多聚合 5 个任务 / Aggregate up to 5 tasks
-    .group_max_delay(Duration::from_secs(30)); // 最大延迟 30 秒 / Max delay 30 seconds
+    .group_max_delay(std::time::Duration::from_secs(30)); // 最大延迟 30 秒 / Max delay 30 seconds
 
   println!("⚙️  Server configuration:");
   println!("   • Group aggregator: enabled");
@@ -129,7 +124,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
   // 构建服务器
   // Build server
-  let mut server = ServerBuilder::new()
+  let mut server = asynq::server::ServerBuilder::new()
     .redis_config(redis_config.clone())
     .server_config(server_config)
     .build()
@@ -138,7 +133,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   // 设置组聚合器
   // Set group aggregator
   println!("📦 Setting up group aggregator function...");
-  let aggregator = GroupAggregatorFunc::new(aggregate_tasks);
+  let aggregator = asynq::components::aggregator::GroupAggregatorFunc::new(aggregate_tasks);
   server.set_group_aggregator(aggregator);
   println!("   ✅ Group aggregator configured");
   println!();

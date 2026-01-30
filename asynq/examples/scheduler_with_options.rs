@@ -4,42 +4,43 @@
 //! 注意：Scheduler 的 start 和 stop 方法现在由 PeriodicTaskManager 管理
 //! Note: Scheduler's start and stop methods are now managed by PeriodicTaskManager
 
-use async_trait::async_trait;
-use asynq::client::Client;
-use asynq::components::periodic_task_manager::{
-  PeriodicTaskConfig, PeriodicTaskConfigProvider, PeriodicTaskManager, PeriodicTaskManagerConfig,
-};
-use asynq::rdb::option::TaskOptions;
-use asynq::scheduler::{PeriodicTask, Scheduler};
-use std::sync::Arc;
-use std::time::Duration;
-
 /// Config provider for tasks with custom options
 struct OptionsConfigProvider {
-  configs: Vec<PeriodicTaskConfig>,
+  configs: Vec<asynq::components::periodic_task_manager::PeriodicTaskConfig>,
 }
 
-#[async_trait]
-impl PeriodicTaskConfigProvider for OptionsConfigProvider {
-  async fn get_configs(&self) -> asynq::error::Result<Vec<PeriodicTaskConfig>> {
+#[async_trait::async_trait]
+impl asynq::components::periodic_task_manager::PeriodicTaskConfigProvider
+  for OptionsConfigProvider
+{
+  async fn get_configs(
+    &self,
+  ) -> asynq::error::Result<Vec<asynq::components::periodic_task_manager::PeriodicTaskConfig>> {
     Ok(self.configs.clone())
   }
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+  use asynq::scheduler::Scheduler;
+
+  use asynq::backend::option::TaskOptions;
+  use asynq::backend::RedisConnectionType;
+
+  use asynq::scheduler::PeriodicTask;
+
   let redis_url = "redis://127.0.0.1:6379";
-  let redis_config = asynq::redis::RedisConnectionType::single(redis_url)?;
+  let redis_config = RedisConnectionType::single(redis_url)?;
 
   // 创建 Client 和 RedisBroker
-  let client = Arc::new(Client::new(redis_config.clone()).await?);
+  let client = std::sync::Arc::new(asynq::client::Client::new(redis_config.clone()).await?);
 
   // 创建 Scheduler
-  let scheduler = Arc::new(Scheduler::new(client.clone(), None).await?);
+  let scheduler = std::sync::Arc::new(Scheduler::new(client.clone(), None).await?);
 
   // 示例 1: 简单的周期性任务配置
   println!("📝 注册简单的周期性任务...");
-  let simple_config = PeriodicTaskConfig::new(
+  let simple_config = asynq::components::periodic_task_manager::PeriodicTaskConfig::new(
     "email:newsletter".to_string(),
     "0 0 9 * * *".to_string(), // 每天上午9点
     b"Send daily newsletter".to_vec(),
@@ -54,8 +55,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ..Default::default()
   };
   custom_opts.max_retry = 10;
-  custom_opts.timeout = Some(Duration::from_secs(120));
-  custom_opts.retention = Some(Duration::from_secs(3600));
+  custom_opts.timeout = Some(std::time::Duration::from_secs(120));
+  custom_opts.retention = Some(std::time::Duration::from_secs(3600));
   custom_opts.task_id = Some("backup-daily-001".to_string());
 
   let _custom_task = PeriodicTask::new_with_options(
@@ -82,10 +83,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   println!("  解析后的保留时间: {:?}", parsed_opts.retention);
 
   // 创建配置提供者
-  let config_provider = Arc::new(OptionsConfigProvider {
+  let config_provider = std::sync::Arc::new(OptionsConfigProvider {
     configs: vec![
       simple_config,
-      PeriodicTaskConfig::new(
+      asynq::components::periodic_task_manager::PeriodicTaskConfig::new(
         "backup:daily".to_string(),
         "0 0 2 * * *".to_string(),
         b"Perform daily backup".to_vec(),
@@ -95,14 +96,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   });
 
   // 创建 PeriodicTaskManager（它会管理 Scheduler 的生命周期）
-  let manager_config = PeriodicTaskManagerConfig {
-    sync_interval: Duration::from_secs(10),
+  let manager_config = asynq::components::periodic_task_manager::PeriodicTaskManagerConfig {
+    sync_interval: std::time::Duration::from_secs(10),
   };
-  let manager = Arc::new(PeriodicTaskManager::new(
-    scheduler.clone(),
-    manager_config,
-    config_provider,
-  ));
+  let manager = std::sync::Arc::new(
+    asynq::components::periodic_task_manager::PeriodicTaskManager::new(
+      scheduler.clone(),
+      manager_config,
+      config_provider,
+    ),
+  );
 
   // 启动 PeriodicTaskManager（它会自动启动 Scheduler）
   let _manager_handle = manager.clone().start();
@@ -110,14 +113,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   println!("\n🚀 调度器已通过 PeriodicTaskManager 启动，按 Ctrl+C 退出...");
 
   // 等待一段时间来演示
-  tokio::time::sleep(Duration::from_secs(5)).await;
+  tokio::time::sleep(std::time::Duration::from_secs(5)).await;
 
   // 停止 PeriodicTaskManager（它会自动停止 Scheduler）
   println!("\n🛑 停止调度器...");
   manager.shutdown();
 
   // 给一点时间让 scheduler 完成清理
-  tokio::time::sleep(Duration::from_millis(500)).await;
+  tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
   println!("✅ 调度器已停止");
 
