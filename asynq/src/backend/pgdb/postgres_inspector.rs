@@ -109,8 +109,9 @@ impl PostgresInspector {
   /// 从数据库字段重构 ServerInfo
   fn reconstruct_server_info(record: &servers::Model) -> Result<ServerInfo> {
     // Parse queues from JSON
-    let queues: std::collections::HashMap<String, i32> = serde_json::from_value(record.queues.clone())
-      .map_err(|e| Error::other(format!("Failed to deserialize queues: {}", e)))?;
+    let queues: std::collections::HashMap<String, i32> =
+      serde_json::from_value(record.queues.clone())
+        .map_err(|e| Error::other(format!("Failed to deserialize queues: {}", e)))?;
 
     // Convert started_at to protobuf Timestamp
     let start_time = {

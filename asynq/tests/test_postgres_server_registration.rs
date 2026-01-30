@@ -16,10 +16,10 @@ async fn test_postgres_server_registration() -> Result<(), Box<dyn std::error::E
   use std::time::Duration;
   use uuid::Uuid;
 
-  use asynq::base::Broker;
-  use asynq::inspector::InspectorTrait;
   use asynq::backend::PostgresBroker;
   use asynq::backend::PostgresInspector;
+  use asynq::base::Broker;
+  use asynq::inspector::InspectorTrait;
   use asynq::proto::ServerInfo;
 
   // Try to connect to PostgresSQL

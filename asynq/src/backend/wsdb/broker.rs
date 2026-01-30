@@ -199,12 +199,7 @@ impl Broker for WebSocketBroker {
   }
 
   /// Add a unique task to a group for aggregation
-  async fn add_to_group_unique(
-    &self,
-    task: &Task,
-    group: &str,
-    ttl: Duration,
-  ) -> Result<TaskInfo> {
+  async fn add_to_group_unique(&self, task: &Task, group: &str, ttl: Duration) -> Result<TaskInfo> {
     let req = AddToGroupUniqueRequest {
       enqueue: self.task_to_enqueue_request(task),
       group: group.to_string(),
