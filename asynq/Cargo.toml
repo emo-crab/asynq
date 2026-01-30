@@ -63,7 +63,6 @@ rand = "0.9"
 cron = "0.15.0"
 phf = { version = "0.13.1", features = ["macros"] }
 # PostgresSQL support (optional)
-sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "chrono"], optional = true }
 sea-orm = { version = "1.1", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"], optional = true }
 # Optional dependencies for WebSocket backend
 tokio-tungstenite = { version = "0.28", optional = true }
@@ -76,7 +75,7 @@ macros = ["asynq-macros"]
 cluster = ["redis/cluster-async"]
 sentinel = ["redis/sentinel"]
 tls = ["rustls", "redis/tls-rustls", "redis/tokio-rustls-comp", "redis/tls-rustls-webpki-roots", "redis/tls-rustls-insecure"]
-postgresql = ["sqlx", "sea-orm", "serde_json"]
+postgresql = ["sea-orm", "serde_json"]
 websocket = ["tokio-tungstenite", "base64", "serde_json"]
 acl = []
 

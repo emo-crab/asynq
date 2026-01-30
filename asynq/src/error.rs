@@ -22,12 +22,6 @@ pub enum Error {
   RedisParsing(#[from] redis::ParsingError),
 
   #[cfg(feature = "postgresql")]
-  /// PostgresSQL 错误 (sqlx)
-  /// PostgresSQL error (sqlx)
-  #[error("PostgresSQL error: {0}")]
-  Postgres(#[from] sqlx::Error),
-
-  #[cfg(feature = "postgresql")]
   /// SeaORM 数据库错误
   /// SeaORM database error
   #[error("SeaORM database error: {0}")]
@@ -215,8 +209,6 @@ impl Error {
       Error::NotSupported(_) => {}
       Error::InvalidMessage(_) => {}
       Error::Broker(_) => {}
-      #[cfg(feature = "postgresql")]
-      Error::Postgres(_) => {}
       #[cfg(feature = "postgresql")]
       Error::SeaOrm(_) => {}
       #[cfg(feature = "json")]

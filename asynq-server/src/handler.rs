@@ -7,10 +7,9 @@ use crate::config::TenantConfig;
 use crate::error::{Error, Result};
 use crate::message::{
   AddToGroupRequest, AddToGroupUniqueRequest, AggregationCheckRequest, ArchiveRequest,
-  ClientMessage, DeleteAggregationSetRequest, DequeueRequest, EnqueueRequest,
-  EnqueueUniqueRequest, ListGroupsRequest, ReadAggregationSetRequest, RetryRequest,
-  ScheduleRequest, ScheduleUniqueRequest, ServerMessage, TaskDoneRequest, TaskInfoResponse,
-  TaskMessageResponse,
+  ClientMessage, DeleteAggregationSetRequest, DequeueRequest, EnqueueRequest, EnqueueUniqueRequest,
+  ListGroupsRequest, ReadAggregationSetRequest, RetryRequest, ScheduleRequest,
+  ScheduleUniqueRequest, ServerMessage, TaskDoneRequest, TaskInfoResponse, TaskMessageResponse,
 };
 use crate::server::CURRENT_TENANT;
 use asynq::base::Broker;
@@ -300,7 +299,13 @@ impl MessageHandler {
     let max_delay = Duration::from_secs(req.max_delay_seconds);
     let set_id = self
       .broker
-      .aggregation_check(&queue, &req.group, aggregation_delay, max_delay, req.max_size)
+      .aggregation_check(
+        &queue,
+        &req.group,
+        aggregation_delay,
+        max_delay,
+        req.max_size,
+      )
       .await?;
     Ok(ServerMessage::AggregationSetId(set_id))
   }
@@ -315,8 +320,10 @@ impl MessageHandler {
       .broker
       .read_aggregation_set(&queue, &req.group, &req.set_id)
       .await?;
-    let responses: Vec<TaskMessageResponse> =
-      tasks.iter().map(|msg| self.task_message_to_response(msg)).collect();
+    let responses: Vec<TaskMessageResponse> = tasks
+      .iter()
+      .map(|msg| self.task_message_to_response(msg))
+      .collect();
     Ok(ServerMessage::AggregationSet(responses))
   }
 
