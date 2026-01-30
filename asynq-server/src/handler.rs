@@ -6,9 +6,11 @@
 use crate::config::TenantConfig;
 use crate::error::{Error, Result};
 use crate::message::{
-  ArchiveRequest, ClientMessage, DequeueRequest, EnqueueRequest, EnqueueUniqueRequest,
-  RetryRequest, ScheduleRequest, ScheduleUniqueRequest, ServerMessage, TaskDoneRequest,
-  TaskInfoResponse, TaskMessageResponse,
+  AddToGroupRequest, AddToGroupUniqueRequest, AggregationCheckRequest, ArchiveRequest,
+  ClientMessage, DeleteAggregationSetRequest, DequeueRequest, EnqueueRequest,
+  EnqueueUniqueRequest, ListGroupsRequest, ReadAggregationSetRequest, RetryRequest,
+  ScheduleRequest, ScheduleUniqueRequest, ServerMessage, TaskDoneRequest, TaskInfoResponse,
+  TaskMessageResponse,
 };
 use crate::server::CURRENT_TENANT;
 use asynq::base::Broker;
@@ -54,10 +56,7 @@ impl MessageHandler {
   /// The tenant configuration is retrieved from the CURRENT_TENANT task-local variable
   /// which is set by the authentication middleware. Queue names will be prefixed with
   /// the tenant ID if a tenant is configured.
-  pub async fn handle(
-    &self,
-    msg: ClientMessage,
-  ) -> Result<ServerMessage> {
+  pub async fn handle(&self, msg: ClientMessage) -> Result<ServerMessage> {
     match msg {
       ClientMessage::Enqueue(req) => self.handle_enqueue(req).await,
       ClientMessage::EnqueueUnique(req) => self.handle_enqueue_unique(req).await,
@@ -73,17 +72,20 @@ impl MessageHandler {
         // Subscription is handled at the WebSocket level
         Ok(ServerMessage::Success)
       }
-      ClientMessage::PublishCancellation { task_id} => {
+      ClientMessage::PublishCancellation { task_id } => {
         self.handle_publish_cancellation(&task_id).await
       }
+      ClientMessage::AddToGroup(req) => self.handle_add_to_group(req).await,
+      ClientMessage::AddToGroupUnique(req) => self.handle_add_to_group_unique(req).await,
+      ClientMessage::ListGroups(req) => self.handle_list_groups(req).await,
+      ClientMessage::AggregationCheck(req) => self.handle_aggregation_check(req).await,
+      ClientMessage::ReadAggregationSet(req) => self.handle_read_aggregation_set(req).await,
+      ClientMessage::DeleteAggregationSet(req) => self.handle_delete_aggregation_set(req).await,
     }
   }
 
   /// Handle enqueue request
-  async fn handle_enqueue(
-    &self,
-    req: EnqueueRequest,
-  ) -> Result<ServerMessage> {
+  async fn handle_enqueue(&self, req: EnqueueRequest) -> Result<ServerMessage> {
     let task = self.create_task_from_request(&req)?;
     let info = self.broker.enqueue(&task).await?;
     Ok(ServerMessage::TaskInfo(TaskInfoResponse {
@@ -95,10 +97,7 @@ impl MessageHandler {
   }
 
   /// Handle enqueue unique request
-  async fn handle_enqueue_unique(
-    &self,
-    req: EnqueueUniqueRequest,
-  ) -> Result<ServerMessage> {
+  async fn handle_enqueue_unique(&self, req: EnqueueUniqueRequest) -> Result<ServerMessage> {
     let task = self.create_task_from_request(&req.enqueue)?;
     let ttl = Duration::from_secs(req.ttl_seconds);
     let info = self.broker.enqueue_unique(&task, ttl).await?;
@@ -111,13 +110,9 @@ impl MessageHandler {
   }
 
   /// Handle schedule request
-  async fn handle_schedule(
-    &self,
-    req: ScheduleRequest,
-  ) -> Result<ServerMessage> {
+  async fn handle_schedule(&self, req: ScheduleRequest) -> Result<ServerMessage> {
     let task = self.create_task_from_request(&req.enqueue)?;
-    let process_at = DateTime::from_timestamp(req.process_at, 0)
-      .unwrap_or_else(Utc::now);
+    let process_at = DateTime::from_timestamp(req.process_at, 0).unwrap_or_else(Utc::now);
     let info = self.broker.schedule(&task, process_at).await?;
     Ok(ServerMessage::TaskInfo(TaskInfoResponse {
       id: info.id,
@@ -128,13 +123,9 @@ impl MessageHandler {
   }
 
   /// Handle schedule unique request
-  async fn handle_schedule_unique(
-    &self,
-    req: ScheduleUniqueRequest,
-  ) -> Result<ServerMessage> {
+  async fn handle_schedule_unique(&self, req: ScheduleUniqueRequest) -> Result<ServerMessage> {
     let task = self.create_task_from_request(&req.schedule.enqueue)?;
-    let process_at = DateTime::from_timestamp(req.schedule.process_at, 0)
-      .unwrap_or_else(Utc::now);
+    let process_at = DateTime::from_timestamp(req.schedule.process_at, 0).unwrap_or_else(Utc::now);
     let ttl = Duration::from_secs(req.ttl_seconds);
     let info = self.broker.schedule_unique(&task, process_at, ttl).await?;
     Ok(ServerMessage::TaskInfo(TaskInfoResponse {
@@ -146,10 +137,7 @@ impl MessageHandler {
   }
 
   /// Handle dequeue request
-  async fn handle_dequeue(
-    &self,
-    req: DequeueRequest,
-  ) -> Result<ServerMessage> {
+  async fn handle_dequeue(&self, req: DequeueRequest) -> Result<ServerMessage> {
     // Apply tenant prefix to all queues
     let queues: Vec<String> = req
       .queues
@@ -162,33 +150,23 @@ impl MessageHandler {
   }
 
   /// Handle task done request
-  async fn handle_done(
-    &self,
-    req: TaskDoneRequest,
-  ) -> Result<ServerMessage> {
+  async fn handle_done(&self, req: TaskDoneRequest) -> Result<ServerMessage> {
     let msg = self.create_task_message_from_request(&req)?;
     self.broker.done(&msg).await?;
     Ok(ServerMessage::Success)
   }
 
   /// Handle mark complete request
-  async fn handle_mark_complete(
-    &self,
-    req: TaskDoneRequest,
-  ) -> Result<ServerMessage> {
+  async fn handle_mark_complete(&self, req: TaskDoneRequest) -> Result<ServerMessage> {
     let msg = self.create_task_message_from_request(&req)?;
     self.broker.mark_as_complete(&msg).await?;
     Ok(ServerMessage::Success)
   }
 
   /// Handle retry request
-  async fn handle_retry(
-    &self,
-    req: RetryRequest,
-  ) -> Result<ServerMessage> {
+  async fn handle_retry(&self, req: RetryRequest) -> Result<ServerMessage> {
     let msg = self.create_task_message_from_request(&req.task)?;
-    let process_at = DateTime::from_timestamp(req.process_at, 0)
-      .unwrap_or_else(Utc::now);
+    let process_at = DateTime::from_timestamp(req.process_at, 0).unwrap_or_else(Utc::now);
     self
       .broker
       .retry(&msg, process_at, &req.error_msg, req.is_failure)
@@ -197,10 +175,7 @@ impl MessageHandler {
   }
 
   /// Handle archive request
-  async fn handle_archive(
-    &self,
-    req: ArchiveRequest,
-  ) -> Result<ServerMessage> {
+  async fn handle_archive(&self, req: ArchiveRequest) -> Result<ServerMessage> {
     let msg = self.create_task_message_from_request(&req.task)?;
     self.broker.archive(&msg, &req.error_msg).await?;
     Ok(ServerMessage::Success)
@@ -213,10 +188,7 @@ impl MessageHandler {
   }
 
   /// Create a Task from an enqueue request
-  fn create_task_from_request(
-    &self,
-    req: &EnqueueRequest,
-  ) -> Result<Task> {
+  fn create_task_from_request(&self, req: &EnqueueRequest) -> Result<Task> {
     let payload = BASE64_STANDARD
       .decode(&req.payload)
       .map_err(|e| Error::invalid_message(format!("Invalid base64 payload: {}", e)))?;
@@ -249,10 +221,7 @@ impl MessageHandler {
   }
 
   /// Create a TaskMessage from a done request
-  fn create_task_message_from_request(
-    &self,
-    req: &TaskDoneRequest,
-  ) -> Result<TaskMessage> {
+  fn create_task_message_from_request(&self, req: &TaskDoneRequest) -> Result<TaskMessage> {
     let payload = BASE64_STANDARD
       .decode(&req.payload)
       .map_err(|e| Error::invalid_message(format!("Invalid base64 payload: {}", e)))?;
@@ -284,5 +253,83 @@ impl MessageHandler {
       deadline: msg.deadline,
       group_key: msg.group_key.clone(),
     }
+  }
+
+  /// Handle add to group request
+  async fn handle_add_to_group(&self, req: AddToGroupRequest) -> Result<ServerMessage> {
+    let task = self.create_task_from_request(&req.enqueue)?;
+    let info = self.broker.add_to_group(&task, &req.group).await?;
+    Ok(ServerMessage::TaskInfo(TaskInfoResponse {
+      id: info.id,
+      queue: info.queue,
+      task_type: info.task_type,
+      state: info.state.as_str().to_string(),
+    }))
+  }
+
+  /// Handle add to group unique request
+  async fn handle_add_to_group_unique(
+    &self,
+    req: AddToGroupUniqueRequest,
+  ) -> Result<ServerMessage> {
+    let task = self.create_task_from_request(&req.enqueue)?;
+    let ttl = Duration::from_secs(req.ttl_seconds);
+    let info = self
+      .broker
+      .add_to_group_unique(&task, &req.group, ttl)
+      .await?;
+    Ok(ServerMessage::TaskInfo(TaskInfoResponse {
+      id: info.id,
+      queue: info.queue,
+      task_type: info.task_type,
+      state: info.state.as_str().to_string(),
+    }))
+  }
+
+  /// Handle list groups request
+  async fn handle_list_groups(&self, req: ListGroupsRequest) -> Result<ServerMessage> {
+    let queue = Self::apply_tenant_prefix(&req.queue);
+    let groups = self.broker.list_groups(&queue).await?;
+    Ok(ServerMessage::GroupsList(groups))
+  }
+
+  /// Handle aggregation check request
+  async fn handle_aggregation_check(&self, req: AggregationCheckRequest) -> Result<ServerMessage> {
+    let queue = Self::apply_tenant_prefix(&req.queue);
+    let aggregation_delay = Duration::from_secs(req.aggregation_delay_seconds);
+    let max_delay = Duration::from_secs(req.max_delay_seconds);
+    let set_id = self
+      .broker
+      .aggregation_check(&queue, &req.group, aggregation_delay, max_delay, req.max_size)
+      .await?;
+    Ok(ServerMessage::AggregationSetId(set_id))
+  }
+
+  /// Handle read aggregation set request
+  async fn handle_read_aggregation_set(
+    &self,
+    req: ReadAggregationSetRequest,
+  ) -> Result<ServerMessage> {
+    let queue = Self::apply_tenant_prefix(&req.queue);
+    let tasks = self
+      .broker
+      .read_aggregation_set(&queue, &req.group, &req.set_id)
+      .await?;
+    let responses: Vec<TaskMessageResponse> =
+      tasks.iter().map(|msg| self.task_message_to_response(msg)).collect();
+    Ok(ServerMessage::AggregationSet(responses))
+  }
+
+  /// Handle delete aggregation set request
+  async fn handle_delete_aggregation_set(
+    &self,
+    req: DeleteAggregationSetRequest,
+  ) -> Result<ServerMessage> {
+    let queue = Self::apply_tenant_prefix(&req.queue);
+    self
+      .broker
+      .delete_aggregation_set(&queue, &req.group, &req.set_id)
+      .await?;
+    Ok(ServerMessage::Success)
   }
 }

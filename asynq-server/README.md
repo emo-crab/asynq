@@ -209,9 +209,9 @@ Configure via code (not command-line):
 
 ```rust
 use asynq_server::AsynqServer;
-use asynq::redis::RedisConnectionType;
+use asynq::backend::RedisConnectionType;
 
-let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
+let redis_config = asynq::backend::RedisConnectionType::single("redis://127.0.0.1:6379")?;
 let server = AsynqServer::with_redis("127.0.0.1:8080", redis_config).await?;
 server.run().await?;
 ```

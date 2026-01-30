@@ -74,7 +74,7 @@ pub enum BackendType {
 }
 
 /// Multi-tenant authentication manager with backend-based authentication
-/// 
+///
 /// This manager authenticates tenants by attempting to connect to their
 /// own backend (Redis or PostgresSQL) using their credentials. Successful
 /// connections are cached to avoid repeated connection attempts.
@@ -107,7 +107,7 @@ impl std::fmt::Debug for MultiTenantAuth {
 
 impl MultiTenantAuth {
   /// Create a new multi-tenant authentication manager with backend-based auth
-  /// 
+  ///
   /// # Arguments
   /// * `backend_type` - The type of backend to use (Redis or PostgresSQL)
   /// * `backend_template` - Connection string template where credentials will be substituted
@@ -160,11 +160,13 @@ impl MultiTenantAuth {
   /// Record a failed authentication attempt
   fn record_failed_attempt(&self, username: &str) {
     if let Ok(mut attempts) = self.failed_attempts.write() {
-      let entry = attempts.entry(username.to_string()).or_insert(FailedAttempt {
-        count: 0,
-        last_attempt: Instant::now(),
-      });
-      
+      let entry = attempts
+        .entry(username.to_string())
+        .or_insert(FailedAttempt {
+          count: 0,
+          last_attempt: Instant::now(),
+        });
+
       // Reset count if outside the rate limit window
       if entry.last_attempt.elapsed() >= self.rate_limit_window {
         entry.count = 1;
@@ -186,16 +188,21 @@ impl MultiTenantAuth {
 
   /// Build connection string from template and credentials
   fn build_connection_string(&self, username: &str, password: &str) -> String {
-    self.backend_template
+    self
+      .backend_template
       .replace("{username}", username)
       .replace("{password}", password)
   }
 
   /// Attempt to authenticate by connecting to the backend
-  /// 
+  ///
   /// Returns Ok(TenantConfig) if authentication succeeds, Err otherwise.
   /// On success, the tenant is cached for future requests.
-  pub async fn authenticate(&self, username: &str, password: &str) -> Result<TenantConfig, AuthError> {
+  pub async fn authenticate(
+    &self,
+    username: &str,
+    password: &str,
+  ) -> Result<TenantConfig, AuthError> {
     // Check rate limiting first
     if self.is_rate_limited(username) {
       return Err(AuthError::RateLimited);
@@ -215,7 +222,7 @@ impl MultiTenantAuth {
 
     // Attempt to connect to backend with credentials
     let connection_string = self.build_connection_string(username, password);
-    
+
     match self.try_backend_connection(&connection_string).await {
       Ok(()) => {
         // Success! Cache this tenant
@@ -226,15 +233,15 @@ impl MultiTenantAuth {
           queue_prefix: Some(username.to_string()),
           backend_connection: Some(connection_string.clone()),
         };
-        
+
         if let Ok(mut tenants) = self.tenants.write() {
           tenants.insert(username.to_string(), tenant.clone());
         }
         // If caching fails due to poisoned lock, still return success
-        
+
         // Clear any failed attempts
         self.clear_failed_attempts(username);
-        
+
         Ok(tenant)
       }
       Err(e) => {
@@ -254,32 +261,23 @@ impl MultiTenantAuth {
   }
 
   /// Try to connect to Redis
-  #[cfg(feature = "redis")]
   async fn try_redis_connection(&self, connection_string: &str) -> Result<(), AuthError> {
-    use asynq::redis::RedisConnectionType;
-    use asynq::rdb::RedisBroker;
-    
-    match RedisConnectionType::single(connection_string) {
-      Ok(config) => {
-        match RedisBroker::new(config).await {
-          Ok(_broker) => Ok(()),
-          Err(_) => Err(AuthError::ConnectionFailed),
-        }
-      }
+    use asynq::backend::RedisBroker;
+
+    match asynq::backend::RedisConnectionType::single(connection_string) {
+      Ok(config) => match RedisBroker::new(config).await {
+        Ok(_broker) => Ok(()),
+        Err(_) => Err(AuthError::ConnectionFailed),
+      },
       Err(_) => Err(AuthError::InvalidCredentials),
     }
-  }
-
-  #[cfg(not(feature = "redis"))]
-  async fn try_redis_connection(&self, _connection_string: &str) -> Result<(), AuthError> {
-    Err(AuthError::BackendNotAvailable)
   }
 
   /// Try to connect to PostgresSQL
   #[cfg(feature = "postgresql")]
   async fn try_postgresql_connection(&self, connection_string: &str) -> Result<(), AuthError> {
-    use asynq::pgdb::PostgresBroker;
-    
+    use asynq::backend::PostgresBroker;
+
     match PostgresBroker::new(connection_string).await {
       Ok(_broker) => Ok(()),
       Err(_) => Err(AuthError::ConnectionFailed),
@@ -301,13 +299,18 @@ impl MultiTenantAuth {
 
   /// Remove a tenant from the cache
   pub fn remove_tenant(&self, username: &str) -> Option<TenantConfig> {
-    self.tenants.write().ok()
+    self
+      .tenants
+      .write()
+      .ok()
       .and_then(|mut tenants| tenants.remove(username))
   }
 
   /// List all cached tenants
   pub fn list_tenants(&self) -> Vec<String> {
-    self.tenants.read()
+    self
+      .tenants
+      .read()
       .map(|tenants| tenants.values().map(|t| t.id.clone()).collect())
       .unwrap_or_default()
   }
@@ -320,7 +323,9 @@ impl MultiTenantAuth {
 
   /// Get the number of cached tenants
   pub fn tenant_count(&self) -> usize {
-    self.tenants.read()
+    self
+      .tenants
+      .read()
       .map(|tenants| tenants.len())
       .unwrap_or(0)
   }
@@ -384,7 +389,7 @@ mod tests {
   fn test_multi_tenant_auth_caching() {
     let auth = MultiTenantAuth::new(
       BackendType::Redis,
-      "redis://{username}:{password}@localhost:6379".to_string()
+      "redis://{username}:{password}@localhost:6379".to_string(),
     );
     assert!(auth.is_enabled()); // Always enabled with backend auth
 
@@ -414,7 +419,7 @@ mod tests {
   fn test_rate_limiting() {
     let auth = MultiTenantAuth::new(
       BackendType::Redis,
-      "redis://{username}:{password}@localhost:6379".to_string()
+      "redis://{username}:{password}@localhost:6379".to_string(),
     )
     .with_max_failed_attempts(3)
     .with_rate_limit_window(Duration::from_secs(60));
@@ -436,7 +441,7 @@ mod tests {
   fn test_connection_string_building() {
     let auth = MultiTenantAuth::new(
       BackendType::Redis,
-      "redis://{username}:{password}@localhost:6379".to_string()
+      "redis://{username}:{password}@localhost:6379".to_string(),
     );
 
     let conn_str = auth.build_connection_string("testuser", "testpass");
