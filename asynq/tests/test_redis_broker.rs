@@ -1,6 +1,6 @@
 // mod test_redis_broker
-use asynq::rdb::RedisBroker;
-use asynq::redis::RedisConnectionType;
+use asynq::backend::RedisBroker;
+use asynq::backend::RedisConnectionType;
 
 // RedisBroker 单元测试
 // ...以下为原 tests 模块内容...

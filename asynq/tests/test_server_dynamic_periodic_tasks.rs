@@ -8,7 +8,7 @@ use asynq::components::periodic_task_manager::{
   PeriodicTaskConfig, PeriodicTaskConfigProvider, PeriodicTaskManager, PeriodicTaskManagerConfig,
 };
 use asynq::config::ServerConfig;
-use asynq::redis::RedisConnectionType;
+use asynq::backend::RedisConnectionType;
 use asynq::scheduler::Scheduler;
 use std::sync::Arc;
 use std::time::Duration;

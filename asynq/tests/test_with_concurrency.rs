@@ -2,7 +2,7 @@
 use async_trait::async_trait;
 use asynq::config::ServerConfig;
 use asynq::error::Result;
-use asynq::redis::RedisConnectionType;
+use asynq::backend::RedisConnectionType;
 use asynq::server::{Handler, ServerBuilder};
 use asynq::task::Task;
 use std::sync::{Arc, Mutex};

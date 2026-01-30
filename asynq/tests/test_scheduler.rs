@@ -1,6 +1,6 @@
 use asynq::{
   client::Client,
-  redis::RedisConnectionType,
+  backend::RedisConnectionType,
   scheduler::{PeriodicTask, Scheduler},
 };
 use std::sync::Arc;

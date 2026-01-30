@@ -11,7 +11,7 @@ use uuid::Uuid;
 
 use asynq::base::{keys, Broker};
 use asynq::proto::ServerInfo;
-use asynq::{rdb::RedisBroker, redis::RedisConnectionType};
+use asynq::{backend::RedisBroker, backend::RedisConnectionType};
 
 #[tokio::test]
 async fn test_server_registration() -> Result<(), Box<dyn std::error::Error>> {
