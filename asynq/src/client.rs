@@ -4,21 +4,20 @@
 //! 提供任务排队功能
 //! Provides task queuing functionality
 
+use crate::backend::RedisBroker;
+use crate::backend::RedisConnectionType;
 use crate::base::Broker;
 use crate::config::ClientConfig;
 use crate::error::Result;
-use crate::memdb::MemoryBroker;
-use crate::rdb::RedisBroker;
-use crate::redis::RedisConnectionType;
 use crate::task::{Task, TaskInfo};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
 #[cfg(feature = "postgresql")]
-use crate::pgdb::PostgresBroker;
+use crate::backend::pgdb::PostgresBroker;
 
 #[cfg(feature = "websocket")]
-use crate::wsdb::WebSocketBroker;
+use crate::backend::wsdb::WebSocketBroker;
 
 /// 客户端后端类型
 /// Client backend type
@@ -30,9 +29,6 @@ enum ClientBroker {
   /// PostgresSQL 后端
   /// PostgresSQL backend
   Postgres(Arc<PostgresBroker>),
-  /// 内存后端（本地运行，不依赖外部服务）
-  /// Memory backend (runs locally, no external service dependencies)
-  Memory(Arc<MemoryBroker>),
   #[cfg(feature = "websocket")]
   /// WebSocket 后端（连接到 asynq-server）
   /// WebSocket backend (connects to asynq-server)
@@ -47,48 +43,20 @@ impl ClientBroker {
       ClientBroker::Redis(broker) => broker.clone(),
       #[cfg(feature = "postgresql")]
       ClientBroker::Postgres(broker) => broker.clone(),
-      ClientBroker::Memory(broker) => broker.clone(),
       #[cfg(feature = "websocket")]
       ClientBroker::WebSocket(broker) => broker.clone(),
     }
   }
 
-  /// 尝试获取 RedisBroker 实例
-  /// Try to get the RedisBroker instance
-  fn as_redis(&self) -> Option<Arc<RedisBroker>> {
+  /// 获取 SchedulerBroker trait 对象
+  /// Get the SchedulerBroker trait object
+  fn as_scheduler_broker(&self) -> Arc<dyn crate::base::SchedulerBroker> {
     match self {
-      ClientBroker::Redis(broker) => Some(broker.clone()),
+      ClientBroker::Redis(broker) => broker.clone(),
       #[cfg(feature = "postgresql")]
-      ClientBroker::Postgres(_) => None,
-      ClientBroker::Memory(_) => None,
+      ClientBroker::Postgres(broker) => broker.clone(),
       #[cfg(feature = "websocket")]
-      ClientBroker::WebSocket(_) => None,
-    }
-  }
-
-  /// 尝试获取 MemoryBroker 实例
-  /// Try to get the MemoryBroker instance
-  fn as_memory(&self) -> Option<Arc<MemoryBroker>> {
-    match self {
-      ClientBroker::Memory(broker) => Some(broker.clone()),
-      ClientBroker::Redis(_) => None,
-      #[cfg(feature = "postgresql")]
-      ClientBroker::Postgres(_) => None,
-      #[cfg(feature = "websocket")]
-      ClientBroker::WebSocket(_) => None,
-    }
-  }
-
-  #[cfg(feature = "websocket")]
-  /// 尝试获取 WebSocketBroker 实例
-  /// Try to get the WebSocketBroker instance
-  fn as_websocket(&self) -> Option<Arc<WebSocketBroker>> {
-    match self {
-      ClientBroker::WebSocket(broker) => Some(broker.clone()),
-      ClientBroker::Redis(_) => None,
-      #[cfg(feature = "postgresql")]
-      ClientBroker::Postgres(_) => None,
-      ClientBroker::Memory(_) => None,
+      ClientBroker::WebSocket(broker) => broker.clone(),
     }
   }
 }
@@ -141,24 +109,6 @@ impl Client {
       broker: ClientBroker::Postgres(broker),
       config,
     })
-  }
-
-  /// 创建使用内存后端的新客户端实例（本地运行，不依赖外部服务）
-  /// Create a new client instance using memory backend (runs locally, no external service dependencies)
-  pub fn new_with_memory() -> Self {
-    Self::new_with_memory_config(ClientConfig::default())
-  }
-
-  /// 使用指定配置创建内存后端客户端实例
-  /// Create a memory backend client instance with the specified configuration
-  pub fn new_with_memory_config(config: ClientConfig) -> Self {
-    // 创建 MemoryBroker 实例
-    // Create MemoryBroker instance
-    let broker = Arc::new(MemoryBroker::new());
-    Self {
-      broker: ClientBroker::Memory(broker),
-      config,
-    }
   }
 
   /// 创建使用 WebSocket 后端的新客户端实例（连接到 asynq-server）
@@ -218,26 +168,13 @@ impl Client {
     self.broker.as_broker()
   }
 
-  /// 尝试获取 RedisBroker 实例（如果底层 broker 是 RedisBroker）
-  /// Try to get the RedisBroker instance (if the underlying broker is RedisBroker)
+  /// 获取 SchedulerBroker 实例用于调度器功能
+  /// Get the SchedulerBroker instance for scheduler functionality
   ///
-  /// 某些组件（如 Scheduler）需要 Redis 特定的功能
-  /// Some components (like Scheduler) require Redis-specific features
-  pub fn get_redis_broker(&self) -> Option<Arc<RedisBroker>> {
-    self.broker.as_redis()
-  }
-
-  /// 尝试获取 MemoryBroker 实例（如果底层 broker 是 MemoryBroker）
-  /// Try to get the MemoryBroker instance (if the underlying broker is MemoryBroker)
-  pub fn get_memory_broker(&self) -> Option<Arc<MemoryBroker>> {
-    self.broker.as_memory()
-  }
-
-  /// 尝试获取 WebSocketBroker 实例（如果底层 broker 是 WebSocketBroker）
-  /// Try to get the WebSocketBroker instance (if the underlying broker is WebSocketBroker)
-  #[cfg(feature = "websocket")]
-  pub fn get_websocket_broker(&self) -> Option<Arc<WebSocketBroker>> {
-    self.broker.as_websocket()
+  /// 调度器（Scheduler）需要特定的持久化和查询功能
+  /// Scheduler requires specific persistence and query functionality
+  pub(crate) fn get_scheduler_broker(&self) -> Arc<dyn crate::base::SchedulerBroker> {
+    self.broker.as_scheduler_broker()
   }
 
   /// 应用 ACL 前缀到任务的队列名称
@@ -334,7 +271,6 @@ impl Client {
     self.broker.as_broker().close().await
   }
 }
-
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -362,48 +298,6 @@ mod tests {
     // Since client creation requires a connection to Redis, we only test configuration parsing and basic structure
     assert_eq!(redis_config.addr().to_string(), "127.0.0.1:6379");
     assert_eq!(config.max_retries, 3);
-  }
-
-  #[tokio::test]
-  async fn test_memory_client_creation() {
-    // 测试内存客户端创建（不需要任何外部服务）
-    // Test memory client creation (no external service required)
-    let client = Client::new_with_memory();
-
-    // 验证 ping 成功
-    // Verify ping succeeds
-    assert!(client.ping().await.is_ok());
-
-    // 验证可以获取 MemoryBroker
-    // Verify we can get MemoryBroker
-    assert!(client.get_memory_broker().is_some());
-    assert!(client.get_redis_broker().is_none());
-  }
-
-  #[tokio::test]
-  async fn test_memory_client_enqueue() {
-    // 测试内存客户端入队功能
-    // Test memory client enqueue functionality
-    let client = Client::new_with_memory();
-    let task = Task::new("test:memory", b"test payload").unwrap();
-
-    let result = client.enqueue(task).await;
-    assert!(result.is_ok());
-
-    let task_info = result.unwrap();
-    assert_eq!(task_info.task_type, "test:memory");
-  }
-
-  #[tokio::test]
-  async fn test_memory_client_schedule() {
-    // 测试内存客户端调度功能
-    // Test memory client schedule functionality
-    let client = Client::new_with_memory();
-    let task = Task::new("test:schedule", b"payload").unwrap();
-    let process_at = SystemTime::now() + Duration::from_secs(3600);
-
-    let result = client.schedule(task, process_at).await;
-    assert!(result.is_ok());
   }
 
   // 注意: 由于需要实际的 Redis 连接，完整的集成测试需要在 CI/CD 环境中运行

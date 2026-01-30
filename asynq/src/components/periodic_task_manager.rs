@@ -280,12 +280,12 @@ impl ComponentLifecycle for PeriodicTaskManager {
     PeriodicTaskManager::is_done(self)
   }
 }
-
+#[cfg(feature = "default")]
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::backend::RedisConnectionType;
   use crate::client::Client;
-  use crate::redis::RedisConnectionType;
 
   // 测试配置提供者
   // Test configuration provider

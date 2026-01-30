@@ -234,11 +234,11 @@ impl ComponentLifecycle for Subscriber {
     Subscriber::is_done(self)
   }
 }
-
+#[cfg(feature = "default")]
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::redis::RedisConnectionType;
+  use crate::backend::RedisConnectionType;
 
   #[test]
   fn test_subscriber_config_default() {
@@ -248,7 +248,7 @@ mod tests {
 
   #[tokio::test]
   async fn test_subscriber_shutdown() {
-    use crate::rdb::RedisBroker;
+    use crate::backend::RedisBroker;
     let redis_connection_config = RedisConnectionType::single("redis://localhost:6379").unwrap();
     let broker = Arc::new(RedisBroker::new(redis_connection_config).await.unwrap());
     let config = SubscriberConfig::default();
@@ -261,7 +261,7 @@ mod tests {
 
   #[tokio::test]
   async fn test_subscriber_publish_receive() {
-    use crate::rdb::RedisBroker;
+    use crate::backend::RedisBroker;
     let redis_connection_config = RedisConnectionType::single("redis://localhost:6379").unwrap();
 
     let broker = Arc::new(RedisBroker::new(redis_connection_config).await.unwrap());
@@ -289,7 +289,7 @@ mod tests {
   #[tokio::test]
   #[ignore] // 需要运行 Redis 服务器才能运行此测试 / Requires running Redis server to run this test
   async fn test_subscriber_cancellation_pubsub() {
-    use crate::rdb::RedisBroker;
+    use crate::backend::RedisBroker;
     let redis_connection_config = RedisConnectionType::single("redis://localhost:6379").unwrap();
     let broker: Arc<dyn Broker> =
       Arc::new(RedisBroker::new(redis_connection_config).await.unwrap());

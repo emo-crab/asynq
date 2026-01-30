@@ -32,21 +32,6 @@
 //! └─────────────────┘                   └─────────────────────────────────┘
 //! ```
 //!
-//! ## Usage
-//!
-//! ### Starting the server with Memory backend (default)
-//!
-//! ```rust,no_run
-//! use asynq_server::AsynqServer;
-//!
-//! #[tokio::main]
-//! async fn main() -> anyhow::Result<()> {
-//!     let server = AsynqServer::from_str("127.0.0.1:8080")?;
-//!     server.run().await?;
-//!     Ok(())
-//! }
-//! ```
-//!
 //! ### Starting the server with Redis backend (requires `redis` feature)
 //!
 //! ```rust,ignore

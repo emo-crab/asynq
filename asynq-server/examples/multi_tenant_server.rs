@@ -29,6 +29,7 @@
 
 use asynq_server::{AsynqServer, BackendType, MultiTenantAuth};
 use std::str::FromStr;
+use tracing::info;
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 #[tokio::main]
@@ -67,10 +68,16 @@ async fn main() -> anyhow::Result<()> {
   tracing::info!("");
   tracing::info!("WebSocket endpoint: ws://{}/ws", addr);
   tracing::info!("Health check: http://{}/health", addr);
-
+  let socket = std::net::SocketAddr::from_str(addr)?;
+  info!("Starting asynq-server on {}", addr);
+  let redis_url = std::env::var("REDIS_URL")
+    .unwrap_or_else(|_| "redis://tenant1:secure_pass123@localhost:6379".to_string());
+  println!("🔗 Using Redis URL: {redis_url}");
+  let redis_config = asynq::backend::RedisConnectionType::single(redis_url.clone())?;
+  let broker = asynq::backend::RedisBroker::new(redis_config).await?;
+  let server =
+    AsynqServer::with_broker(socket, std::sync::Arc::new(broker)).with_multi_tenant_auth(auth);
   // Create and run server
-  let server = AsynqServer::from_str(addr)?.with_multi_tenant_auth(auth);
-
   server.run().await?;
 
   Ok(())

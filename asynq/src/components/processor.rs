@@ -52,13 +52,13 @@
 //! use std::sync::Arc;
 //! use std::sync::atomic::AtomicUsize;
 //! use std::time::Duration;
-//!
+//! #[cfg(feature = "default")]
 //! async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // 创建 broker 和其他必要组件
 //! // Create broker and other necessary components
-//! # use asynq::redis::RedisConnectionType;
-//! # use asynq::rdb::RedisBroker;
-//! # let redis_config = RedisConnectionType::single("redis://localhost:6379")?;
+//! # use asynq::backend::RedisConnectionType;
+//! # use asynq::backend::RedisBroker;
+//! # let redis_config = asynq::backend::RedisConnectionType::single("redis://localhost:6379")?;
 //! # let broker = Arc::new(RedisBroker::new(redis_config).await?);
 //!
 //! let mut queues = HashMap::new();
@@ -633,7 +633,7 @@ fn calculate_task_timeout(task_msg: &crate::proto::TaskMessage) -> Option<Durati
 /// Calculate retry delay
 fn calculate_retry_delay(
   retried: i32,
-  retry_policy: Option<&crate::rdb::option::RetryPolicy>,
+  retry_policy: Option<&crate::backend::option::RetryPolicy>,
 ) -> Duration {
   match retry_policy {
     Some(policy) => policy.calculate_delay(retried),

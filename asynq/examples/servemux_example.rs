@@ -1,11 +1,7 @@
 //! ServeMux 示例 - 演示如何使用 ServeMux 路由不同的任务类型
 //! ServeMux Example - Demonstrates how to use ServeMux to route different task types
 
-use asynq::redis::RedisConnectionType;
-use asynq::{config::ServerConfig, serve_mux::ServeMux, server::ServerBuilder, task::Task};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::Duration;
 
 #[derive(Serialize, Deserialize)]
 struct EmailPayload {
@@ -23,6 +19,12 @@ struct ImageResizePayload {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+  use asynq::backend::RedisConnectionType;
+
+  use asynq::serve_mux::ServeMux;
+
+  use asynq::task::Task;
+
   // 初始化日志
   // Initialize logging
   tracing_subscriber::fmt::init();
@@ -39,7 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 创建队列配置
   // Create queue configuration
-  let mut queues = HashMap::new();
+  let mut queues = std::collections::HashMap::new();
   queues.insert("critical".to_string(), 6);
   queues.insert("default".to_string(), 3);
   queues.insert("image_processing".to_string(), 2);
@@ -47,12 +49,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 创建服务器配置
   // Create server configuration
-  let server_config = ServerConfig::new()
+  let server_config = asynq::config::ServerConfig::new()
     .concurrency(2) // 2 个并发工作者，与 Go 示例一致
     .queues(queues)
     .strict_priority(false)
-    .task_check_interval(Duration::from_secs(1))
-    .shutdown_timeout(Duration::from_secs(10));
+    .task_check_interval(std::time::Duration::from_secs(1))
+    .shutdown_timeout(std::time::Duration::from_secs(10));
 
   // 创建 ServeMux
   // Create ServeMux
@@ -123,7 +125,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 创建服务器
   // Create server
-  let mut server = ServerBuilder::new()
+  let mut server = asynq::server::ServerBuilder::new()
     .redis_config(redis_config)
     .server_config(server_config)
     .build()

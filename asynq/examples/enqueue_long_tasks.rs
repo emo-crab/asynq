@@ -4,25 +4,21 @@
 //! 这个示例创建一些长时间运行的任务用于测试取消功能
 //! This example creates some long-running tasks for testing cancellation
 
-use asynq::client::Client;
-use asynq::redis::RedisConnectionType;
-use asynq::task::Task;
-
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   println!("📤 Enqueuing long-running tasks...\n");
 
   // 创建客户端
   // Create client
-  let redis_config = RedisConnectionType::single("redis://localhost:6379")?;
-  let client = Client::new(redis_config).await?;
+  let redis_config = asynq::backend::RedisConnectionType::single("redis://localhost:6379")?;
+  let client = asynq::client::Client::new(redis_config).await?;
 
   // 创建并入队多个长任务
   // Create and enqueue multiple long tasks
   let mut task_ids = Vec::new();
 
   for i in 1..=5 {
-    let task = Task::new("long_task", format!("task_{i}").as_bytes())?;
+    let task = asynq::task::Task::new("long_task", format!("task_{i}").as_bytes())?;
     let info = client.enqueue(task).await?;
     let task_id = info.id.clone();
 

@@ -6,20 +6,18 @@ use crate::config::{MultiTenantAuth, TenantConfig};
 use crate::error::{Error, Result};
 use crate::handler::MessageHandler;
 use crate::message::{ClientMessage, ServerMessage};
-use asynq::base::Broker;
-use asynq::memdb::MemoryBroker;
-#[cfg(feature = "redis")]
-use asynq::rdb::RedisBroker;
-#[cfg(feature = "redis")]
-use asynq::redis::RedisConnectionType;
 #[cfg(feature = "postgresql")]
-use asynq::pgdb::PostgresBroker;
+use asynq::backend::PostgresBroker;
+use asynq::backend::RedisBroker;
+use asynq::backend::RedisConnectionType;
+use asynq::base::Broker;
+use asynq::components::forwarder::{Forwarder, ForwarderConfig};
 use axum::{
   extract::{
     ws::{Message, WebSocket, WebSocketUpgrade},
     Request, State,
   },
-  http::{StatusCode, header},
+  http::{header, StatusCode},
   middleware::{self, Next},
   response::{IntoResponse, Response},
   routing::get,
@@ -28,7 +26,6 @@ use axum::{
 use base64::prelude::*;
 use futures_util::{SinkExt, StreamExt};
 use std::net::SocketAddr;
-use std::str::FromStr;
 use std::sync::Arc;
 use tokio::sync::broadcast;
 use tokio::task_local;
@@ -91,26 +88,7 @@ pub struct AsynqServer {
   /// Authentication mode
   auth_mode: AuthMode,
 }
-impl FromStr for AsynqServer {
-  type Err = Error;
-
-  fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-    let addr: SocketAddr = s
-        .parse()
-        .map_err(|e| Error::server(format!("Invalid address: {}", e)))?;
-    Ok(Self::new(addr))
-  }
-}
 impl AsynqServer {
-  /// Create a new AsynqServer with the specified address and Memory backend
-  pub fn new<A: Into<SocketAddr>>(addr: A) -> Self {
-    Self {
-      addr: addr.into(),
-      broker: Arc::new(MemoryBroker::new()),
-      auth_mode: AuthMode::None,
-    }
-  }
-
   /// Create a new AsynqServer with a custom broker
   ///
   /// This allows using any Broker implementation (except WebSocket) as the backend.
@@ -144,7 +122,6 @@ impl AsynqServer {
   }
 
   /// Create a new AsynqServer with Redis backend
-  #[cfg(feature = "redis")]
   pub async fn with_redis<A: Into<SocketAddr>>(
     addr: A,
     redis_connection: RedisConnectionType,
@@ -163,10 +140,7 @@ impl AsynqServer {
 
   /// Create a new AsynqServer with PostgresSQL backend
   #[cfg(feature = "postgresql")]
-  pub async fn with_postgres<A: Into<SocketAddr>>(
-    addr: A,
-    database_url: &str,
-  ) -> Result<Self> {
+  pub async fn with_postgres<A: Into<SocketAddr>>(addr: A, database_url: &str) -> Result<Self> {
     let broker = Arc::new(
       PostgresBroker::new(database_url)
         .await
@@ -207,9 +181,22 @@ impl AsynqServer {
       }
     });
 
+    // Start the task forwarder to move scheduled/retry tasks to pending queue
+    // This is essential for processing delayed tasks created with enqueue_in
+    let forwarder_config = ForwarderConfig {
+      interval: std::time::Duration::from_secs(5),
+      queues: vec!["default".to_string()],
+    };
+    let forwarder = Arc::new(Forwarder::new(self.broker.clone(), forwarder_config));
+    let forwarder_handle = forwarder.clone().start();
+    info!("Task forwarder started for scheduled task processing");
+
     let app = Router::new()
       .route("/ws", get(websocket_handler))
-      .route_layer(middleware::from_fn_with_state(state.clone(), auth_middleware))
+      .route_layer(middleware::from_fn_with_state(
+        state.clone(),
+        auth_middleware,
+      ))
       .route("/health", get(health_handler))
       .layer(CorsLayer::permissive())
       .layer(TraceLayer::new_for_http())
@@ -221,16 +208,26 @@ impl AsynqServer {
 
     info!("Asynq server listening on {}", self.addr);
 
-    axum::serve(listener, app)
+    // Run the server with graceful shutdown support
+    let result = axum::serve(listener, app)
+      .with_graceful_shutdown(async {
+        let _ = tokio::signal::ctrl_c().await;
+        info!("Received shutdown signal, stopping server...");
+      })
       .await
-      .map_err(Error::Io)?;
+      .map_err(Error::Io);
 
-    Ok(())
+    // Cleanup: Stop the forwarder when server shuts down
+    forwarder.shutdown();
+    let _ = tokio::time::timeout(std::time::Duration::from_secs(5), forwarder_handle).await;
+    info!("Task forwarder stopped");
+
+    result
   }
 }
 
 /// Authentication middleware
-/// 
+///
 /// This middleware authenticates the request and sets the CURRENT_TENANT task-local variable
 /// if authentication succeeds. The tenant information is then accessible throughout the
 /// request handling chain without needing to pass it through function parameters.
@@ -290,7 +287,10 @@ async fn auth_middleware(
               if let Some((username, password)) = decoded_str.split_once(':') {
                 match multi_auth.authenticate(username, password).await {
                   Ok(tenant) => {
-                    info!("Tenant '{}' authenticated successfully via backend", tenant.id);
+                    info!(
+                      "Tenant '{}' authenticated successfully via backend",
+                      tenant.id
+                    );
                     Some(tenant)
                   }
                   Err(crate::config::AuthError::RateLimited) => {
@@ -333,7 +333,7 @@ async fn health_handler() -> impl IntoResponse {
 }
 
 /// WebSocket upgrade handler
-/// 
+///
 /// Authentication is handled by the middleware, so we just extract the tenant
 /// from request extensions and upgrade to WebSocket.
 async fn websocket_handler(
@@ -342,14 +342,18 @@ async fn websocket_handler(
   req: Request,
 ) -> impl IntoResponse {
   // Extract tenant from request extensions (set by auth middleware)
-  let tenant_option = req.extensions().get::<Option<TenantConfig>>().cloned().flatten();
+  let tenant_option = req
+    .extensions()
+    .get::<Option<TenantConfig>>()
+    .cloned()
+    .flatten();
 
   // Upgrade to WebSocket with tenant context
   ws.on_upgrade(move |socket| handle_socket(socket, state, tenant_option))
 }
 
 /// Handle a WebSocket connection
-/// 
+///
 /// The tenant context is maintained via the CURRENT_TENANT task-local variable
 /// which was set by the authentication middleware.
 async fn handle_socket(
@@ -395,38 +399,32 @@ async fn handle_socket(
       // Handle incoming messages
       while let Some(msg) = receiver.next().await {
         let response = match msg {
-          Ok(Message::Text(text)) => {
-            match serde_json::from_str::<ClientMessage>(&text) {
-              Ok(client_msg) => match state.handler.handle(client_msg).await {
-                Ok(server_msg) => Some(server_msg),
-                Err(e) => {
-                  error!("Handler error: {}", e);
-                  Some(ServerMessage::error(e.to_string()))
-                }
-              },
+          Ok(Message::Text(text)) => match serde_json::from_str::<ClientMessage>(&text) {
+            Ok(client_msg) => match state.handler.handle(client_msg).await {
+              Ok(server_msg) => Some(server_msg),
               Err(e) => {
-                warn!("Invalid message: {}", e);
-                Some(ServerMessage::error(format!("Invalid message: {}", e)))
+                error!("Handler error: {}", e);
+                Some(ServerMessage::error(e.to_string()))
               }
+            },
+            Err(e) => {
+              warn!("Invalid message: {}", e);
+              Some(ServerMessage::error(format!("Invalid message: {}", e)))
             }
-          }
-          Ok(Message::Binary(data)) => {
-            match serde_json::from_slice::<ClientMessage>(&data) {
-              Ok(client_msg) => {
-                match state.handler.handle(client_msg).await {
-                  Ok(server_msg) => Some(server_msg),
-                  Err(e) => {
-                    error!("Handler error: {}", e);
-                    Some(ServerMessage::error(e.to_string()))
-                  }
-                }
-              }
+          },
+          Ok(Message::Binary(data)) => match serde_json::from_slice::<ClientMessage>(&data) {
+            Ok(client_msg) => match state.handler.handle(client_msg).await {
+              Ok(server_msg) => Some(server_msg),
               Err(e) => {
-                warn!("Invalid binary message: {}", e);
-                None
+                error!("Handler error: {}", e);
+                Some(ServerMessage::error(e.to_string()))
               }
+            },
+            Err(e) => {
+              warn!("Invalid binary message: {}", e);
+              None
             }
-          }
+          },
           Ok(Message::Ping(_)) | Ok(Message::Pong(_)) => None,
           Ok(Message::Close(_)) => break,
           Err(e) => {
@@ -453,23 +451,4 @@ async fn handle_socket(
       }
     })
     .await
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  #[test]
-  fn test_server_creation() {
-    let server = AsynqServer::from_str("127.0.0.1:8080").unwrap();
-    assert_eq!(server.addr.port(), 8080);
-  }
-
-  #[test]
-  fn test_server_with_custom_broker() {
-    let broker = Arc::new(MemoryBroker::new());
-    let addr: SocketAddr = "127.0.0.1:8081".parse().unwrap();
-    let server = AsynqServer::with_broker(addr, broker);
-    assert_eq!(server.addr.port(), 8081);
-  }
 }

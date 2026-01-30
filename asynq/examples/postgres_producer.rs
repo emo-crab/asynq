@@ -5,10 +5,7 @@
 //! Demonstrates how to use asynq client to enqueue tasks to PostgresSQL
 
 use asynq::client::Client;
-use asynq::task::Task;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
-
 #[derive(Serialize, Deserialize)]
 struct EmailPayload {
   to: String,
@@ -22,7 +19,9 @@ struct ImageResizePayload {
   width: u32,
   height: u32,
 }
-
+#[cfg(not(feature = "postgresql"))]
+fn main() {}
+#[cfg(feature = "postgresql")]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
   tracing_subscriber::fmt::init();
@@ -47,7 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   };
 
   let email_payload_bin = serde_json::to_vec(&email_payload)?;
-  let email_task = Task::new("email:send", &email_payload_bin).unwrap();
+  let email_task = asynq::task::Task::new("email:send", &email_payload_bin).unwrap();
 
   // 立即排队处理
   // Immediately enqueue for processing
@@ -69,11 +68,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   };
 
   let image_payload_bin = serde_json::to_vec(&image_payload)?;
-  let image_task = Task::new("image:resize", &image_payload_bin)
+  let image_task = asynq::task::Task::new("image:resize", &image_payload_bin)
     .unwrap()
     .with_queue("image_processing")
     .with_max_retry(5)
-    .with_timeout(Duration::from_secs(300)); // 5 分钟超时
+    .with_timeout(std::time::Duration::from_secs(300)); // 5 分钟超时
 
   // 立即排队处理
   // Immediately enqueue for processing
@@ -89,12 +88,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // 示例 3: 调度延迟任务
   // Example 3: Schedule delayed task
   let delayed_email_bin = serde_json::to_vec(&email_payload)?;
-  let delayed_email = Task::new("email:reminder", &delayed_email_bin).unwrap();
+  let delayed_email = asynq::task::Task::new("email:reminder", &delayed_email_bin).unwrap();
 
   // 30 秒后执行
   // Execute after 30 seconds
   let process_at = std::time::SystemTime::now()
-    .checked_add(Duration::from_secs(30))
+    .checked_add(std::time::Duration::from_secs(30))
     .unwrap();
   match client.schedule(delayed_email, process_at).await {
     Ok(task_info) => {
@@ -108,12 +107,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // 示例 4: 唯一任务（去重）
   // Example 4: Unique task (deduplication)
   let unique_payload_bin = serde_json::to_vec(&serde_json::json!({"date": "2023-01-01"}))?;
-  let unique_task = Task::new("report:daily", &unique_payload_bin).unwrap();
+  let unique_task = asynq::task::Task::new("report:daily", &unique_payload_bin).unwrap();
 
   // 在 1 小时内保持唯一性
   // Maintain uniqueness within 1 hour
   match client
-    .enqueue_unique(unique_task, Duration::from_secs(3600))
+    .enqueue_unique(unique_task, std::time::Duration::from_secs(3600))
     .await
   {
     Ok(task_info) => {
@@ -128,7 +127,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // Example 5: Group task (for aggregation)
   for i in 1..=5 {
     let batch_payload_bin = serde_json::to_vec(&serde_json::json!({"item": i}))?;
-    let batch_task = Task::new("batch:process", &batch_payload_bin).unwrap();
+    let batch_task = asynq::task::Task::new("batch:process", &batch_payload_bin).unwrap();
 
     match client.add_to_group(batch_task, "daily_batch").await {
       Ok(task_info) => {
@@ -143,10 +142,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // 示例 6: 使用唯一组任务
   // Example 6: Use unique group task
   let group_payload_bin = serde_json::to_vec(&serde_json::json!({"priority": "high"}))?;
-  let group_task = Task::new("group:process", &group_payload_bin).unwrap();
+  let group_task = asynq::task::Task::new("group:process", &group_payload_bin).unwrap();
 
   match client
-    .add_to_group_unique(group_task, "priority_group", Duration::from_secs(3600))
+    .add_to_group_unique(
+      group_task,
+      "priority_group",
+      std::time::Duration::from_secs(3600),
+    )
     .await
   {
     Ok(task_info) => {

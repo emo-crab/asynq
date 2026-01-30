@@ -8,13 +8,7 @@
 //! cargo run --example pattern_matching_example --features macros
 //! ```
 
-use asynq::redis::RedisConnectionType;
-use asynq::{
-  config::ServerConfig, error::Result, register_handlers, serve_mux::ServeMux,
-  server::ServerBuilder, task::Task, task_handler,
-};
-use std::collections::HashMap;
-use std::time::Duration;
+use asynq::{error::Result, task::Task, task_handler};
 
 // Handle all email-related tasks with a prefix wildcard
 #[task_handler("email:*")]
@@ -87,20 +81,20 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   println!();
 
   // Configure Redis connection
-  let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
+  let redis_config = asynq::backend::RedisConnectionType::single("redis://127.0.0.1:6379")?;
 
   // Configure queue priorities
-  let mut queues = HashMap::new();
+  let mut queues = std::collections::HashMap::new();
   queues.insert("default".to_string(), 5);
   queues.insert("urgent".to_string(), 10);
 
   // Create server configuration
-  let server_config = ServerConfig::new()
+  let server_config = asynq::config::ServerConfig::new()
     .concurrency(2)
     .queues(queues)
     .strict_priority(false)
-    .task_check_interval(Duration::from_secs(1))
-    .shutdown_timeout(Duration::from_secs(5));
+    .task_check_interval(std::time::Duration::from_secs(1))
+    .shutdown_timeout(std::time::Duration::from_secs(5));
 
   println!("⚙️  Server Configuration:");
   println!("   • Concurrency: 2 workers");
@@ -109,11 +103,11 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
   // Create ServeMux and register handlers with patterns
   println!("📋 Registering task handlers with patterns...");
-  let mut mux = ServeMux::new();
+  let mut mux = asynq::serve_mux::ServeMux::new();
 
   // Register handlers in order of specificity
   // More specific patterns should come before more general ones
-  register_handlers!(
+  asynq::register_handlers!(
     mux,
     handle_urgent_tasks,          // *:urgent (suffix wildcard)
     handle_notification_complete, // notification:*:complete (prefix + suffix)
@@ -132,7 +126,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
   // Create and start server
   println!("🚀 Starting server...");
-  let mut server = ServerBuilder::new()
+  let mut server = asynq::server::ServerBuilder::new()
     .redis_config(redis_config)
     .server_config(server_config)
     .build()

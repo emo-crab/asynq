@@ -4,6 +4,7 @@
 //! 此测试文件演示如何通过 Lifecycle trait 统一管理各种组件
 //! This test file demonstrates how to manage various components uniformly through the Lifecycle trait
 
+use asynq::backend::RedisConnectionType;
 use asynq::components::aggregator::{Aggregator, AggregatorConfig};
 use asynq::components::forwarder::{Forwarder, ForwarderConfig};
 use asynq::components::healthcheck::{Healthcheck, HealthcheckConfig};
@@ -12,7 +13,6 @@ use asynq::components::janitor::{Janitor, JanitorConfig};
 use asynq::components::recoverer::{Recoverer, RecovererConfig};
 use asynq::components::subscriber::{Subscriber, SubscriberConfig};
 use asynq::components::ComponentLifecycle;
-use asynq::redis::RedisConnectionType;
 use std::collections::HashMap;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
@@ -23,8 +23,8 @@ use std::time::{Duration, SystemTime};
 #[tokio::test]
 #[ignore] // Requires Redis to be running
 async fn test_lifecycle_trait_usage() {
-  use asynq::rdb::RedisBroker;
-  use asynq::redis::RedisConnectionType;
+  use asynq::backend::RedisBroker;
+  use asynq::backend::RedisConnectionType;
 
   // 创建 Redis 连接
   // Create Redis connection
@@ -109,7 +109,7 @@ async fn test_lifecycle_trait_usage() {
 #[tokio::test]
 #[ignore] // Requires Redis to be running
 async fn test_janitor_lifecycle() {
-  use asynq::rdb::RedisBroker;
+  use asynq::backend::RedisBroker;
 
   let redis_config = RedisConnectionType::single("redis://localhost:6379").unwrap();
   let broker = Arc::new(RedisBroker::new(redis_config).await.unwrap());
@@ -151,7 +151,7 @@ async fn test_janitor_lifecycle() {
 #[tokio::test]
 #[ignore] // Requires Redis to be running
 async fn test_generic_component_management() {
-  use asynq::rdb::RedisBroker;
+  use asynq::backend::RedisBroker;
 
   let redis_config = RedisConnectionType::single("redis://localhost:6379").unwrap();
   let broker = Arc::new(RedisBroker::new(redis_config).await.unwrap());

@@ -4,12 +4,7 @@
 //! 演示如何创建带有组标签的任务以进行批量聚合
 //! Demonstrates how to create tasks with group labels for batch aggregation
 
-use asynq::redis::RedisConnectionType;
-use asynq::{client::Client, task::Task};
-use serde::Serialize;
-use std::time::Duration;
-
-#[derive(Serialize)]
+#[derive(serde::Serialize)]
 struct EmailPayload {
   to: String,
   subject: String,
@@ -28,11 +23,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
   println!("🔗 Using Redis URL: {redis_url}");
 
-  let redis_config = RedisConnectionType::single(redis_url)?;
+  let redis_config = asynq::backend::RedisConnectionType::single(redis_url)?;
 
   // 创建客户端
   // Create client
-  let client = Client::new(redis_config).await?;
+  let client = asynq::client::Client::new(redis_config).await?;
   println!("✅ Client connected");
   println!();
 
@@ -47,13 +42,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       body: format!("Your daily digest #{i}"),
     };
 
-    let task = Task::new(
+    let task = asynq::task::Task::new(
       "email:send",
       &serde_json::to_vec(&payload).unwrap_or_default(),
     )?
     .with_queue("default")
     .with_group("daily-digest") // 设置组标签 / Set group label
-    .with_group_grace_period(Duration::from_secs(5)); // 设置组宽限期 / Set group grace period
+    .with_group_grace_period(std::time::Duration::from_secs(5)); // 设置组宽限期 / Set group grace period
 
     let task_info = client.enqueue(task).await?;
     println!("   ✅ Enqueued task {} with ID: {}", i, task_info.id);
@@ -80,13 +75,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       body: format!("Your weekly report #{i}"),
     };
 
-    let task = Task::new(
+    let task = asynq::task::Task::new(
       "email:send",
       &serde_json::to_vec(&payload).unwrap_or_default(),
     )?
     .with_queue("default")
     .with_group("weekly-report") // 不同的组 / Different group
-    .with_group_grace_period(Duration::from_secs(5));
+    .with_group_grace_period(std::time::Duration::from_secs(5));
 
     let task_info = client.enqueue(task).await?;
     println!("   ✅ Enqueued task {} with ID: {}", i, task_info.id);

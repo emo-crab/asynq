@@ -6,19 +6,18 @@
 //!
 //! 此示例展示了新组件如何协同工作，提供完整的 asynq 兼容服务器架构。
 
-use asynq::components::aggregator::{Aggregator, AggregatorConfig};
-use asynq::components::forwarder::{Forwarder, ForwarderConfig};
-use asynq::components::healthcheck::{Healthcheck, HealthcheckConfig};
-use asynq::components::janitor::{Janitor, JanitorConfig};
-use asynq::components::recoverer::{Recoverer, RecovererConfig};
-use asynq::components::subscriber::{Subscriber, SubscriberConfig};
-use asynq::rdb::RedisBroker;
-use asynq::redis::RedisConnectionType;
-use std::sync::Arc;
-use std::time::Duration;
-
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+  use asynq::backend::RedisBroker;
+  use asynq::backend::RedisConnectionType;
+
+  use asynq::components::aggregator::{Aggregator, AggregatorConfig};
+  use asynq::components::forwarder::{Forwarder, ForwarderConfig};
+  use asynq::components::healthcheck::{Healthcheck, HealthcheckConfig};
+  use asynq::components::janitor::{Janitor, JanitorConfig};
+  use asynq::components::recoverer::{Recoverer, RecovererConfig};
+  use asynq::components::subscriber::{Subscriber, SubscriberConfig};
+  use std::sync::Arc;
   // 初始化日志
   // Initialize logging
   tracing_subscriber::fmt::init();
@@ -33,7 +32,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   let redis_config = RedisConnectionType::single(redis_url)?;
   let broker = RedisBroker::new(redis_config.clone()).await?;
-  let broker: Arc<dyn asynq::base::Broker> = Arc::new(broker);
+  let broker: Arc<dyn asynq::base::Broker> = std::sync::Arc::new(broker);
 
   println!("✅ Connected to Redis\n");
 
@@ -41,11 +40,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // 1. Janitor - Clean up expired tasks and dead servers
   println!("🧹 Starting Janitor component...");
   let janitor_config = JanitorConfig {
-    interval: Duration::from_secs(10),
+    interval: std::time::Duration::from_secs(10),
     batch_size: 100,
     queues: vec!["default".to_string(), "critical".to_string()],
   };
-  let janitor = Arc::new(Janitor::new(Arc::clone(&broker), janitor_config));
+  let janitor = std::sync::Arc::new(Janitor::new(Arc::clone(&broker), janitor_config));
   let janitor_handle = janitor.clone().start();
   println!("   ✓ Janitor started (interval: 10s)\n");
 
@@ -53,10 +52,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // 2. Recoverer - Recover orphaned tasks
   println!("🔄 Starting Recoverer component...");
   let recoverer_config = RecovererConfig {
-    interval: Duration::from_secs(8),
+    interval: std::time::Duration::from_secs(8),
     queues: vec!["default".to_string(), "critical".to_string()],
   };
-  let recoverer = Arc::new(Recoverer::new(Arc::clone(&broker), recoverer_config));
+  let recoverer = std::sync::Arc::new(Recoverer::new(Arc::clone(&broker), recoverer_config));
   let recoverer_handle = recoverer.clone().start();
   println!("   ✓ Recoverer started (interval: 8s)\n");
 
@@ -64,10 +63,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // 3. Forwarder - Forward scheduled tasks
   println!("⏩ Starting Forwarder component...");
   let forwarder_config = ForwarderConfig {
-    interval: Duration::from_secs(5),
+    interval: std::time::Duration::from_secs(5),
     queues: vec!["default".to_string(), "critical".to_string()],
   };
-  let forwarder = Arc::new(Forwarder::new(Arc::clone(&broker), forwarder_config));
+  let forwarder = std::sync::Arc::new(Forwarder::new(Arc::clone(&broker), forwarder_config));
   let forwarder_handle = forwarder.clone().start();
   println!("   ✓ Forwarder started (interval: 5s)\n");
 
@@ -75,9 +74,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // 4. Healthcheck - Health check
   println!("🏥 Starting Healthcheck component...");
   let healthcheck_config = HealthcheckConfig {
-    interval: Duration::from_secs(15),
+    interval: std::time::Duration::from_secs(15),
   };
-  let healthcheck = Arc::new(Healthcheck::new(Arc::clone(&broker), healthcheck_config));
+  let healthcheck = std::sync::Arc::new(Healthcheck::new(Arc::clone(&broker), healthcheck_config));
   let healthcheck_handle = healthcheck.clone().start();
   println!("   ✓ Healthcheck started (interval: 15s)\n");
 
@@ -85,14 +84,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   // 5. Aggregator - Aggregate tasks
   println!("📦 Starting Aggregator component...");
   let aggregator_config = AggregatorConfig {
-    interval: Duration::from_secs(5),
+    interval: std::time::Duration::from_secs(5),
     queues: vec!["default".to_string()],
-    grace_period: Duration::from_secs(60),
-    max_delay: Some(Duration::from_secs(300)),
+    grace_period: std::time::Duration::from_secs(60),
+    max_delay: Some(std::time::Duration::from_secs(300)),
     max_size: Some(100),
     group_aggregator: None,
   };
-  let aggregator = Arc::new(Aggregator::new(Arc::clone(&broker), aggregator_config));
+  let aggregator = std::sync::Arc::new(Aggregator::new(Arc::clone(&broker), aggregator_config));
   let aggregator_handle = aggregator.clone().start();
   println!("   ✓ Aggregator started (interval: 5s)\n");
 
@@ -101,7 +100,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   println!("📢 Starting Subscriber component...");
   let subscriber_config = SubscriberConfig { buffer_size: 100 };
   let subscriber = Subscriber::new(Arc::clone(&broker), subscriber_config);
-  let subscriber_arc = Arc::new(subscriber);
+  let subscriber_arc = std::sync::Arc::new(subscriber);
   let subscriber_handle = subscriber_arc.clone().start();
   println!("   ✓ Subscriber started (buffer size: 100)\n");
 
@@ -124,7 +123,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 运行 30 秒
   // Run for 30 seconds
-  tokio::time::sleep(Duration::from_secs(30)).await;
+  tokio::time::sleep(std::time::Duration::from_secs(30)).await;
 
   // 优雅关闭所有组件
   // Gracefully shutdown all components
@@ -139,12 +138,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 等待所有任务完成
   // Wait for all tasks to complete
-  let _ = tokio::time::timeout(Duration::from_secs(5), janitor_handle).await;
-  let _ = tokio::time::timeout(Duration::from_secs(5), recoverer_handle).await;
-  let _ = tokio::time::timeout(Duration::from_secs(5), forwarder_handle).await;
-  let _ = tokio::time::timeout(Duration::from_secs(5), healthcheck_handle).await;
-  let _ = tokio::time::timeout(Duration::from_secs(5), aggregator_handle).await;
-  let _ = tokio::time::timeout(Duration::from_secs(5), subscriber_handle).await;
+  let _ = tokio::time::timeout(std::time::Duration::from_secs(5), janitor_handle).await;
+  let _ = tokio::time::timeout(std::time::Duration::from_secs(5), recoverer_handle).await;
+  let _ = tokio::time::timeout(std::time::Duration::from_secs(5), forwarder_handle).await;
+  let _ = tokio::time::timeout(std::time::Duration::from_secs(5), healthcheck_handle).await;
+  let _ = tokio::time::timeout(std::time::Duration::from_secs(5), aggregator_handle).await;
+  let _ = tokio::time::timeout(std::time::Duration::from_secs(5), subscriber_handle).await;
 
   println!("✅ All components shut down successfully!\n");
   println!("👋 Example completed!");

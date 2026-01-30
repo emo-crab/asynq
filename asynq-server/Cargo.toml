@@ -20,7 +20,7 @@ name = "asynq-server"
 path = "src/main.rs"
 
 [dependencies]
-# Core asynq library
+# Core asynq library (Redis is always included as the default backend)
 asynq = { path = "../asynq" }
 
 # Web framework
@@ -56,9 +56,10 @@ chrono = { version = "0.4", features = ["serde"], default-features = false }
 
 [features]
 default = []
-# Enable Redis backend support
-redis = ["asynq/cluster"]
-# Enable PostgresSQL backend support
+# Enable Redis cluster and sentinel support
+cluster = ["asynq/cluster"]
+sentinel = ["asynq/sentinel"]
+# Enable PostgresSQL backend support (in addition to Redis)
 postgresql = ["asynq/postgresql"]
 
 [dev-dependencies]

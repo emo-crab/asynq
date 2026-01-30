@@ -64,7 +64,7 @@ struct EmailPayload {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create Redis configuration
-    let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
+    let redis_config = asynq::backend::RedisConnectionType::single("redis://127.0.0.1:6379")?;
 
     // Create client
     let client = Client::new(redis_config).await?;
@@ -123,7 +123,7 @@ impl Handler for EmailProcessor {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Redis configuration
-    let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
+    let redis_config = asynq::backend::RedisConnectionType::single("redis://127.0.0.1:6379")?;
 
     // Configure queues
     let mut queues = HashMap::new();
@@ -156,7 +156,7 @@ use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
+    let redis_config = asynq::backend::RedisConnectionType::single("redis://127.0.0.1:6379")?;
 
     // Create ServeMux
     let mut mux = ServeMux::new();
@@ -240,7 +240,7 @@ async fn handle_image(task: Task) -> asynq::error::Result<()> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
+    let redis_config = asynq::backend::RedisConnectionType::single("redis://127.0.0.1:6379")?;
     
     // Create ServeMux and register handlers with convenience macros
     let mut mux = ServeMux::new();
@@ -435,9 +435,9 @@ use asynq::redis::{RedisConnectionType};
 use std::time::Duration;
 
 // Basic configuration
-let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
+let redis_config = asynq::backend::RedisConnectionType::single("redis://127.0.0.1:6379")?;
 let nodes = vec!["redis://127.0.0.1:6379/", "redis://127.0.0.1:6378/", "redis://127.0.0.1:6377/"];
-let redis_config = RedisConnectionType::cluster(nodes)?;
+let redis_config = asynq::backend::RedisConnectionType::cluster(nodes)?;
 ```
 
 ## 📊 Monitoring and Management

@@ -4,6 +4,8 @@
 //! 提供任务处理服务器功能
 //! Provides task processing server functionality
 
+use crate::backend::RedisBroker;
+use crate::backend::RedisConnectionType;
 use crate::base::Broker;
 use crate::components::heartbeat::{Heartbeat, HeartbeatMeta};
 use crate::components::processor::{Processor, ProcessorParams};
@@ -11,9 +13,8 @@ use crate::components::subscriber::SubscriberConfig;
 use crate::components::ComponentLifecycle;
 pub use crate::config::ServerConfig;
 use crate::error::{Error, Result};
-use crate::inspector::{InspectorTrait, RedisInspector};
-use crate::rdb::RedisBroker;
-use crate::redis::RedisConnectionType;
+use crate::inspector::InspectorTrait;
+use crate::inspector::RedisInspector;
 use crate::task::Task;
 use async_trait::async_trait;
 use std::sync::atomic::AtomicUsize;
@@ -139,8 +140,8 @@ impl Server {
     format!("{}:{}:{}", self.host, self.pid, self.server_uuid)
   }
 
-  /// 创建新的服务器实例
-  /// Create a new server instance
+  /// 创建新的服务器实例（使用 Redis 后端）
+  /// Create a new server instance (with Redis backend)
   pub async fn new(
     redis_connection_config: RedisConnectionType,
     config: ServerConfig,
@@ -155,7 +156,7 @@ impl Server {
     // Initialize scripts
     let broker = Arc::new(redis_broker);
 
-    Self::with_broker(broker, config).await
+    Self::with_redis_broker(broker, config).await
   }
 
   /// 使用自定义 Broker 和 Inspector 创建新的服务器实例
@@ -197,7 +198,7 @@ impl Server {
   ///
   /// 这是一个便利方法，自动创建 RedisInspector
   /// This is a convenience method that automatically creates a RedisInspector
-  pub async fn with_broker(broker: Arc<RedisBroker>, config: ServerConfig) -> Result<Self> {
+  pub async fn with_redis_broker(broker: Arc<RedisBroker>, config: ServerConfig) -> Result<Self> {
     let inspector = Arc::new(RedisInspector::from_broker(broker.clone()));
     Self::with_broker_and_inspector(broker, inspector, config).await
   }
@@ -674,8 +675,10 @@ impl ServerBuilder {
   /// 这是一个便利方法，自动创建 PostgresInspector
   /// This is a convenience method that automatically creates a PostgresInspector
   #[cfg(feature = "postgresql")]
-  pub fn postgres_broker(mut self, broker: Arc<crate::pgdb::PostgresBroker>) -> Self {
-    let inspector = Arc::new(crate::pgdb::PostgresInspector::from_broker(broker.clone()));
+  pub fn postgres_broker(mut self, broker: Arc<crate::backend::pgdb::PostgresBroker>) -> Self {
+    let inspector = Arc::new(crate::backend::pgdb::PostgresInspector::from_broker(
+      broker.clone(),
+    ));
     self.broker = Some(broker);
     self.inspector = Some(inspector);
     self

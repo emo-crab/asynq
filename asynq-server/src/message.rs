@@ -57,6 +57,30 @@ pub enum ClientMessage {
   /// Publish a cancellation
   #[serde(rename = "publish_cancellation")]
   PublishCancellation { task_id: String },
+
+  /// Add a task to a group for aggregation
+  #[serde(rename = "add_to_group")]
+  AddToGroup(AddToGroupRequest),
+
+  /// Add a unique task to a group for aggregation
+  #[serde(rename = "add_to_group_unique")]
+  AddToGroupUnique(AddToGroupUniqueRequest),
+
+  /// List groups in a queue
+  #[serde(rename = "list_groups")]
+  ListGroups(ListGroupsRequest),
+
+  /// Check if aggregation conditions are met
+  #[serde(rename = "aggregation_check")]
+  AggregationCheck(AggregationCheckRequest),
+
+  /// Read tasks from an aggregation set
+  #[serde(rename = "read_aggregation_set")]
+  ReadAggregationSet(ReadAggregationSetRequest),
+
+  /// Delete an aggregation set
+  #[serde(rename = "delete_aggregation_set")]
+  DeleteAggregationSet(DeleteAggregationSetRequest),
 }
 
 /// Response message from server to client
@@ -86,6 +110,18 @@ pub enum ServerMessage {
   /// Cancellation event
   #[serde(rename = "cancellation")]
   Cancellation { task_id: String },
+
+  /// Groups list response
+  #[serde(rename = "groups_list")]
+  GroupsList(Vec<String>),
+
+  /// Aggregation set ID response
+  #[serde(rename = "aggregation_set_id")]
+  AggregationSetId(Option<String>),
+
+  /// Aggregation set (list of tasks) response
+  #[serde(rename = "aggregation_set")]
+  AggregationSet(Vec<TaskMessageResponse>),
 }
 
 /// Request to enqueue a task
@@ -178,6 +214,72 @@ pub struct ArchiveRequest {
   pub task: TaskDoneRequest,
   /// Error message
   pub error_msg: String,
+}
+
+/// Request to add a task to a group for aggregation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddToGroupRequest {
+  /// Base enqueue request
+  #[serde(flatten)]
+  pub enqueue: EnqueueRequest,
+  /// Group name
+  pub group: String,
+}
+
+/// Request to add a unique task to a group for aggregation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AddToGroupUniqueRequest {
+  /// Base enqueue request
+  #[serde(flatten)]
+  pub enqueue: EnqueueRequest,
+  /// Group name
+  pub group: String,
+  /// TTL in seconds for uniqueness
+  pub ttl_seconds: u64,
+}
+
+/// Request to list groups in a queue
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ListGroupsRequest {
+  /// Queue name
+  pub queue: String,
+}
+
+/// Request to check aggregation conditions
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AggregationCheckRequest {
+  /// Queue name
+  pub queue: String,
+  /// Group name
+  pub group: String,
+  /// Aggregation delay in seconds
+  pub aggregation_delay_seconds: u64,
+  /// Maximum delay in seconds
+  pub max_delay_seconds: u64,
+  /// Maximum size of aggregation
+  pub max_size: usize,
+}
+
+/// Request to read tasks from an aggregation set
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ReadAggregationSetRequest {
+  /// Queue name
+  pub queue: String,
+  /// Group name
+  pub group: String,
+  /// Set ID
+  pub set_id: String,
+}
+
+/// Request to delete an aggregation set
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DeleteAggregationSetRequest {
+  /// Queue name
+  pub queue: String,
+  /// Group name
+  pub group: String,
+  /// Set ID
+  pub set_id: String,
 }
 
 /// Task info response

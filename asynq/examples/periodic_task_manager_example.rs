@@ -10,71 +10,69 @@
 //! 3. 让 PeriodicTaskManager 自动同步任务到 Redis
 //!    Let PeriodicTaskManager automatically sync tasks to Redis
 
-use async_trait::async_trait;
-use asynq::client::Client;
-use asynq::components::periodic_task_manager::{
-  PeriodicTaskConfig, PeriodicTaskConfigProvider, PeriodicTaskManager, PeriodicTaskManagerConfig,
-};
-use asynq::config::ServerConfig;
-use asynq::redis::RedisConnectionType;
-use asynq::scheduler::Scheduler;
-use asynq::server::{AsyncHandlerFunc, Server};
-use asynq::task::Task;
-use std::sync::Arc;
-use std::time::Duration;
-
 /// Simple config provider for demo purposes
 /// 用于演示的简单配置提供者
 struct SimpleConfigProvider {
-  configs: Vec<PeriodicTaskConfig>,
+  configs: Vec<asynq::components::periodic_task_manager::PeriodicTaskConfig>,
 }
 
-#[async_trait]
-impl PeriodicTaskConfigProvider for SimpleConfigProvider {
-  async fn get_configs(&self) -> asynq::error::Result<Vec<PeriodicTaskConfig>> {
+#[async_trait::async_trait]
+impl asynq::components::periodic_task_manager::PeriodicTaskConfigProvider for SimpleConfigProvider {
+  async fn get_configs(
+    &self,
+  ) -> asynq::error::Result<Vec<asynq::components::periodic_task_manager::PeriodicTaskConfig>> {
     Ok(self.configs.clone())
   }
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+  use asynq::task::Task;
+
+  use asynq::scheduler::Scheduler;
+
   // 初始化日志
   // Initialize logging
   tracing_subscriber::fmt::init();
 
   let redis_url = "redis://127.0.0.1:6379";
-  let redis_config = RedisConnectionType::single(redis_url)?;
+  let redis_config = asynq::backend::RedisConnectionType::single(redis_url)?;
 
   println!("创建 Scheduler 和 PeriodicTaskManager");
   println!("Creating Scheduler and PeriodicTaskManager");
 
   // 创建客户端和调度器
   // Create client and scheduler
-  let client = Arc::new(Client::new(redis_config.clone()).await?);
-  let scheduler = Arc::new(Scheduler::new(client, Some(Duration::from_secs(10))).await?);
+  let client = std::sync::Arc::new(asynq::client::Client::new(redis_config.clone()).await?);
+  let scheduler =
+    std::sync::Arc::new(Scheduler::new(client, Some(std::time::Duration::from_secs(10))).await?);
 
   // 创建配置提供者
   // Create config provider
-  let config_provider = Arc::new(SimpleConfigProvider {
-    configs: vec![PeriodicTaskConfig::new(
-      "demo:periodic_task".to_string(),
-      "0/30 * * * * *".to_string(), // Every 30 seconds
-      b"periodic payload".to_vec(),
-      "default".to_string(),
-    )],
+  let config_provider = std::sync::Arc::new(SimpleConfigProvider {
+    configs: vec![
+      asynq::components::periodic_task_manager::PeriodicTaskConfig::new(
+        "demo:periodic_task".to_string(),
+        "0/30 * * * * *".to_string(), // Every 30 seconds
+        b"periodic payload".to_vec(),
+        "default".to_string(),
+      ),
+    ],
   });
 
   // 创建 PeriodicTaskManager
   // Create PeriodicTaskManager
-  let manager_config = PeriodicTaskManagerConfig {
-    sync_interval: Duration::from_secs(30),
+  let manager_config = asynq::components::periodic_task_manager::PeriodicTaskManagerConfig {
+    sync_interval: std::time::Duration::from_secs(30),
   };
 
-  let manager = Arc::new(PeriodicTaskManager::new(
-    scheduler.clone(),
-    manager_config,
-    config_provider,
-  ));
+  let manager = std::sync::Arc::new(
+    asynq::components::periodic_task_manager::PeriodicTaskManager::new(
+      scheduler.clone(),
+      manager_config,
+      config_provider,
+    ),
+  );
 
   println!("  - Sync interval: 30 seconds");
   println!("  - 同步间隔: 30 秒");
@@ -85,13 +83,15 @@ async fn main() -> anyhow::Result<()> {
 
   // 创建服务器处理任务
   // Create server to process tasks
-  let server_config = ServerConfig::new().concurrency(4).add_queue("default", 1)?;
+  let server_config = asynq::config::ServerConfig::new()
+    .concurrency(4)
+    .add_queue("default", 1)?;
 
-  let mut server = Server::new(redis_config, server_config).await?;
+  let mut server = asynq::server::Server::new(redis_config, server_config).await?;
 
   // 定义任务处理器
   // Define task handler
-  let handler = AsyncHandlerFunc::new(|task: Task| async move {
+  let handler = asynq::server::AsyncHandlerFunc::new(|task: Task| async move {
     println!("Processing task: {}", task.get_type());
     println!(
       "  Payload: {:?}",
@@ -100,7 +100,7 @@ async fn main() -> anyhow::Result<()> {
 
     // 模拟任务处理
     // Simulate task processing
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
     println!("  ✓ Task completed: {}", task.get_type());
     Ok(())

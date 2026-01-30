@@ -183,6 +183,47 @@ pub trait Broker: Send + Sync {
   /// Write task result - Go: WriteResult
   async fn write_result(&self, queue: &str, task_id: &str, result: &[u8]) -> Result<()>;
 }
+
+/// 调度器相关功能的 Broker 特性扩展
+/// Broker trait extension for scheduler-related functionality
+///
+/// 此特性定义了调度器（Scheduler）所需的持久化和查询接口
+/// This trait defines the persistence and query interface required by the Scheduler
+#[async_trait]
+pub trait SchedulerBroker: Send + Sync {
+  /// 批量写入 scheduler entries
+  /// Batch write scheduler entries
+  async fn write_scheduler_entries(
+    &self,
+    entries: &[crate::proto::SchedulerEntry],
+    scheduler_id: &str,
+    ttl_secs: u64,
+  ) -> Result<()>;
+
+  /// 记录调度事件
+  /// Record scheduling event
+  async fn record_scheduler_enqueue_event(
+    &self,
+    event: &crate::proto::SchedulerEnqueueEvent,
+    entry_id: &str,
+  ) -> Result<()>;
+
+  /// 获取所有 SchedulerEntry
+  /// Get all SchedulerEntry
+  async fn scheduler_entries_script(
+    &self,
+    scheduler_id: &str,
+  ) -> Result<std::collections::HashMap<String, Vec<u8>>>;
+
+  /// 获取调度事件列表
+  /// Get scheduling event list
+  async fn scheduler_events_script(&self, count: usize) -> Result<Vec<Vec<u8>>>;
+
+  /// 删除 scheduler entries 数据
+  /// Delete scheduler entries data
+  async fn clear_scheduler_entries(&self, scheduler_id: &str) -> Result<()>;
+}
+
 /// 服务器状态
 /// Server state
 #[derive(Debug, Clone, PartialEq)]

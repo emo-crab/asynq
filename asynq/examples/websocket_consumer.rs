@@ -27,33 +27,37 @@
 //!    cargo run --example websocket_producer --features websocket,json
 //!    ```
 
-use asynq::config::ServerConfig;
-use asynq::serve_mux::ServeMux;
-use asynq::server::Server;
-use asynq::task::Task;
-use asynq::wsdb::{WebSocketBroker, WebSocketInspector};
+#[cfg(feature = "websocket")]
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::env;
-use std::sync::Arc;
-use tracing::info;
 
+#[cfg(feature = "websocket")]
 #[derive(Serialize, Deserialize, Debug)]
 struct EmailPayload {
   to: String,
   subject: String,
   body: String,
 }
-
+#[cfg(feature = "websocket")]
 #[derive(Serialize, Deserialize, Debug)]
 struct ImagePayload {
   url: String,
   width: u32,
   height: u32,
 }
-
+#[cfg(not(feature = "websocket"))]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+  Ok(())
+}
+#[cfg(feature = "websocket")]
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+  use asynq::backend::{WebSocketBroker, WebSocketInspector};
+  use asynq::serve_mux::ServeMux;
+  use asynq::server::Server;
+  use asynq::task::Task;
+  use std::env;
+  use tracing::info;
   // Initialize logging
   tracing_subscriber::fmt()
     .with_env_filter(
@@ -76,7 +80,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   );
 
   // Create a WebSocket broker with HTTP Basic authentication
-  let broker = Arc::new(WebSocketBroker::with_basic_auth(&ws_url, username, password).await?);
+  let broker =
+    std::sync::Arc::new(WebSocketBroker::with_basic_auth(&ws_url, username, password).await?);
   info!("Successfully connected to asynq-server");
 
   // Create a ServeMux to route tasks to handlers
@@ -99,6 +104,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
       }
       Err(e) => {
         tracing::error!("Failed to parse email payload: {}", e);
+        Err(e)
+      }
+    }
+  });
+
+  // Register handler for email:reminder tasks (delayed/scheduled tasks)
+  mux.handle_async_func("email:reminder", |task: Task| async move {
+    match task.get_payload_with_json::<EmailPayload>() {
+      Ok(payload) => {
+        info!("⏰ Processing delayed email reminder task:");
+        info!("   To: {}", payload.to);
+        info!("   Subject: {}", payload.subject);
+        info!("   Body: {}", payload.body);
+
+        // Simulate email sending
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+
+        info!("✅ Reminder email sent successfully to {}", payload.to);
+        Ok(())
+      }
+      Err(e) => {
+        tracing::error!("Failed to parse email reminder payload: {}", e);
         Err(e)
       }
     }
@@ -147,21 +174,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
   });
 
   // Configure queues with priorities
-  let mut queues = HashMap::new();
+  let mut queues = std::collections::HashMap::new();
   queues.insert("critical".to_string(), 6); // Highest priority
   queues.insert("default".to_string(), 3); // Medium priority
   queues.insert("image_processing".to_string(), 2); // Lower priority
   queues.insert("low".to_string(), 1); // Lowest priority
 
   // Create server configuration
-  let config = ServerConfig::new()
+  let config = asynq::config::ServerConfig::new()
     .concurrency(4) // Process up to 4 tasks concurrently
     .queues(queues);
 
   info!("Starting consumer with 4 concurrent workers...");
 
   // Create WebSocket inspector (stub that directs operations to asynq-server)
-  let inspector = Arc::new(WebSocketInspector::new());
+  let inspector = std::sync::Arc::new(WebSocketInspector::new());
 
   // Create server with broker and inspector
   let mut server = Server::with_broker_and_inspector(broker, inspector, config).await?;

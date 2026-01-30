@@ -9,42 +9,39 @@
 //! tasks based on configuration changes.
 //! PeriodicTaskManager 会轮询配置提供者，并根据配置变更自动注册/注销任务。
 
-use async_trait::async_trait;
-use asynq::client::Client;
-use asynq::components::periodic_task_manager::{
-  PeriodicTaskConfig, PeriodicTaskConfigProvider, PeriodicTaskManager, PeriodicTaskManagerConfig,
-};
-use asynq::error::Result;
-use asynq::redis::RedisConnectionType;
-use asynq::scheduler::Scheduler;
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::Mutex;
-
 /// Example config provider that returns a static list of tasks
 /// 示例配置提供者，返回静态任务列表
 struct ExampleConfigProvider {
-  configs: Arc<Mutex<Vec<PeriodicTaskConfig>>>,
+  configs: std::sync::Arc<
+    tokio::sync::Mutex<Vec<asynq::components::periodic_task_manager::PeriodicTaskConfig>>,
+  >,
 }
 
 impl ExampleConfigProvider {
-  fn new(configs: Vec<PeriodicTaskConfig>) -> Self {
+  fn new(configs: Vec<asynq::components::periodic_task_manager::PeriodicTaskConfig>) -> Self {
     Self {
-      configs: Arc::new(Mutex::new(configs)),
+      configs: std::sync::Arc::new(tokio::sync::Mutex::new(configs)),
     }
   }
 
   /// Update the configuration dynamically
   /// 动态更新配置
-  async fn update_configs(&self, configs: Vec<PeriodicTaskConfig>) {
+  async fn update_configs(
+    &self,
+    configs: Vec<asynq::components::periodic_task_manager::PeriodicTaskConfig>,
+  ) {
     let mut c = self.configs.lock().await;
     *c = configs;
   }
 }
 
-#[async_trait]
-impl PeriodicTaskConfigProvider for ExampleConfigProvider {
-  async fn get_configs(&self) -> Result<Vec<PeriodicTaskConfig>> {
+#[async_trait::async_trait]
+impl asynq::components::periodic_task_manager::PeriodicTaskConfigProvider
+  for ExampleConfigProvider
+{
+  async fn get_configs(
+    &self,
+  ) -> asynq::error::Result<Vec<asynq::components::periodic_task_manager::PeriodicTaskConfig>> {
     let configs = self.configs.lock().await;
     Ok(configs.clone())
   }
@@ -52,6 +49,7 @@ impl PeriodicTaskConfigProvider for ExampleConfigProvider {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+  use asynq::scheduler::Scheduler;
   // 初始化日志
   // Initialize logging
   tracing_subscriber::fmt::init();
@@ -60,26 +58,27 @@ async fn main() -> anyhow::Result<()> {
   // Redis 连接 URL - 可以通过环境变量配置
   let redis_url =
     std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
-  let redis_config = RedisConnectionType::single(redis_url)?;
+  let redis_config = asynq::backend::RedisConnectionType::single(redis_url)?;
 
   println!("Creating Scheduler and PeriodicTaskManager with ConfigProvider");
   println!("创建 Scheduler 和使用 ConfigProvider 的 PeriodicTaskManager");
 
   // Create client and scheduler
   // 创建客户端和调度器
-  let client = Arc::new(Client::new(redis_config).await?);
-  let scheduler = Arc::new(Scheduler::new(client, Some(Duration::from_secs(10))).await?);
+  let client = std::sync::Arc::new(asynq::client::Client::new(redis_config).await?);
+  let scheduler =
+    std::sync::Arc::new(Scheduler::new(client, Some(std::time::Duration::from_secs(10))).await?);
 
   // Create config provider with initial tasks
   // 创建带有初始任务的配置提供者
   let initial_configs = vec![
-    PeriodicTaskConfig::new(
+    asynq::components::periodic_task_manager::PeriodicTaskConfig::new(
       "demo:task1".to_string(),
       "0 */30 * * * *".to_string(), // Every 30 seconds (sec min hour day month dow)
       b"Task 1 payload".to_vec(),
       "default".to_string(),
     ),
-    PeriodicTaskConfig::new(
+    asynq::components::periodic_task_manager::PeriodicTaskConfig::new(
       "demo:task2".to_string(),
       "0 */45 * * * *".to_string(), // Every 45 seconds
       b"Task 2 payload".to_vec(),
@@ -87,19 +86,21 @@ async fn main() -> anyhow::Result<()> {
     ),
   ];
 
-  let config_provider = Arc::new(ExampleConfigProvider::new(initial_configs));
+  let config_provider = std::sync::Arc::new(ExampleConfigProvider::new(initial_configs));
 
   // Create and start PeriodicTaskManager
   // 创建并启动 PeriodicTaskManager
-  let manager_config = PeriodicTaskManagerConfig {
-    sync_interval: Duration::from_secs(5), // Sync every 5 seconds
+  let manager_config = asynq::components::periodic_task_manager::PeriodicTaskManagerConfig {
+    sync_interval: std::time::Duration::from_secs(5), // Sync every 5 seconds
   };
 
-  let manager = Arc::new(PeriodicTaskManager::new(
-    scheduler.clone(),
-    manager_config,
-    config_provider.clone(),
-  ));
+  let manager = std::sync::Arc::new(
+    asynq::components::periodic_task_manager::PeriodicTaskManager::new(
+      scheduler.clone(),
+      manager_config,
+      config_provider.clone(),
+    ),
+  );
 
   println!("\n=== Starting PeriodicTaskManager ===");
   println!("=== 启动 PeriodicTaskManager ===\n");
@@ -108,7 +109,7 @@ async fn main() -> anyhow::Result<()> {
 
   // Wait for initial sync
   // 等待初始同步
-  tokio::time::sleep(Duration::from_secs(2)).await;
+  tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
   println!("✓ PeriodicTaskManager started and synced initial tasks");
   println!("✓ PeriodicTaskManager 已启动并同步初始任务");
@@ -119,13 +120,13 @@ async fn main() -> anyhow::Result<()> {
   println!("=== 更新配置（移除 task1，添加 task3）===");
 
   let updated_configs = vec![
-    PeriodicTaskConfig::new(
+    asynq::components::periodic_task_manager::PeriodicTaskConfig::new(
       "demo:task2".to_string(),
       "0 */45 * * * *".to_string(),
       b"Task 2 payload".to_vec(),
       "default".to_string(),
     ),
-    PeriodicTaskConfig::new(
+    asynq::components::periodic_task_manager::PeriodicTaskConfig::new(
       "demo:task3".to_string(),
       "0 */60 * * * *".to_string(), // Every 60 seconds
       b"Task 3 payload".to_vec(),
@@ -137,7 +138,7 @@ async fn main() -> anyhow::Result<()> {
 
   // Wait for sync to happen
   // 等待同步发生
-  tokio::time::sleep(Duration::from_secs(6)).await;
+  tokio::time::sleep(std::time::Duration::from_secs(6)).await;
 
   println!("✓ Configuration updated and synced");
   println!("✓ 配置已更新并同步");

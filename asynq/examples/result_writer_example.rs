@@ -4,17 +4,10 @@
 //! 演示如何在任务处理完成后写入结果
 //! Demonstrates how to write results after task processing is complete
 
-use async_trait::async_trait;
 use asynq::error::Result;
-use asynq::redis::RedisConnectionType;
+use asynq::server::Handler;
 use asynq::task::Task;
-use asynq::{
-  config::ServerConfig,
-  server::{Handler, ServerBuilder},
-};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::time::Duration;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct ComputePayload {
@@ -34,7 +27,7 @@ struct ComputeResult {
 /// Task processor demonstrating ResultWriter usage
 pub struct ResultWriterHandler;
 
-#[async_trait]
+#[async_trait::async_trait]
 impl Handler for ResultWriterHandler {
   async fn process_task(&self, task: Task) -> Result<()> {
     match task.get_type() {
@@ -65,7 +58,7 @@ impl ResultWriterHandler {
 
     // 模拟一些处理时间
     // Simulate some processing time
-    tokio::time::sleep(Duration::from_secs(1)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
 
     println!("   Result: {}", result);
 
@@ -100,6 +93,8 @@ impl ResultWriterHandler {
 
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
+  use asynq::backend::RedisConnectionType;
+
   tracing_subscriber::fmt::init();
 
   println!("🚀 Starting ResultWriter Example Server...");
@@ -113,21 +108,21 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
 
   // 配置队列
   // Configure queues
-  let mut queues = HashMap::new();
+  let mut queues = std::collections::HashMap::new();
   queues.insert("default".to_string(), 3);
 
   // 创建服务器配置
   // Create server configuration
-  let server_config = ServerConfig::new()
+  let server_config = asynq::config::ServerConfig::new()
     .concurrency(2)
     .queues(queues)
     .strict_priority(false)
-    .task_check_interval(Duration::from_secs(1))
-    .shutdown_timeout(Duration::from_secs(10));
+    .task_check_interval(std::time::Duration::from_secs(1))
+    .shutdown_timeout(std::time::Duration::from_secs(10));
 
   // 创建服务器
   // Create server
-  let mut server = ServerBuilder::new()
+  let mut server = asynq::server::ServerBuilder::new()
     .redis_config(redis_config)
     .server_config(server_config)
     .build()

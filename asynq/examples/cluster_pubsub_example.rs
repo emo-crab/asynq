@@ -7,8 +7,8 @@
 #[cfg(feature = "cluster")]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-  use asynq::rdb::RedisBroker;
-  use asynq::redis::RedisConnectionType;
+  use asynq::backend::RedisBroker;
+
   // 初始化日志
   // Initialize logging
   tracing_subscriber::fmt::init();
@@ -18,7 +18,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
   // 创建集群配置，启用 RESP3 协议以支持 PubSub
   // Create cluster configuration with RESP3 enabled for PubSub support
-  let cluster_config = RedisConnectionType::cluster(vec![
+  let cluster_config = asynq::backend::RedisConnectionType::cluster(vec![
     "redis://127.0.0.1:7000".to_string(),
     "redis://127.0.0.1:7001".to_string(),
     "redis://127.0.0.1:7002".to_string(),

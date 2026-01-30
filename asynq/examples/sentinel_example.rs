@@ -1,6 +1,7 @@
 use anyhow::Result;
+#[cfg(all(feature = "sentinel", feature = "json"))]
 use serde::{Deserialize, Serialize};
-
+#[cfg(all(feature = "sentinel", feature = "json"))]
 #[derive(Serialize, Deserialize)]
 struct EmailPayload {
   to: String,
@@ -22,7 +23,7 @@ async fn main() -> Result<()> {
       .set_password("mypassword"),
   );
   let redis_config =
-    asynq::redis::RedisConnectionType::sentinel(master_name, sentinels, redis_connection_info)?;
+    asynq::backend::RedisConnectionType::sentinel(master_name, sentinels, redis_connection_info)?;
   let client = asynq::client::Client::new(redis_config).await?;
   // Create task
   let payload = EmailPayload {

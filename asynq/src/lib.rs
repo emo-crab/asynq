@@ -43,6 +43,19 @@
 //! - Web UI 检查和远程控制队列和任务
 //!   - Web UI for inspecting and remotely controlling queues and tasks
 //!
+//! ## 多后端支持
+//! ## Multiple Backend Support
+//!
+//! 现在支持同时启用多个后端，默认使用 Redis 后端。
+//! Now supports enabling multiple backends simultaneously, with Redis as the default.
+//!
+//! - Redis: 始终可用作为默认后端
+//! - Redis: Always available as the default backend
+//! - PostgreSQL: 需要启用 `postgresql` feature
+//! - PostgreSQL: Requires `postgresql` feature to be enabled
+//! - WebSocket: 需要启用 `websocket` feature
+//! - WebSocket: Requires `websocket` feature to be enabled
+//!
 //! ## 快速开始
 //! ## Quick Start
 //!
@@ -59,8 +72,8 @@
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     // 创建 Redis 配置
 //!     // Create Redis configuration
-//!     use asynq::redis::RedisConnectionType;
-//!     let redis_config = RedisConnectionType::single("redis://127.0.0.1:6379")?;
+//!     use asynq::backend::RedisConnectionType;
+//!     let redis_config = asynq::backend::RedisConnectionType::single("redis://127.0.0.1:6379")?;
 //!     
 //!     // 创建客户端
 //!     // Create client
@@ -105,30 +118,6 @@
 //! # }
 //! ```
 //!
-//! ### 使用内存后端（本地运行，不依赖外部服务）
-//! ### Using Memory Backend (runs locally, no external service dependencies)
-//!
-//! ```rust,no_run
-//! use asynq::{client::Client,task::Task};
-//!
-//! #[tokio::main]
-//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     // 创建内存客户端（不需要任何外部服务）
-//!     // Create memory client (no external service required)
-//!     let client = Client::new_with_memory();
-//!     
-//!     // 创建任务
-//!     // Create task
-//!     let task = Task::new("email:deliver", b"task payload").unwrap();
-//!     
-//!     // 将任务加入队列
-//!     // Enqueue task
-//!     client.enqueue(task).await?;
-//!     
-//!     Ok(())
-//! }
-//! ```
-//!
 //! ### 使用 WebSocket 后端连接 asynq-server (需要 `websocket` feature)
 //! ### Using WebSocket Backend to connect to asynq-server (requires `websocket` feature)
 //!
@@ -158,24 +147,18 @@
 
 #[cfg(feature = "acl")]
 pub mod acl;
+pub mod backend;
 pub mod base;
 pub mod client;
 pub mod components;
 pub mod config;
 pub mod error;
 pub mod inspector;
-pub mod memdb;
-#[cfg(feature = "postgresql")]
-pub mod pgdb;
 pub mod proto;
-pub mod rdb;
-pub mod redis;
 pub mod scheduler;
 pub mod serve_mux;
 pub mod server;
 pub mod task;
-#[cfg(feature = "websocket")]
-pub mod wsdb;
 
 // Re-export macros when the feature is enabled
 #[cfg(feature = "macros")]
