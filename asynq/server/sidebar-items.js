@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["AsyncHandlerFunc","HandlerFunc","Server","ServerBuilder"],"trait":["Handler"]};

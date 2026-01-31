@@ -1,0 +1,37 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="ServeMux - 任务路由多路复用器 ServeMux - Task routing multiplexer"><title>asynq::serve_mux - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="asynq" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0 (254b59607 2026-01-19)" data-channel="1.93.0" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../static.files/storage-e2aeef58.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module serve_mux</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../asynq/index.html">asynq</a><span class="version">0.1.5</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module serve_<wbr>mux</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#pattern-matching--模式匹配" title="Pattern Matching / 模式匹配">Pattern Matching / 模式匹配</a></li><li><a href="#examples--示例" title="Examples / 示例">Examples / 示例</a></li></ul><h3><a href="#structs">Module Items</a></h3><ul class="block"><li><a href="#structs" title="Structs">Structs</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="../index.html">In crate asynq</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">asynq</a></div><h1>Module <span>serve_<wbr>mux</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/asynq/serve_mux.rs.html#1-418">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>ServeMux - 任务路由多路复用器
+ServeMux - Task routing multiplexer</p>
+<p>提供基于任务类型的路由功能，类似于 Go 版本的 servemux.go
+Provides task type-based routing functionality, similar to Go’s servemux.go</p>
+<h3 id="pattern-matching--模式匹配"><a class="doc-anchor" href="#pattern-matching--模式匹配">§</a>Pattern Matching / 模式匹配</h3>
+<p>ServeMux supports wildcard pattern matching for flexible task routing:
+ServeMux 支持通配符模式匹配，实现灵活的任务路由：</p>
+<ul>
+<li>Exact match / 精确匹配: <code>"email:send"</code> matches only “email:send”</li>
+<li>Prefix wildcard / 前缀通配符: <code>"email:*"</code> matches all tasks starting with “email:”</li>
+<li>Suffix wildcard / 后缀通配符: <code>"*:send"</code> matches all tasks ending with “:send”</li>
+<li>Combined wildcards / 组合通配符: <code>"email:*:done"</code> matches tasks with specific prefix and suffix</li>
+<li>Catch-all / 捕获所有: <code>"*"</code> matches any task type</li>
+</ul>
+<h3 id="examples--示例"><a class="doc-anchor" href="#examples--示例">§</a>Examples / 示例</h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>asynq::{serve_mux::ServeMux, task::Task, error::Result};
+
+<span class="kw">let </span><span class="kw-2">mut </span>mux = ServeMux::new();
+
+<span class="comment">// Handle all email tasks / 处理所有邮件任务
+</span>mux.handle_func(<span class="string">"email:*"</span>, |task: Task| {
+    <span class="macro">println!</span>(<span class="string">"Processing email task: {}"</span>, task.get_type());
+    <span class="prelude-val">Ok</span>(())
+});
+
+<span class="comment">// Handle all urgent tasks / 处理所有紧急任务
+</span>mux.handle_func(<span class="string">"*:urgent"</span>, |task: Task| {
+    <span class="macro">println!</span>(<span class="string">"Processing urgent task: {}"</span>, task.get_type());
+    <span class="prelude-val">Ok</span>(())
+});
+
+<span class="comment">// Catch-all handler / 捕获所有处理器
+</span>mux.handle_async_func(<span class="string">"*"</span>, |task: Task| <span class="kw">async move </span>{
+    <span class="macro">println!</span>(<span class="string">"Default handler for: {}"</span>, task.get_type());
+    <span class="prelude-val">Ok</span>(())
+});</code></pre></div></div></details><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.ServeMux.html" title="struct asynq::serve_mux::ServeMux">Serve<wbr>Mux</a></dt><dd>ServeMux - 任务路由多路复用器
+ServeMux - Task routing multiplexer</dd></dl></section></div></main></body></html>

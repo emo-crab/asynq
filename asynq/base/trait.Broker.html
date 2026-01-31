@@ -1,0 +1,503 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="经纪人特性，定义了与任务存储后端交互的接口 Broker trait, defines the interface for interacting with the task storage backend 对应 Go asynq 的 internal/base/base.go 中的 Broker interface Corresponds to the Broker interface in Go asynq’s internal/base/base.go"><title>Broker in asynq::base - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="asynq" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0 (254b59607 2026-01-19)" data-channel="1.93.0" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../static.files/storage-e2aeef58.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc trait"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Broker</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../asynq/index.html">asynq</a><span class="version">0.1.5</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Broker</a></h2><h3><a href="#required-methods">Required Methods</a></h3><ul class="block"><li><a href="#tymethod.add_to_group" title="add_to_group">add_to_group</a></li><li><a href="#tymethod.add_to_group_unique" title="add_to_group_unique">add_to_group_unique</a></li><li><a href="#tymethod.aggregation_check" title="aggregation_check">aggregation_check</a></li><li><a href="#tymethod.archive" title="archive">archive</a></li><li><a href="#tymethod.cancellation_pub_sub" title="cancellation_pub_sub">cancellation_pub_sub</a></li><li><a href="#tymethod.clear_server_state" title="clear_server_state">clear_server_state</a></li><li><a href="#tymethod.close" title="close">close</a></li><li><a href="#tymethod.delete_aggregation_set" title="delete_aggregation_set">delete_aggregation_set</a></li><li><a href="#tymethod.delete_expired_completed_tasks" title="delete_expired_completed_tasks">delete_expired_completed_tasks</a></li><li><a href="#tymethod.dequeue" title="dequeue">dequeue</a></li><li><a href="#tymethod.done" title="done">done</a></li><li><a href="#tymethod.enqueue" title="enqueue">enqueue</a></li><li><a href="#tymethod.enqueue_unique" title="enqueue_unique">enqueue_unique</a></li><li><a href="#tymethod.extend_lease" title="extend_lease">extend_lease</a></li><li><a href="#tymethod.forward_if_ready" title="forward_if_ready">forward_if_ready</a></li><li><a href="#tymethod.list_groups" title="list_groups">list_groups</a></li><li><a href="#tymethod.list_lease_expired" title="list_lease_expired">list_lease_expired</a></li><li><a href="#tymethod.mark_as_complete" title="mark_as_complete">mark_as_complete</a></li><li><a href="#tymethod.ping" title="ping">ping</a></li><li><a href="#tymethod.publish_cancellation" title="publish_cancellation">publish_cancellation</a></li><li><a href="#tymethod.read_aggregation_set" title="read_aggregation_set">read_aggregation_set</a></li><li><a href="#tymethod.reclaim_stale_aggregation_sets" title="reclaim_stale_aggregation_sets">reclaim_stale_aggregation_sets</a></li><li><a href="#tymethod.requeue" title="requeue">requeue</a></li><li><a href="#tymethod.retry" title="retry">retry</a></li><li><a href="#tymethod.schedule" title="schedule">schedule</a></li><li><a href="#tymethod.schedule_unique" title="schedule_unique">schedule_unique</a></li><li><a href="#tymethod.write_result" title="write_result">write_result</a></li><li><a href="#tymethod.write_server_state" title="write_server_state">write_server_state</a></li></ul><h3><a href="#implementors">Implementors</a></h3></section><div id="rustdoc-modnav"><h2><a href="index.html">In asynq::<wbr>base</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">asynq</a>::<wbr><a href="index.html">base</a></div><h1>Trait <span class="trait">Broker</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/asynq/base/mod.rs.html#22-185">Source</a> </span></div><pre class="rust item-decl"><code>pub trait Broker: <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Sync.html" title="trait core::marker::Sync">Sync</a> {
+<details class="toggle type-contents-toggle"><summary class="hideme"><span>Show 28 methods</span></summary>    // Required methods
+    fn <a href="#tymethod.ping" class="fn">ping</a>&lt;'life0, 'async_trait&gt;(
+        &amp;'life0 self,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.close" class="fn">close</a>&lt;'life0, 'async_trait&gt;(
+        &amp;'life0 self,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.enqueue" class="fn">enqueue</a>&lt;'life0, 'life1, 'async_trait&gt;(
+        &amp;'life0 self,
+        task: &amp;'life1 <a class="struct" href="../task/struct.Task.html" title="struct asynq::task::Task">Task</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="../task/struct.TaskInfo.html" title="struct asynq::task::TaskInfo">TaskInfo</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.enqueue_unique" class="fn">enqueue_unique</a>&lt;'life0, 'life1, 'async_trait&gt;(
+        &amp;'life0 self,
+        task: &amp;'life1 <a class="struct" href="../task/struct.Task.html" title="struct asynq::task::Task">Task</a>,
+        ttl: <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="../task/struct.TaskInfo.html" title="struct asynq::task::TaskInfo">TaskInfo</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.dequeue" class="fn">dequeue</a>&lt;'life0, 'life1, 'async_trait&gt;(
+        &amp;'life0 self,
+        queues: &amp;'life1 [<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>],
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="enum" href="https://doc.rust-lang.org/1.93.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="../proto/struct.TaskMessage.html" title="struct asynq::proto::TaskMessage">TaskMessage</a>&gt;&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.done" class="fn">done</a>&lt;'life0, 'life1, 'async_trait&gt;(
+        &amp;'life0 self,
+        msg: &amp;'life1 <a class="struct" href="../proto/struct.TaskMessage.html" title="struct asynq::proto::TaskMessage">TaskMessage</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.mark_as_complete" class="fn">mark_as_complete</a>&lt;'life0, 'life1, 'async_trait&gt;(
+        &amp;'life0 self,
+        msg: &amp;'life1 <a class="struct" href="../proto/struct.TaskMessage.html" title="struct asynq::proto::TaskMessage">TaskMessage</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.requeue" class="fn">requeue</a>&lt;'life0, 'life1, 'life2, 'async_trait&gt;(
+        &amp;'life0 self,
+        msg: &amp;'life1 <a class="struct" href="../proto/struct.TaskMessage.html" title="struct asynq::proto::TaskMessage">TaskMessage</a>,
+        process_at: <a class="struct" href="https://docs.rs/chrono/latest/chrono/datetime/struct.DateTime.html" title="struct chrono::datetime::DateTime">DateTime</a>&lt;<a class="struct" href="https://docs.rs/chrono/latest/chrono/offset/utc/struct.Utc.html" title="struct chrono::offset::utc::Utc">Utc</a>&gt;,
+        error_msg: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait,
+             'life2: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.schedule" class="fn">schedule</a>&lt;'life0, 'life1, 'async_trait&gt;(
+        &amp;'life0 self,
+        task: &amp;'life1 <a class="struct" href="../task/struct.Task.html" title="struct asynq::task::Task">Task</a>,
+        process_at: <a class="struct" href="https://docs.rs/chrono/latest/chrono/datetime/struct.DateTime.html" title="struct chrono::datetime::DateTime">DateTime</a>&lt;<a class="struct" href="https://docs.rs/chrono/latest/chrono/offset/utc/struct.Utc.html" title="struct chrono::offset::utc::Utc">Utc</a>&gt;,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="../task/struct.TaskInfo.html" title="struct asynq::task::TaskInfo">TaskInfo</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.schedule_unique" class="fn">schedule_unique</a>&lt;'life0, 'life1, 'async_trait&gt;(
+        &amp;'life0 self,
+        task: &amp;'life1 <a class="struct" href="../task/struct.Task.html" title="struct asynq::task::Task">Task</a>,
+        process_at: <a class="struct" href="https://docs.rs/chrono/latest/chrono/datetime/struct.DateTime.html" title="struct chrono::datetime::DateTime">DateTime</a>&lt;<a class="struct" href="https://docs.rs/chrono/latest/chrono/offset/utc/struct.Utc.html" title="struct chrono::offset::utc::Utc">Utc</a>&gt;,
+        ttl: <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="../task/struct.TaskInfo.html" title="struct asynq::task::TaskInfo">TaskInfo</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.retry" class="fn">retry</a>&lt;'life0, 'life1, 'life2, 'async_trait&gt;(
+        &amp;'life0 self,
+        msg: &amp;'life1 <a class="struct" href="../proto/struct.TaskMessage.html" title="struct asynq::proto::TaskMessage">TaskMessage</a>,
+        process_at: <a class="struct" href="https://docs.rs/chrono/latest/chrono/datetime/struct.DateTime.html" title="struct chrono::datetime::DateTime">DateTime</a>&lt;<a class="struct" href="https://docs.rs/chrono/latest/chrono/offset/utc/struct.Utc.html" title="struct chrono::offset::utc::Utc">Utc</a>&gt;,
+        error_msg: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+        is_failure: <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.bool.html">bool</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait,
+             'life2: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.archive" class="fn">archive</a>&lt;'life0, 'life1, 'life2, 'async_trait&gt;(
+        &amp;'life0 self,
+        msg: &amp;'life1 <a class="struct" href="../proto/struct.TaskMessage.html" title="struct asynq::proto::TaskMessage">TaskMessage</a>,
+        error_msg: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait,
+             'life2: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.forward_if_ready" class="fn">forward_if_ready</a>&lt;'life0, 'life1, 'async_trait&gt;(
+        &amp;'life0 self,
+        queues: &amp;'life1 [<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>],
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.i64.html">i64</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.add_to_group" class="fn">add_to_group</a>&lt;'life0, 'life1, 'life2, 'async_trait&gt;(
+        &amp;'life0 self,
+        task: &amp;'life1 <a class="struct" href="../task/struct.Task.html" title="struct asynq::task::Task">Task</a>,
+        group: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="../task/struct.TaskInfo.html" title="struct asynq::task::TaskInfo">TaskInfo</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait,
+             'life2: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.add_to_group_unique" class="fn">add_to_group_unique</a>&lt;'life0, 'life1, 'life2, 'async_trait&gt;(
+        &amp;'life0 self,
+        task: &amp;'life1 <a class="struct" href="../task/struct.Task.html" title="struct asynq::task::Task">Task</a>,
+        group: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+        ttl: <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="../task/struct.TaskInfo.html" title="struct asynq::task::TaskInfo">TaskInfo</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait,
+             'life2: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.list_groups" class="fn">list_groups</a>&lt;'life0, 'life1, 'async_trait&gt;(
+        &amp;'life0 self,
+        queue: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.aggregation_check" class="fn">aggregation_check</a>&lt;'life0, 'life1, 'life2, 'async_trait&gt;(
+        &amp;'life0 self,
+        queue: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+        group: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+        aggregation_delay: <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>,
+        max_delay: <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>,
+        max_size: <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.usize.html">usize</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="enum" href="https://doc.rust-lang.org/1.93.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait,
+             'life2: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.read_aggregation_set" class="fn">read_aggregation_set</a>&lt;'life0, 'life1, 'life2, 'life3, 'async_trait&gt;(
+        &amp;'life0 self,
+        queue: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+        group: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+        set_id: &amp;'life3 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="../proto/struct.TaskMessage.html" title="struct asynq::proto::TaskMessage">TaskMessage</a>&gt;&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait,
+             'life2: 'async_trait,
+             'life3: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.delete_aggregation_set" class="fn">delete_aggregation_set</a>&lt;'life0, 'life1, 'life2, 'life3, 'async_trait&gt;(
+        &amp;'life0 self,
+        queue: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+        group: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+        set_id: &amp;'life3 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait,
+             'life2: 'async_trait,
+             'life3: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.reclaim_stale_aggregation_sets" class="fn">reclaim_stale_aggregation_sets</a>&lt;'life0, 'life1, 'async_trait&gt;(
+        &amp;'life0 self,
+        queue: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.delete_expired_completed_tasks" class="fn">delete_expired_completed_tasks</a>&lt;'life0, 'life1, 'async_trait&gt;(
+        &amp;'life0 self,
+        queue: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.i64.html">i64</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.list_lease_expired" class="fn">list_lease_expired</a>&lt;'life0, 'life1, 'async_trait&gt;(
+        &amp;'life0 self,
+        cutoff: <a class="struct" href="https://docs.rs/chrono/latest/chrono/datetime/struct.DateTime.html" title="struct chrono::datetime::DateTime">DateTime</a>&lt;<a class="struct" href="https://docs.rs/chrono/latest/chrono/offset/utc/struct.Utc.html" title="struct chrono::offset::utc::Utc">Utc</a>&gt;,
+        queues: &amp;'life1 [<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>],
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="../proto/struct.TaskMessage.html" title="struct asynq::proto::TaskMessage">TaskMessage</a>&gt;&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.extend_lease" class="fn">extend_lease</a>&lt;'life0, 'life1, 'life2, 'async_trait&gt;(
+        &amp;'life0 self,
+        queue: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+        task_id: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+        lease_duration: <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait,
+             'life2: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.write_server_state" class="fn">write_server_state</a>&lt;'life0, 'life1, 'async_trait&gt;(
+        &amp;'life0 self,
+        server_info: &amp;'life1 <a class="struct" href="../proto/struct.ServerInfo.html" title="struct asynq::proto::ServerInfo">ServerInfo</a>,
+        ttl: <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.clear_server_state" class="fn">clear_server_state</a>&lt;'life0, 'life1, 'life2, 'async_trait&gt;(
+        &amp;'life0 self,
+        host: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+        pid: <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.i32.html">i32</a>,
+        server_id: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait,
+             'life2: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.cancellation_pub_sub" class="fn">cancellation_pub_sub</a>&lt;'life0, 'async_trait&gt;(
+        &amp;'life0 self,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn Stream&lt;Item = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Unpin.html" title="trait core::marker::Unpin">Unpin</a> + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.publish_cancellation" class="fn">publish_cancellation</a>&lt;'life0, 'life1, 'async_trait&gt;(
+        &amp;'life0 self,
+        task_id: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait</span>;
+<span class="item-spacer"></span>    fn <a href="#tymethod.write_result" class="fn">write_result</a>&lt;'life0, 'life1, 'life2, 'life3, 'async_trait&gt;(
+        &amp;'life0 self,
+        queue: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+        task_id: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+        result: &amp;'life3 [<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.u8.html">u8</a>],
+    ) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;
+       <span class="where">where Self: 'async_trait,
+             'life0: 'async_trait,
+             'life1: 'async_trait,
+             'life2: 'async_trait,
+             'life3: 'async_trait</span>;
+</details>}</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>经纪人特性，定义了与任务存储后端交互的接口
+Broker trait, defines the interface for interacting with the task storage backend
+对应 Go asynq 的 internal/base/base.go 中的 Broker interface
+Corresponds to the Broker interface in Go asynq’s internal/base/base.go</p>
+</div></details><h2 id="required-methods" class="section-header">Required Methods<a href="#required-methods" class="anchor">§</a></h2><div class="methods"><details class="toggle method-toggle" open><summary><section id="tymethod.ping" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#27">Source</a><h4 class="code-header">fn <a href="#tymethod.ping" class="fn">ping</a>&lt;'life0, 'async_trait&gt;(
+    &amp;'life0 self,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,</div></h4></section></summary><div class="docblock"><p>Ping Redis 连接 - Go: Ping
+Ping Redis connection - Go: Ping</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.close" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#31">Source</a><h4 class="code-header">fn <a href="#tymethod.close" class="fn">close</a>&lt;'life0, 'async_trait&gt;(
+    &amp;'life0 self,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,</div></h4></section></summary><div class="docblock"><p>关闭连接 - Go: Close
+Close connection - Go: Close</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.enqueue" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#35">Source</a><h4 class="code-header">fn <a href="#tymethod.enqueue" class="fn">enqueue</a>&lt;'life0, 'life1, 'async_trait&gt;(
+    &amp;'life0 self,
+    task: &amp;'life1 <a class="struct" href="../task/struct.Task.html" title="struct asynq::task::Task">Task</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="../task/struct.TaskInfo.html" title="struct asynq::task::TaskInfo">TaskInfo</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,</div></h4></section></summary><div class="docblock"><p>将任务加入队列 - Go: Enqueue
+Enqueue a task - Go: Enqueue</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.enqueue_unique" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#39">Source</a><h4 class="code-header">fn <a href="#tymethod.enqueue_unique" class="fn">enqueue_unique</a>&lt;'life0, 'life1, 'async_trait&gt;(
+    &amp;'life0 self,
+    task: &amp;'life1 <a class="struct" href="../task/struct.Task.html" title="struct asynq::task::Task">Task</a>,
+    ttl: <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="../task/struct.TaskInfo.html" title="struct asynq::task::TaskInfo">TaskInfo</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,</div></h4></section></summary><div class="docblock"><p>将唯一任务加入队列 - Go: EnqueueUnique
+Enqueue a unique task - Go: EnqueueUnique</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.dequeue" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#43">Source</a><h4 class="code-header">fn <a href="#tymethod.dequeue" class="fn">dequeue</a>&lt;'life0, 'life1, 'async_trait&gt;(
+    &amp;'life0 self,
+    queues: &amp;'life1 [<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>],
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="enum" href="https://doc.rust-lang.org/1.93.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="../proto/struct.TaskMessage.html" title="struct asynq::proto::TaskMessage">TaskMessage</a>&gt;&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,</div></h4></section></summary><div class="docblock"><p>从队列中出队任务 - Go: Dequeue
+Dequeue a task from the queue - Go: Dequeue</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.done" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#47">Source</a><h4 class="code-header">fn <a href="#tymethod.done" class="fn">done</a>&lt;'life0, 'life1, 'async_trait&gt;(
+    &amp;'life0 self,
+    msg: &amp;'life1 <a class="struct" href="../proto/struct.TaskMessage.html" title="struct asynq::proto::TaskMessage">TaskMessage</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,</div></h4></section></summary><div class="docblock"><p>完成任务 - Go: Done
+Mark a task as done - Go: Done</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.mark_as_complete" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#51">Source</a><h4 class="code-header">fn <a href="#tymethod.mark_as_complete" class="fn">mark_as_complete</a>&lt;'life0, 'life1, 'async_trait&gt;(
+    &amp;'life0 self,
+    msg: &amp;'life1 <a class="struct" href="../proto/struct.TaskMessage.html" title="struct asynq::proto::TaskMessage">TaskMessage</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,</div></h4></section></summary><div class="docblock"><p>标记任务为完成状态 - Go: MarkAsComplete
+Mark a task as complete - Go: MarkAsComplete</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.requeue" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#55-60">Source</a><h4 class="code-header">fn <a href="#tymethod.requeue" class="fn">requeue</a>&lt;'life0, 'life1, 'life2, 'async_trait&gt;(
+    &amp;'life0 self,
+    msg: &amp;'life1 <a class="struct" href="../proto/struct.TaskMessage.html" title="struct asynq::proto::TaskMessage">TaskMessage</a>,
+    process_at: <a class="struct" href="https://docs.rs/chrono/latest/chrono/datetime/struct.DateTime.html" title="struct chrono::datetime::DateTime">DateTime</a>&lt;<a class="struct" href="https://docs.rs/chrono/latest/chrono/offset/utc/struct.Utc.html" title="struct chrono::offset::utc::Utc">Utc</a>&gt;,
+    error_msg: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,
+    'life2: 'async_trait,</div></h4></section></summary><div class="docblock"><p>重新排队任务进行重试 - Go: Requeue
+Requeue a task for retry - Go: Requeue</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.schedule" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#64">Source</a><h4 class="code-header">fn <a href="#tymethod.schedule" class="fn">schedule</a>&lt;'life0, 'life1, 'async_trait&gt;(
+    &amp;'life0 self,
+    task: &amp;'life1 <a class="struct" href="../task/struct.Task.html" title="struct asynq::task::Task">Task</a>,
+    process_at: <a class="struct" href="https://docs.rs/chrono/latest/chrono/datetime/struct.DateTime.html" title="struct chrono::datetime::DateTime">DateTime</a>&lt;<a class="struct" href="https://docs.rs/chrono/latest/chrono/offset/utc/struct.Utc.html" title="struct chrono::offset::utc::Utc">Utc</a>&gt;,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="../task/struct.TaskInfo.html" title="struct asynq::task::TaskInfo">TaskInfo</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,</div></h4></section></summary><div class="docblock"><p>调度任务在指定时间执行 - Go: Schedule
+Schedule a task to execute at a specific time - Go: Schedule</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.schedule_unique" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#68-73">Source</a><h4 class="code-header">fn <a href="#tymethod.schedule_unique" class="fn">schedule_unique</a>&lt;'life0, 'life1, 'async_trait&gt;(
+    &amp;'life0 self,
+    task: &amp;'life1 <a class="struct" href="../task/struct.Task.html" title="struct asynq::task::Task">Task</a>,
+    process_at: <a class="struct" href="https://docs.rs/chrono/latest/chrono/datetime/struct.DateTime.html" title="struct chrono::datetime::DateTime">DateTime</a>&lt;<a class="struct" href="https://docs.rs/chrono/latest/chrono/offset/utc/struct.Utc.html" title="struct chrono::offset::utc::Utc">Utc</a>&gt;,
+    ttl: <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="../task/struct.TaskInfo.html" title="struct asynq::task::TaskInfo">TaskInfo</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,</div></h4></section></summary><div class="docblock"><p>调度唯一任务在指定时间执行 - Go: ScheduleUnique
+Schedule a unique task to execute at a specific time - Go: ScheduleUnique</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.retry" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#77-83">Source</a><h4 class="code-header">fn <a href="#tymethod.retry" class="fn">retry</a>&lt;'life0, 'life1, 'life2, 'async_trait&gt;(
+    &amp;'life0 self,
+    msg: &amp;'life1 <a class="struct" href="../proto/struct.TaskMessage.html" title="struct asynq::proto::TaskMessage">TaskMessage</a>,
+    process_at: <a class="struct" href="https://docs.rs/chrono/latest/chrono/datetime/struct.DateTime.html" title="struct chrono::datetime::DateTime">DateTime</a>&lt;<a class="struct" href="https://docs.rs/chrono/latest/chrono/offset/utc/struct.Utc.html" title="struct chrono::offset::utc::Utc">Utc</a>&gt;,
+    error_msg: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    is_failure: <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.bool.html">bool</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,
+    'life2: 'async_trait,</div></h4></section></summary><div class="docblock"><p>重试失败的任务 - Go: Retry
+Retry a failed task - Go: Retry</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.archive" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#87">Source</a><h4 class="code-header">fn <a href="#tymethod.archive" class="fn">archive</a>&lt;'life0, 'life1, 'life2, 'async_trait&gt;(
+    &amp;'life0 self,
+    msg: &amp;'life1 <a class="struct" href="../proto/struct.TaskMessage.html" title="struct asynq::proto::TaskMessage">TaskMessage</a>,
+    error_msg: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,
+    'life2: 'async_trait,</div></h4></section></summary><div class="docblock"><p>归档任务 - Go: Archive
+Archive a task - Go: Archive</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.forward_if_ready" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#91">Source</a><h4 class="code-header">fn <a href="#tymethod.forward_if_ready" class="fn">forward_if_ready</a>&lt;'life0, 'life1, 'async_trait&gt;(
+    &amp;'life0 self,
+    queues: &amp;'life1 [<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>],
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.i64.html">i64</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,</div></h4></section></summary><div class="docblock"><p>将调度的任务转发到等待队列 - Go: ForwardIfReady
+Forward scheduled tasks to the waiting queue if ready - Go: ForwardIfReady</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.add_to_group" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#98">Source</a><h4 class="code-header">fn <a href="#tymethod.add_to_group" class="fn">add_to_group</a>&lt;'life0, 'life1, 'life2, 'async_trait&gt;(
+    &amp;'life0 self,
+    task: &amp;'life1 <a class="struct" href="../task/struct.Task.html" title="struct asynq::task::Task">Task</a>,
+    group: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="../task/struct.TaskInfo.html" title="struct asynq::task::TaskInfo">TaskInfo</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,
+    'life2: 'async_trait,</div></h4></section></summary><div class="docblock"><p>将任务添加到组中进行聚合 - Go: AddToGroup
+Add a task to a group for aggregation - Go: AddToGroup</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.add_to_group_unique" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#102">Source</a><h4 class="code-header">fn <a href="#tymethod.add_to_group_unique" class="fn">add_to_group_unique</a>&lt;'life0, 'life1, 'life2, 'async_trait&gt;(
+    &amp;'life0 self,
+    task: &amp;'life1 <a class="struct" href="../task/struct.Task.html" title="struct asynq::task::Task">Task</a>,
+    group: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    ttl: <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="../task/struct.TaskInfo.html" title="struct asynq::task::TaskInfo">TaskInfo</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,
+    'life2: 'async_trait,</div></h4></section></summary><div class="docblock"><p>将唯一任务添加到组中进行聚合 - Go: AddToGroupUnique
+Add a unique task to a group for aggregation - Go: AddToGroupUnique</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.list_groups" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#106">Source</a><h4 class="code-header">fn <a href="#tymethod.list_groups" class="fn">list_groups</a>&lt;'life0, 'life1, 'async_trait&gt;(
+    &amp;'life0 self,
+    queue: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,</div></h4></section></summary><div class="docblock"><p>获取队列中的任务组列表 - Go: ListGroups
+Get the list of task groups in a queue - Go: ListGroups</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.aggregation_check" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#110-117">Source</a><h4 class="code-header">fn <a href="#tymethod.aggregation_check" class="fn">aggregation_check</a>&lt;'life0, 'life1, 'life2, 'async_trait&gt;(
+    &amp;'life0 self,
+    queue: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    group: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    aggregation_delay: <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>,
+    max_delay: <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>,
+    max_size: <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.usize.html">usize</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="enum" href="https://doc.rust-lang.org/1.93.0/core/option/enum.Option.html" title="enum core::option::Option">Option</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,
+    'life2: 'async_trait,</div></h4></section></summary><div class="docblock"><p>检查聚合条件是否满足 - Go: AggregationCheck
+Check if aggregation conditions are met - Go: AggregationCheck</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.read_aggregation_set" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#121-126">Source</a><h4 class="code-header">fn <a href="#tymethod.read_aggregation_set" class="fn">read_aggregation_set</a>&lt;'life0, 'life1, 'life2, 'life3, 'async_trait&gt;(
+    &amp;'life0 self,
+    queue: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    group: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    set_id: &amp;'life3 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="../proto/struct.TaskMessage.html" title="struct asynq::proto::TaskMessage">TaskMessage</a>&gt;&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,
+    'life2: 'async_trait,
+    'life3: 'async_trait,</div></h4></section></summary><div class="docblock"><p>读取聚合集合中的任务 - Go: ReadAggregationSet
+Read tasks from an aggregation set - Go: ReadAggregationSet</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.delete_aggregation_set" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#130">Source</a><h4 class="code-header">fn <a href="#tymethod.delete_aggregation_set" class="fn">delete_aggregation_set</a>&lt;'life0, 'life1, 'life2, 'life3, 'async_trait&gt;(
+    &amp;'life0 self,
+    queue: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    group: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    set_id: &amp;'life3 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,
+    'life2: 'async_trait,
+    'life3: 'async_trait,</div></h4></section></summary><div class="docblock"><p>删除聚合集合 - Go: DeleteAggregationSet
+Delete an aggregation set - Go: DeleteAggregationSet</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.reclaim_stale_aggregation_sets" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#134">Source</a><h4 class="code-header">fn <a href="#tymethod.reclaim_stale_aggregation_sets" class="fn">reclaim_stale_aggregation_sets</a>&lt;'life0, 'life1, 'async_trait&gt;(
+    &amp;'life0 self,
+    queue: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,</div></h4></section></summary><div class="docblock"><p>回收过期的聚合集合 - Go: ReclaimStaleAggregationSets
+Reclaim expired aggregation sets - Go: ReclaimStaleAggregationSets</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.delete_expired_completed_tasks" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#141">Source</a><h4 class="code-header">fn <a href="#tymethod.delete_expired_completed_tasks" class="fn">delete_expired_completed_tasks</a>&lt;'life0, 'life1, 'async_trait&gt;(
+    &amp;'life0 self,
+    queue: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.i64.html">i64</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,</div></h4></section></summary><div class="docblock"><p>删除过期的完成任务 - Go: DeleteExpiredCompletedTasks
+Delete expired completed tasks - Go: DeleteExpiredCompletedTasks</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.list_lease_expired" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#148-152">Source</a><h4 class="code-header">fn <a href="#tymethod.list_lease_expired" class="fn">list_lease_expired</a>&lt;'life0, 'life1, 'async_trait&gt;(
+    &amp;'life0 self,
+    cutoff: <a class="struct" href="https://docs.rs/chrono/latest/chrono/datetime/struct.DateTime.html" title="struct chrono::datetime::DateTime">DateTime</a>&lt;<a class="struct" href="https://docs.rs/chrono/latest/chrono/offset/utc/struct.Utc.html" title="struct chrono::offset::utc::Utc">Utc</a>&gt;,
+    queues: &amp;'life1 [<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>],
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html" title="struct alloc::vec::Vec">Vec</a>&lt;<a class="struct" href="../proto/struct.TaskMessage.html" title="struct asynq::proto::TaskMessage">TaskMessage</a>&gt;&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,</div></h4></section></summary><div class="docblock"><p>列出租约已过期的任务 - Go: ListLeaseExpired
+List tasks with expired leases - Go: ListLeaseExpired</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.extend_lease" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#156">Source</a><h4 class="code-header">fn <a href="#tymethod.extend_lease" class="fn">extend_lease</a>&lt;'life0, 'life1, 'life2, 'async_trait&gt;(
+    &amp;'life0 self,
+    queue: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    task_id: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    lease_duration: <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,
+    'life2: 'async_trait,</div></h4></section></summary><div class="docblock"><p>延长任务处理租约 - Go: ExtendLease
+Extend task lease - Go: ExtendLease</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.write_server_state" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#163">Source</a><h4 class="code-header">fn <a href="#tymethod.write_server_state" class="fn">write_server_state</a>&lt;'life0, 'life1, 'async_trait&gt;(
+    &amp;'life0 self,
+    server_info: &amp;'life1 <a class="struct" href="../proto/struct.ServerInfo.html" title="struct asynq::proto::ServerInfo">ServerInfo</a>,
+    ttl: <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/time/struct.Duration.html" title="struct core::time::Duration">Duration</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,</div></h4></section></summary><div class="docblock"><p>写入服务器状态 - Go: WriteServerState
+Write server state - Go: WriteServerState</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.clear_server_state" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#167">Source</a><h4 class="code-header">fn <a href="#tymethod.clear_server_state" class="fn">clear_server_state</a>&lt;'life0, 'life1, 'life2, 'async_trait&gt;(
+    &amp;'life0 self,
+    host: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    pid: <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.i32.html">i32</a>,
+    server_id: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,
+    'life2: 'async_trait,</div></h4></section></summary><div class="docblock"><p>清除服务器状态 - Go: ClearServerState
+Clear server state - Go: ClearServerState</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.cancellation_pub_sub" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#174-176">Source</a><h4 class="code-header">fn <a href="#tymethod.cancellation_pub_sub" class="fn">cancellation_pub_sub</a>&lt;'life0, 'async_trait&gt;(
+    &amp;'life0 self,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn Stream&lt;Item = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/string/struct.String.html" title="struct alloc::string::String">String</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Unpin.html" title="trait core::marker::Unpin">Unpin</a> + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a>&gt;&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,</div></h4></section></summary><div class="docblock"><p>订阅任务取消事件 - Go: CancelationPubSub
+Subscribe to task cancellation events - Go: CancelationPubSub</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.publish_cancellation" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#180">Source</a><h4 class="code-header">fn <a href="#tymethod.publish_cancellation" class="fn">publish_cancellation</a>&lt;'life0, 'life1, 'async_trait&gt;(
+    &amp;'life0 self,
+    task_id: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,</div></h4></section></summary><div class="docblock"><p>发布任务取消通知 - Go: PublishCancelation
+Publish task cancellation notification - Go: PublishCancelation</p>
+</div></details><details class="toggle method-toggle" open><summary><section id="tymethod.write_result" class="method"><a class="src rightside" href="../../src/asynq/base/mod.rs.html#184">Source</a><h4 class="code-header">fn <a href="#tymethod.write_result" class="fn">write_result</a>&lt;'life0, 'life1, 'life2, 'life3, 'async_trait&gt;(
+    &amp;'life0 self,
+    queue: &amp;'life1 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    task_id: &amp;'life2 <a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.str.html">str</a>,
+    result: &amp;'life3 [<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.u8.html">u8</a>],
+) -&gt; <a class="struct" href="https://doc.rust-lang.org/1.93.0/core/pin/struct.Pin.html" title="struct core::pin::Pin">Pin</a>&lt;<a class="struct" href="https://doc.rust-lang.org/1.93.0/alloc/boxed/struct.Box.html" title="struct alloc::boxed::Box">Box</a>&lt;dyn <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/future/future/trait.Future.html" title="trait core::future::future::Future">Future</a>&lt;Output = <a class="type" href="../error/type.Result.html" title="type asynq::error::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/1.93.0/std/primitive.unit.html">()</a>&gt;&gt; + <a class="trait" href="https://doc.rust-lang.org/1.93.0/core/marker/trait.Send.html" title="trait core::marker::Send">Send</a> + 'async_trait&gt;&gt;<div class="where">where
+    Self: 'async_trait,
+    'life0: 'async_trait,
+    'life1: 'async_trait,
+    'life2: 'async_trait,
+    'life3: 'async_trait,</div></h4></section></summary><div class="docblock"><p>写入任务结果 - Go: WriteResult
+Write task result - Go: WriteResult</p>
+</div></details></div><h2 id="implementors" class="section-header">Implementors<a href="#implementors" class="anchor">§</a></h2><div id="implementors-list"><section id="impl-Broker-for-RedisBroker" class="impl"><a class="src rightside" href="../../src/asynq/backend/rdb/broker.rs.html#21-964">Source</a><a href="#impl-Broker-for-RedisBroker" class="anchor">§</a><h3 class="code-header">impl <a class="trait" href="trait.Broker.html" title="trait asynq::base::Broker">Broker</a> for <a class="struct" href="../backend/struct.RedisBroker.html" title="struct asynq::backend::RedisBroker">RedisBroker</a></h3><div class="docblock"><p>RedisBroker 实现 Broker trait，提供与 Redis 的任务存储和调度交互。
+RedisBroker implements the Broker trait, providing task storage and scheduling interaction with Redis.</p>
+</div></section></div><script src="../../trait.impl/asynq/base/trait.Broker.js" async></script></section></div></main></body></html>

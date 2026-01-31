@@ -1,0 +1,97 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="处理器模块 Processor module"><title>asynq::components::processor - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="asynq" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0 (254b59607 2026-01-19)" data-channel="1.93.0" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../../static.files/storage-e2aeef58.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module processor</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../asynq/index.html">asynq</a><span class="version">0.1.5</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module processor</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#概述--overview" title="概述 / Overview">概述 / Overview</a></li><li><a href="#主要特性--key-features" title="主要特性 / Key Features">主要特性 / Key Features</a></li><li><a href="#与-go-版本的兼容性--compatibility-with-go-version" title="与 Go 版本的兼容性 / Compatibility with Go version">与 Go 版本的兼容性 / Compatibility with Go version</a></li><li><a href="#使用示例--usage-example" title="使用示例 / Usage Example">使用示例 / Usage Example</a></li></ul><h3><a href="#structs">Module Items</a></h3><ul class="block"><li><a href="#structs" title="Structs">Structs</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="../index.html">In asynq::<wbr>components</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../index.html">asynq</a>::<wbr><a href="../index.html">components</a></div><h1>Module <span>processor</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../../src/asynq/components/processor.rs.html#1-780">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>处理器模块
+Processor module</p>
+<p>实现与 Go asynq processor.go 兼容的任务处理器
+Implements task processor compatible with Go asynq processor.go</p>
+<h3 id="概述--overview"><a class="doc-anchor" href="#概述--overview">§</a>概述 / Overview</h3>
+<p>Processor 是任务处理的核心组件，负责从 Redis 队列中取出任务并执行。
+它实现了与 Go 版本 asynq processor.go 相似的架构和功能。</p>
+<p>The Processor is the core component for task processing, responsible for dequeuing
+tasks from Redis queues and executing them. It implements an architecture and
+functionality similar to Go’s asynq processor.go.</p>
+<h3 id="主要特性--key-features"><a class="doc-anchor" href="#主要特性--key-features">§</a>主要特性 / Key Features</h3>
+<ul>
+<li>
+<p><strong>信号量并发控制</strong>: 使用 Tokio Semaphore 限制并发工作者数量</p>
+<ul>
+<li><strong>Semaphore-based concurrency</strong>: Uses Tokio Semaphore to limit concurrent workers</li>
+</ul>
+</li>
+<li>
+<p><strong>队列优先级</strong>: 支持严格优先级和加权优先级两种模式</p>
+<ul>
+<li><strong>Queue priority</strong>: Supports both strict priority and weighted priority modes</li>
+</ul>
+</li>
+<li>
+<p><strong>任务超时</strong>: 支持任务级别和全局超时设置</p>
+<ul>
+<li><strong>Task timeout</strong>: Supports task-level and global timeout settings</li>
+</ul>
+</li>
+<li>
+<p><strong>优雅关闭</strong>: 等待所有活跃工作者完成后再关闭</p>
+<ul>
+<li><strong>Graceful shutdown</strong>: Waits for all active workers to finish before shutting down</li>
+</ul>
+</li>
+<li>
+<p><strong>自动重试</strong>: 失败任务自动重试，支持指数退避策略</p>
+<ul>
+<li><strong>Automatic retry</strong>: Failed tasks are automatically retried with exponential backoff</li>
+</ul>
+</li>
+<li>
+<p><strong>任务归档</strong>: 达到最大重试次数后自动归档任务</p>
+<ul>
+<li><strong>Task archival</strong>: Tasks are automatically archived after max retries</li>
+</ul>
+</li>
+</ul>
+<h3 id="与-go-版本的兼容性--compatibility-with-go-version"><a class="doc-anchor" href="#与-go-版本的兼容性--compatibility-with-go-version">§</a>与 Go 版本的兼容性 / Compatibility with Go version</h3>
+<p>本实现与 Go 版本的 processor.go 在以下方面保持兼容：
+This implementation maintains compatibility with Go’s processor.go in the following aspects:</p>
+<ul>
+<li>相同的队列优先级算法 / Same queue priority algorithm</li>
+<li>相同的重试延迟计算 / Same retry delay calculation</li>
+<li>相同的任务超时处理 / Same task timeout handling</li>
+<li>相同的并发控制机制 / Same concurrency control mechanism</li>
+</ul>
+<h3 id="使用示例--usage-example"><a class="doc-anchor" href="#使用示例--usage-example">§</a>使用示例 / Usage Example</h3>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>asynq::components::processor::{Processor, ProcessorParams};
+<span class="kw">use </span>asynq::server::Handler;
+<span class="kw">use </span>std::collections::HashMap;
+<span class="kw">use </span>std::sync::Arc;
+<span class="kw">use </span>std::sync::atomic::AtomicUsize;
+<span class="kw">use </span>std::time::Duration;
+<span class="attr">#[cfg(feature = <span class="string">"default"</span>)]
+</span><span class="kw">async fn </span>example() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+<span class="comment">// 创建 broker 和其他必要组件
+// Create broker and other necessary components
+
+</span><span class="kw">let </span><span class="kw-2">mut </span>queues = HashMap::new();
+queues.insert(<span class="string">"default"</span>.to_string(), <span class="number">3</span>);
+queues.insert(<span class="string">"critical"</span>.to_string(), <span class="number">6</span>);
+
+<span class="kw">let </span>params = ProcessorParams {
+  broker: broker.clone(),
+  inspector: Arc::new(asynq::inspector::Inspector::from_broker(broker)),
+  queues,
+  concurrency: <span class="number">10</span>,
+  strict_priority: <span class="bool-val">false</span>,
+  task_check_interval: Duration::from_secs(<span class="number">1</span>),
+  shutdown_timeout: Duration::from_secs(<span class="number">30</span>),
+  active_workers: Arc::new(AtomicUsize::new(<span class="number">0</span>)),
+};
+
+<span class="kw">let </span><span class="kw-2">mut </span>processor = Processor::new(params);
+
+<span class="comment">// 启动处理器
+// Start processor
+</span>processor.start(Arc::new(MyHandler));
+
+<span class="comment">// 停止处理器
+// Stop processor
+</span>processor.shutdown().<span class="kw">await</span>;</code></pre></div></div></details><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.CancellationMap.html" title="struct asynq::components::processor::CancellationMap">Cancellation<wbr>Map</a></dt><dd>任务取消追踪结构
+Task cancellation tracking structure</dd><dt><a class="struct" href="struct.Processor.html" title="struct asynq::components::processor::Processor">Processor</a></dt><dd>处理器 - 负责从队列中取出任务并处理
+Processor - responsible for dequeuing and processing tasks</dd><dt><a class="struct" href="struct.ProcessorParams.html" title="struct asynq::components::processor::ProcessorParams">Processor<wbr>Params</a></dt><dd>处理器参数
+Processor parameters</dd></dl></section></div></main></body></html>

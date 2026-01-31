@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["PeriodicTaskConfig","PeriodicTaskManager","PeriodicTaskManagerConfig"],"trait":["PeriodicTaskConfigProvider"]};

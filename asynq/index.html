@@ -1,0 +1,174 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Asynq"><title>asynq - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="asynq" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0 (254b59607 2026-01-19)" data-channel="1.93.0" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../static.files/storage-e2aeef58.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Crate asynq</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../asynq/index.html">asynq</a><span class="version">0.1.5</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#asynq" title="Asynq">Asynq</a><ul><li><a href="#特性" title="特性">特性</a></li><li><a href="#features" title="Features">Features</a></li><li><a href="#多后端支持" title="多后端支持">多后端支持</a></li><li><a href="#multiple-backend-support" title="Multiple Backend Support">Multiple Backend Support</a></li><li><a href="#快速开始" title="快速开始">快速开始</a></li><li><a href="#quick-start" title="Quick Start">Quick Start</a></li></ul></li></ul><h3><a href="#modules">Crate Items</a></h3><ul class="block"><li><a href="#modules" title="Modules">Modules</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><h1>Crate <span>asynq</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/asynq/lib.rs.html#1-167">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="asynq"><a class="doc-anchor" href="#asynq">§</a>Asynq</h2>
+<p>Simple, reliable &amp; efficient distributed task queue in Rust</p>
+<p>Asynq 是一个分布式任务队列库，用于在 Redis 支持的异步工作者之间排队任务并处理任务。
+Asynq is a distributed task queue library for queuing and processing tasks among async workers backed by Redis.
+它旨在具有可扩展性，但易于上手。
+It is designed to be scalable yet easy to use.</p>
+<h3 id="特性"><a class="doc-anchor" href="#特性">§</a>特性</h3><h3 id="features"><a class="doc-anchor" href="#features">§</a>Features</h3>
+<ul>
+<li>保证任务至少执行一次
+<ul>
+<li>Guarantees at-least-once task execution</li>
+</ul>
+</li>
+<li>任务调度功能
+<ul>
+<li>Task scheduling capability</li>
+</ul>
+</li>
+<li>失败任务的重试机制
+<ul>
+<li>Retry mechanism for failed tasks</li>
+</ul>
+</li>
+<li>在工作者崩溃时自动恢复任务
+<ul>
+<li>Automatic task recovery on worker crash</li>
+</ul>
+</li>
+<li>加权优先级队列
+<ul>
+<li>Weighted priority queues</li>
+</ul>
+</li>
+<li>严格优先级队列
+<ul>
+<li>Strict priority queues</li>
+</ul>
+</li>
+<li>低延迟添加任务，因为 Redis 写入速度快
+<ul>
+<li>Low-latency task addition due to fast Redis writes</li>
+</ul>
+</li>
+<li>使用唯一选项去重任务
+<ul>
+<li>Deduplication of tasks using unique option</li>
+</ul>
+</li>
+<li>支持每个任务的超时和截止时间
+<ul>
+<li>Supports timeout and deadline for each task</li>
+</ul>
+</li>
+<li>允许聚合任务组以批处理多个连续操作
+<ul>
+<li>Allows aggregation of task groups for batch processing</li>
+</ul>
+</li>
+<li>灵活的处理器接口，支持中间件
+<ul>
+<li>Flexible handler interface with middleware support</li>
+</ul>
+</li>
+<li>能够暂停队列以停止处理来自队列的任务
+<ul>
+<li>Ability to pause queues to stop processing tasks from a queue</li>
+</ul>
+</li>
+<li>周期性任务
+<ul>
+<li>Periodic tasks</li>
+</ul>
+</li>
+<li>支持 Redis Sentinels 实现高可用性
+<ul>
+<li>Supports Redis Sentinels for high availability</li>
+</ul>
+</li>
+<li>与 Prometheus 集成以收集和可视化队列指标
+<ul>
+<li>Integration with Prometheus for queue metrics collection and visualization</li>
+</ul>
+</li>
+<li>Web UI 检查和远程控制队列和任务
+<ul>
+<li>Web UI for inspecting and remotely controlling queues and tasks</li>
+</ul>
+</li>
+</ul>
+<h3 id="多后端支持"><a class="doc-anchor" href="#多后端支持">§</a>多后端支持</h3><h3 id="multiple-backend-support"><a class="doc-anchor" href="#multiple-backend-support">§</a>Multiple Backend Support</h3>
+<p>现在支持同时启用多个后端，默认使用 Redis 后端。
+Now supports enabling multiple backends simultaneously, with Redis as the default.</p>
+<ul>
+<li>Redis: 始终可用作为默认后端</li>
+<li>Redis: Always available as the default backend</li>
+<li>PostgreSQL: 需要启用 <code>postgres</code> feature</li>
+<li>PostgreSQL: Requires <code>postgres</code> feature to be enabled</li>
+<li>WebSocket: 需要启用 <code>websocket</code> feature</li>
+<li>WebSocket: Requires <code>websocket</code> feature to be enabled</li>
+</ul>
+<h3 id="快速开始"><a class="doc-anchor" href="#快速开始">§</a>快速开始</h3><h3 id="quick-start"><a class="doc-anchor" href="#quick-start">§</a>Quick Start</h3><h4 id="使用-redis-后端"><a class="doc-anchor" href="#使用-redis-后端">§</a>使用 Redis 后端</h4><h4 id="using-redis-backend"><a class="doc-anchor" href="#using-redis-backend">§</a>Using Redis Backend</h4>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>asynq::{client::Client,task::Task};
+<span class="kw">use </span>asynq::server::{Server,Handler};
+<span class="kw">use </span>async_trait::async_trait;
+<span class="kw">use </span>std::time::Duration;
+
+<span class="attr">#[tokio::main]
+</span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    <span class="comment">// 创建 Redis 配置
+    // Create Redis configuration
+    </span><span class="kw">use </span>asynq::backend::RedisConnectionType;
+    <span class="kw">let </span>redis_config = asynq::backend::RedisConnectionType::single(<span class="string">"redis://127.0.0.1:6379"</span>)<span class="question-mark">?</span>;
+     
+    <span class="comment">// 创建客户端
+    // Create client
+    </span><span class="kw">let </span>client = Client::new(redis_config).<span class="kw">await</span><span class="question-mark">?</span>;
+     
+    <span class="comment">// 创建任务
+    // Create task
+    </span><span class="kw">let </span>task = Task::new(<span class="string">"email:deliver"</span>, <span class="string">b"task payload"</span>).unwrap();
+     
+    <span class="comment">// 将任务加入队列
+    // Enqueue task
+    </span>client.enqueue(task).<span class="kw">await</span><span class="question-mark">?</span>;
+     
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div><h4 id="使用-postgressql-后端-需要-postgres-feature"><a class="doc-anchor" href="#使用-postgressql-后端-需要-postgres-feature">§</a>使用 PostgresSQL 后端 (需要 <code>postgres</code> feature)</h4><h4 id="using-postgressql-backend-requires-postgres-feature"><a class="doc-anchor" href="#using-postgressql-backend-requires-postgres-feature">§</a>Using PostgresSQL Backend (requires <code>postgres</code> feature)</h4>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>asynq::{client::Client,task::Task};
+
+<span class="attr">#[tokio::main]
+</span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    <span class="comment">// 创建 PostgresSQL 客户端
+    // Create PostgresSQL client
+    </span><span class="kw">let </span>client = Client::new_with_postgres(<span class="string">"postgres://user:pass@localhost/dbname"</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+     
+    <span class="comment">// 创建任务
+    // Create task
+    </span><span class="kw">let </span>task = Task::new(<span class="string">"email:deliver"</span>, <span class="string">b"task payload"</span>).unwrap();
+     
+    <span class="comment">// 将任务加入队列
+    // Enqueue task
+    </span>client.enqueue(task).<span class="kw">await</span><span class="question-mark">?</span>;
+     
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div><h4 id="使用-websocket-后端连接-asynq-server-需要-websocket-feature"><a class="doc-anchor" href="#使用-websocket-后端连接-asynq-server-需要-websocket-feature">§</a>使用 WebSocket 后端连接 asynq-server (需要 <code>websocket</code> feature)</h4><h4 id="using-websocket-backend-to-connect-to-asynq-server-requires-websocket-feature"><a class="doc-anchor" href="#using-websocket-backend-to-connect-to-asynq-server-requires-websocket-feature">§</a>Using WebSocket Backend to connect to asynq-server (requires <code>websocket</code> feature)</h4>
+<div class="example-wrap"><pre class="rust rust-example-rendered"><code><span class="kw">use </span>asynq::{client::Client, task::Task};
+
+<span class="attr">#[tokio::main]
+</span><span class="kw">async fn </span>main() -&gt; <span class="prelude-ty">Result</span>&lt;(), Box&lt;<span class="kw">dyn </span>std::error::Error&gt;&gt; {
+    <span class="comment">// 连接到 asynq-server
+    // Connect to asynq-server
+    </span><span class="kw">let </span>client = Client::new_with_websocket(<span class="string">"ws://127.0.0.1:8080/ws"</span>).<span class="kw">await</span><span class="question-mark">?</span>;
+     
+    <span class="comment">// 创建任务
+    // Create task
+    </span><span class="kw">let </span>task = Task::new(<span class="string">"email:deliver"</span>, <span class="string">b"task payload"</span>).unwrap();
+     
+    <span class="comment">// 将任务加入队列
+    // Enqueue task
+    </span>client.enqueue(task).<span class="kw">await</span><span class="question-mark">?</span>;
+     
+    <span class="prelude-val">Ok</span>(())
+}</code></pre></div></div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="backend/index.html" title="mod asynq::backend">backend</a></dt><dd>后端模块
+Backend module</dd><dt><a class="mod" href="base/index.html" title="mod asynq::base">base</a></dt><dd>经纪人模块
+Broker module</dd><dt><a class="mod" href="client/index.html" title="mod asynq::client">client</a></dt><dd>客户端模块
+Client module</dd><dt><a class="mod" href="components/index.html" title="mod asynq::components">components</a></dt><dd>Lifecycle 模块
+Lifecycle module</dd><dt><a class="mod" href="config/index.html" title="mod asynq::config">config</a></dt><dd>配置模块
+Configuration module</dd><dt><a class="mod" href="error/index.html" title="mod asynq::error">error</a></dt><dd>错误处理模块
+Error handling module</dd><dt><a class="mod" href="inspector/index.html" title="mod asynq::inspector">inspector</a></dt><dd>检查器模块
+Inspector module</dd><dt><a class="mod" href="proto/index.html" title="mod asynq::proto">proto</a></dt><dd>Protocol related code.
+source: asynq.proto</dd><dt><a class="mod" href="scheduler/index.html" title="mod asynq::scheduler">scheduler</a></dt><dd>周期性任务调度器（Scheduler）</dd><dt><a class="mod" href="serve_mux/index.html" title="mod asynq::serve_mux">serve_<wbr>mux</a></dt><dd>ServeMux - 任务路由多路复用器
+ServeMux - Task routing multiplexer</dd><dt><a class="mod" href="server/index.html" title="mod asynq::server">server</a></dt><dd>服务器模块
+Server module</dd><dt><a class="mod" href="task/index.html" title="mod asynq::task">task</a></dt><dd>任务模块
+Task module</dd></dl><script type="text/json" id="notable-traits-data">{"&[u8]":"<h3>Notable traits for <code>&amp;[<a class=\"primitive\" href=\"https://doc.rust-lang.org/1.93.0/std/primitive.u8.html\">u8</a>]</code></h3><pre><code><div class=\"where\">impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.93.0/std/io/trait.Read.html\" title=\"trait std::io::Read\">Read</a> for &amp;[<a class=\"primitive\" href=\"https://doc.rust-lang.org/1.93.0/std/primitive.u8.html\">u8</a>]</div>","Vec<u8>":"<h3>Notable traits for <code><a class=\"struct\" href=\"https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html\" title=\"struct alloc::vec::Vec\">Vec</a>&lt;<a class=\"primitive\" href=\"https://doc.rust-lang.org/1.93.0/std/primitive.u8.html\">u8</a>, A&gt;</code></h3><pre><code><div class=\"where\">impl&lt;A&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/1.93.0/std/io/trait.Write.html\" title=\"trait std::io::Write\">Write</a> for <a class=\"struct\" href=\"https://doc.rust-lang.org/1.93.0/alloc/vec/struct.Vec.html\" title=\"struct alloc::vec::Vec\">Vec</a>&lt;<a class=\"primitive\" href=\"https://doc.rust-lang.org/1.93.0/std/primitive.u8.html\">u8</a>, A&gt;<div class=\"where\">where\n    A: <a class=\"trait\" href=\"https://doc.rust-lang.org/1.93.0/core/alloc/trait.Allocator.html\" title=\"trait core::alloc::Allocator\">Allocator</a>,</div></div>"}</script></section></div></main></body></html>

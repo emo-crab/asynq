@@ -1,0 +1,69 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="周期性任务调度器（Scheduler）"><title>asynq::scheduler - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-ca0dd0c4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="asynq" data-themes="" data-resource-suffix="" data-rustdoc-version="1.93.0 (254b59607 2026-01-19)" data-channel="1.93.0" data-search-js="search-9e2438ea.js" data-stringdex-js="stringdex-a3946164.js" data-settings-js="settings-c38705f0.js" ><script src="../../static.files/storage-e2aeef58.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-a410ff4d.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-263c88ec.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module scheduler</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../asynq/index.html">asynq</a><span class="version">0.1.5</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module scheduler</a></h2><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#周期性任务调度器scheduler" title="周期性任务调度器（Scheduler）">周期性任务调度器（Scheduler）</a></li><li><a href="#periodic-task-scheduler-scheduler" title="Periodic Task Scheduler (Scheduler)">Periodic Task Scheduler (Scheduler)</a><ul><li><a href="#go-版主要数据结构与方法对照" title="Go 版主要数据结构与方法对照：">Go 版主要数据结构与方法对照：</a></li><li><a href="#main-data-structures-and-methods-comparison-with-go-version" title="Main data structures and methods comparison with Go version:">Main data structures and methods comparison with Go version:</a></li></ul></li></ul><h3><a href="#structs">Module Items</a></h3><ul class="block"><li><a href="#structs" title="Structs">Structs</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="../index.html">In crate asynq</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">asynq</a></div><h1>Module <span>scheduler</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/asynq/scheduler.rs.html#1-547">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><h2 id="周期性任务调度器scheduler"><a class="doc-anchor" href="#周期性任务调度器scheduler">§</a>周期性任务调度器（Scheduler）</h2><h2 id="periodic-task-scheduler-scheduler"><a class="doc-anchor" href="#periodic-task-scheduler-scheduler">§</a>Periodic Task Scheduler (Scheduler)</h2>
+<p>该模块实现了类似 Go 版 asynq 的周期性任务调度功能。
+This module implements periodic task scheduling similar to the Go version of asynq.
+主要参考 Go 版 asynq/scheduler.go、asynq/periodic_task.go。
+Mainly refers to Go asynq/scheduler.go and asynq/periodic_task.go.</p>
+<h3 id="go-版主要数据结构与方法对照"><a class="doc-anchor" href="#go-版主要数据结构与方法对照">§</a>Go 版主要数据结构与方法对照：</h3><h3 id="main-data-structures-and-methods-comparison-with-go-version"><a class="doc-anchor" href="#main-data-structures-and-methods-comparison-with-go-version">§</a>Main data structures and methods comparison with Go version:</h3>
+<p>Go:
+type Scheduler struct {
+mu sync.Mutex
+entries <code>map[string]*Entry</code>
+running bool
+…
+}
+type Entry struct {
+ID string
+Spec string // cron 表达式
+TaskType string
+Payload []byte
+Queue string
+Next time.Time
+…
+}
+func (s *Scheduler) Register(spec, taskType string, payload []byte, queue string) error
+func (s *Scheduler) Start()
+func (s *Scheduler) Stop()
+func (s *Scheduler) Remove(id string)
+func (s *Scheduler) Entries() []*Entry</p>
+<p>Rust:
+struct Scheduler { … }
+struct PeriodicTask { … }
+impl Scheduler {
+pub fn add_task(&amp;self, task: PeriodicTask)
+pub fn remove_task(&amp;self, name: &amp;str)
+pub fn list_tasks(&amp;self) -&gt; <code>Vec&lt;String&gt;</code>
+pub fn start(&amp;mut self)
+pub fn stop(&amp;mut self)
+}</p>
+<p>目前未实现的 Go 版功能：
+Unimplemented Go features:</p>
+<ul>
+<li>Entry ID（Rust 以 name 作为唯一标识）
+<ul>
+<li>Entry ID (Rust uses name as unique identifier)</li>
+</ul>
+</li>
+<li>任务持久化与恢复
+<ul>
+<li>Task persistence and recovery</li>
+</ul>
+</li>
+<li>任务去重与唯一性
+<ul>
+<li>Task deduplication and uniqueness</li>
+</ul>
+</li>
+<li>运行中动态修改任务（可通过 add/remove 实现）
+<ul>
+<li>Dynamic modification of tasks at runtime (can be done via add/remove)</li>
+</ul>
+</li>
+<li>任务执行日志与错误处理
+<ul>
+<li>Task execution logging and error handling</li>
+</ul>
+</li>
+</ul>
+<p>如需补充上述功能，可参考 Go 版实现进一步扩展。
+For additional features, refer to the Go implementation for further extension。</p>
+</div></details><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.PeriodicTask.html" title="struct asynq::scheduler::PeriodicTask">Periodic<wbr>Task</a></dt><dd>Represents a periodic task to be scheduled.</dd><dt><a class="struct" href="struct.Scheduler.html" title="struct asynq::scheduler::Scheduler">Scheduler</a></dt><dd>周期性任务调度器</dd></dl></section></div></main></body></html>
