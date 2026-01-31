@@ -405,8 +405,6 @@ let aggregator = GroupAggregatorFunc::new(|group, tasks| {
 server.set_group_aggregator(aggregator);
 ```
 
-更多详情请参阅 [GROUP_AGGREGATOR.md](docs/GROUP_AGGREGATOR.md)
-
 ## 🛠️ 配置选项
 
 ### 服务器配置

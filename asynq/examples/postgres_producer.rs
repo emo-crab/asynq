@@ -19,9 +19,9 @@ struct ImageResizePayload {
   width: u32,
   height: u32,
 }
-#[cfg(not(feature = "postgresql"))]
+#[cfg(not(feature = "postgres"))]
 fn main() {}
-#[cfg(feature = "postgresql")]
+#[cfg(feature = "postgres")]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
   tracing_subscriber::fmt::init();

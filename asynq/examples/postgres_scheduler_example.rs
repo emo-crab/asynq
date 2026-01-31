@@ -14,9 +14,9 @@ struct EmailPayload {
   subject: String,
   body: String,
 }
-#[cfg(not(feature = "postgresql"))]
+#[cfg(not(feature = "postgres"))]
 fn main() {}
-#[cfg(feature = "postgresql")]
+#[cfg(feature = "postgres")]
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
   tracing_subscriber::fmt::init();

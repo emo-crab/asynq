@@ -182,9 +182,9 @@ impl TaskProcessor {
     Ok(())
   }
 }
-#[cfg(not(feature = "postgresql"))]
+#[cfg(not(feature = "postgres"))]
 fn main() {}
-#[cfg(feature = "postgresql")]
+#[cfg(feature = "postgres")]
 #[tokio::main]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   use asynq::backend::PostgresBroker;

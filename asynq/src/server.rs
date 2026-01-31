@@ -670,11 +670,11 @@ impl ServerBuilder {
   }
 
   /// 设置 PostgresSQL Broker (PostgresSQL feature required)
-  /// Set PostgresSQL Broker (requires postgresql feature)
+  /// Set PostgresSQL Broker (requires postgres feature)
   ///
   /// 这是一个便利方法，自动创建 PostgresInspector
   /// This is a convenience method that automatically creates a PostgresInspector
-  #[cfg(feature = "postgresql")]
+  #[cfg(feature = "postgres")]
   pub fn postgres_broker(mut self, broker: Arc<crate::backend::pgdb::PostgresBroker>) -> Self {
     let inspector = Arc::new(crate::backend::pgdb::PostgresInspector::from_broker(
       broker.clone(),

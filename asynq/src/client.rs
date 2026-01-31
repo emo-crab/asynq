@@ -13,7 +13,7 @@ use crate::task::{Task, TaskInfo};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
-#[cfg(feature = "postgresql")]
+#[cfg(feature = "postgres")]
 use crate::backend::pgdb::PostgresBroker;
 
 #[cfg(feature = "websocket")]
@@ -25,7 +25,7 @@ enum ClientBroker {
   /// Redis 后端
   /// Redis backend
   Redis(Arc<RedisBroker>),
-  #[cfg(feature = "postgresql")]
+  #[cfg(feature = "postgres")]
   /// PostgresSQL 后端
   /// PostgresSQL backend
   Postgres(Arc<PostgresBroker>),
@@ -41,7 +41,7 @@ impl ClientBroker {
   fn as_broker(&self) -> Arc<dyn Broker> {
     match self {
       ClientBroker::Redis(broker) => broker.clone(),
-      #[cfg(feature = "postgresql")]
+      #[cfg(feature = "postgres")]
       ClientBroker::Postgres(broker) => broker.clone(),
       #[cfg(feature = "websocket")]
       ClientBroker::WebSocket(broker) => broker.clone(),
@@ -53,7 +53,7 @@ impl ClientBroker {
   fn as_scheduler_broker(&self) -> Arc<dyn crate::base::SchedulerBroker> {
     match self {
       ClientBroker::Redis(broker) => broker.clone(),
-      #[cfg(feature = "postgresql")]
+      #[cfg(feature = "postgres")]
       ClientBroker::Postgres(broker) => broker.clone(),
       #[cfg(feature = "websocket")]
       ClientBroker::WebSocket(broker) => broker.clone(),
@@ -93,14 +93,14 @@ impl Client {
 
   /// 从 PostgresSQL 数据库 URL 创建新的客户端实例
   /// Create a new client instance from a PostgresSQL database URL
-  #[cfg(feature = "postgresql")]
+  #[cfg(feature = "postgres")]
   pub async fn new_with_postgres(database_url: &str) -> Result<Self> {
     Self::new_with_postgres_config(database_url, ClientConfig::default()).await
   }
 
   /// 从 PostgresSQL 数据库 URL 和指定配置创建客户端实例
   /// Create a client instance from a PostgresSQL database URL with the specified configuration
-  #[cfg(feature = "postgresql")]
+  #[cfg(feature = "postgres")]
   pub async fn new_with_postgres_config(database_url: &str, config: ClientConfig) -> Result<Self> {
     // 创建PostgresBroker实例
     // Create PostgresBroker instance

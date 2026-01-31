@@ -31,10 +31,10 @@ async fn main() -> anyhow::Result<()> {
   ) {
     let backend = match backend_type.to_lowercase().as_str() {
       "redis" => BackendType::Redis,
-      "postgresql" | "postgres" => BackendType::Postgres,
+      "postgres" => BackendType::Postgres,
       _ => {
         eprintln!(
-          "Invalid ASYNQ_BACKEND_TYPE: {}. Use 'redis' or 'postgresql'",
+          "Invalid ASYNQ_BACKEND_TYPE: {}. Use 'redis' or 'postgres'",
           backend_type
         );
         return Err(anyhow::anyhow!("Invalid backend type"));

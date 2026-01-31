@@ -2,9 +2,8 @@
 
 [English](README.md) | [中文](README.zh-CN.md)
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![License](https://img.shields.io/badge/license-GPL-blue.svg)
 ![Rust](https://img.shields.io/badge/rust-1.70+-orange.svg)
-![Go Compatible](https://img.shields.io/badge/go%20compatible-hibiken%2Fasynq-green.svg)
 
 Asynq is a simple, reliable, and efficient distributed task queue library written in Rust, backed by Redis, inspired by [hibiken/asynq](https://github.com/hibiken/asynq).
 
@@ -12,7 +11,7 @@ Asynq is a simple, reliable, and efficient distributed task queue library writte
 
 ## 🌟 Features
 
-- ✅ **Guaranteed at-least-once execution** - Tasks won't be lost
+- **Guaranteed at-least-once execution** - Tasks won't be lost
 - ⏰ **Task scheduling** - Support for delayed and scheduled tasks
 - 🔄 **Automatic retry** - Configurable retry policies for failed tasks
 - 🛡️ **Fault recovery** - Automatic task recovery on worker crashes
@@ -369,22 +368,22 @@ asynq/
 
 The Processor module implements task processing architecture compatible with Go asynq processor.go:
 
-- ✅ **Semaphore concurrency control**: Uses Tokio Semaphore for precise control of concurrent workers
-- ✅ **Queue priority**: Supports both strict priority and weighted priority modes
-- ✅ **Task timeout**: Supports task-level and global timeout settings
-- ✅ **Graceful shutdown**: Waits for all active workers to complete before shutdown
-- ✅ **Automatic retry**: Failed tasks automatically retry with exponential backoff
-- ✅ **Task archiving**: Tasks automatically archived after reaching max retry count
+- **Semaphore concurrency control**: Uses Tokio Semaphore for precise control of concurrent workers
+- **Queue priority**: Supports both strict priority and weighted priority modes
+- **Task timeout**: Supports task-level and global timeout settings
+- **Graceful shutdown**: Waits for all active workers to complete before shutdown
+- **Automatic retry**: Failed tasks automatically retry with exponential backoff
+- **Task archiving**: Tasks automatically archived after reaching max retry count
 
 ### GroupAggregator Features
 
 The GroupAggregator module implements task aggregation functionality compatible with Go asynq aggregator.go:
 
-- ✅ **Task grouping**: Set group label for tasks using `with_group()`
-- ✅ **Batch aggregation**: Automatically aggregate tasks from the same group into a single batch task
-- ✅ **Flexible triggers**: Supports three trigger conditions: grace period, max group size, max delay
-- ✅ **Custom aggregation**: Customize aggregation logic via `GroupAggregator` trait
-- ✅ **Functional interface**: Quickly create aggregators using `GroupAggregatorFunc`
+- **Task grouping**: Set group label for tasks using `with_group()`
+- **Batch aggregation**: Automatically aggregate tasks from the same group into a single batch task
+- **Flexible triggers**: Supports three trigger conditions: grace period, max group size, max delay
+- **Custom aggregation**: Customize aggregation logic via `GroupAggregator` trait
+- **Functional interface**: Quickly create aggregators using `GroupAggregatorFunc`
 
 Example usage:
 
@@ -404,8 +403,6 @@ let aggregator = GroupAggregatorFunc::new(|group, tasks| {
 // Set on server
 server.set_group_aggregator(aggregator);
 ```
-
-See [GROUP_AGGREGATOR.md](docs/GROUP_AGGREGATOR.md) for more details.
 
 ## 🛠️ Configuration Options
 

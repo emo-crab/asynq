@@ -9,7 +9,7 @@
 //!
 //! - **Memory** (default): In-process storage, no external dependencies
 //! - **Redis** (requires `redis` feature): Persistent storage with Redis
-//! - **PostgresSQL** (requires `postgresql` feature): Persistent storage with PostgresSQL
+//! - **PostgresSQL** (requires `postgres` feature): Persistent storage with PostgresSQL
 //!
 //! **Note:** WebSocket backend is NOT supported to avoid circular dependency.
 //!
@@ -48,7 +48,7 @@
 //! }
 //! ```
 //!
-//! ### Starting the server with PostgresSQL backend (requires `postgresql` feature)
+//! ### Starting the server with PostgresSQL backend (requires `postgres` feature)
 //!
 //! ```rust,ignore
 //! use asynq_server::AsynqServer;

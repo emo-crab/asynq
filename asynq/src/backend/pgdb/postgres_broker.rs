@@ -263,7 +263,7 @@ impl PostgresBroker {
 
   /// 批量写入 scheduler entries，兼容 Go 版 asynq
   /// Batch write scheduler entries, compatible with Go version asynq
-  #[cfg(feature = "postgresql")]
+  #[cfg(feature = "postgres")]
   pub async fn write_scheduler_entries(
     &self,
     entries: &[SchedulerEntry],
@@ -320,7 +320,7 @@ impl PostgresBroker {
 
   /// 记录调度事件，兼容 Go 版 asynq
   /// Record scheduling event, compatible with Go version asynq
-  #[cfg(feature = "postgresql")]
+  #[cfg(feature = "postgres")]
   pub async fn record_scheduler_enqueue_event(
     &self,
     event: &SchedulerEnqueueEvent,
@@ -392,7 +392,7 @@ impl PostgresBroker {
 
   /// 获取所有 SchedulerEntry，兼容 Go 版 asynq
   /// Get all SchedulerEntry, compatible with Go version asynq
-  #[cfg(feature = "postgresql")]
+  #[cfg(feature = "postgres")]
   pub async fn scheduler_entries_script(
     &self,
     scheduler_id: &str,
@@ -454,7 +454,7 @@ impl PostgresBroker {
 
   /// 获取调度事件列表，兼容 Go 版 asynq
   /// Get scheduling event list, compatible with Go version asynq
-  #[cfg(feature = "postgresql")]
+  #[cfg(feature = "postgres")]
   pub async fn scheduler_events_script(&self, count: usize) -> Result<Vec<Vec<u8>>> {
     use crate::backend::pgdb::entity::scheduler_events;
     use sea_orm::{PaginatorTrait, QueryOrder};
@@ -474,7 +474,7 @@ impl PostgresBroker {
 
   /// 删除 scheduler entries 数据，兼容 Go 版 asynq
   /// Delete scheduler entries data, compatible with Go version asynq
-  #[cfg(feature = "postgresql")]
+  #[cfg(feature = "postgres")]
   pub async fn clear_scheduler_entries(&self, scheduler_id: &str) -> Result<()> {
     use crate::backend::pgdb::entity::scheduler_entries;
 

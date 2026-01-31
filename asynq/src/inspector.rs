@@ -145,9 +145,9 @@ pub trait InspectorTrait: Send + Sync {
 // 从 backend 模块重新导出 RedisInspector（始终可用作为默认后端）
 pub use crate::backend::RedisInspector;
 
-// Re-export PostgresInspector when postgresql feature is enabled
-// 当启用 postgresql 特性时重新导出 PostgresInspector
-#[cfg(feature = "postgresql")]
+// Re-export PostgresInspector when postgres feature is enabled
+// 当启用 postgres 特性时重新导出 PostgresInspector
+#[cfg(feature = "postgres")]
 pub use crate::backend::PostgresInspector;
 
 // Re-export WebSocketInspector when websocket feature is enabled
@@ -164,6 +164,6 @@ pub use crate::backend::WebSocketInspector;
 /// 如需使用其他后端，请直接使用具体类型：
 /// To use other backends, use the specific types directly:
 ///
-/// - PostgreSQL: `PostgresInspector` (需要 `postgresql` feature)
+/// - PostgreSQL: `PostgresInspector` (需要 `postgres` feature)
 /// - WebSocket: `WebSocketInspector` (需要 `websocket` feature)
 pub use crate::backend::Inspector;

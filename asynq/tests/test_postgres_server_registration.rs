@@ -8,7 +8,7 @@
 // Default database URL for tests
 const TEST_DATABASE_URL: &str = "postgres://postgres:postgres@localhost:5432/asynq_test";
 
-#[cfg(feature = "postgresql")]
+#[cfg(feature = "postgres")]
 #[tokio::test]
 async fn test_postgres_server_registration() -> Result<(), Box<dyn std::error::Error>> {
   use std::collections::HashMap;
@@ -108,7 +108,7 @@ async fn test_postgres_server_registration() -> Result<(), Box<dyn std::error::E
   Ok(())
 }
 
-#[cfg(feature = "postgresql")]
+#[cfg(feature = "postgres")]
 #[tokio::test]
 async fn test_postgres_worker_registration() -> Result<(), Box<dyn std::error::Error>> {
   use std::sync::Arc;

@@ -86,7 +86,7 @@ pub struct MultiTenantAuth {
   failed_attempts: Arc<RwLock<HashMap<String, FailedAttempt>>>,
   /// Backend type to use for authentication
   backend_type: BackendType,
-  /// Backend connection template (e.g., "redis://{host}:6379" or "postgresql://{host}/db")
+  /// Backend connection template (e.g., "redis://{host}:6379" or "postgres://{host}/db")
   backend_template: String,
   /// Maximum failed attempts before rate limiting kicks in
   max_failed_attempts: u32,
@@ -112,7 +112,7 @@ impl MultiTenantAuth {
   /// * `backend_type` - The type of backend to use (Redis or PostgresSQL)
   /// * `backend_template` - Connection string template where credentials will be substituted
   ///   - For Redis: "redis://{username}:{password}@{host}:6379"
-  ///   - For PostgresSQL: "postgresql://{username}:{password}@{host}/database"
+  ///   - For PostgresSQL: "postgres://{username}:{password}@{host}/database"
   pub fn new(backend_type: BackendType, backend_template: String) -> Self {
     Self {
       tenants: Arc::new(RwLock::new(HashMap::new())),
@@ -256,7 +256,7 @@ impl MultiTenantAuth {
   async fn try_backend_connection(&self, connection_string: &str) -> Result<(), AuthError> {
     match self.backend_type {
       BackendType::Redis => self.try_redis_connection(connection_string).await,
-      BackendType::Postgres => self.try_postgresql_connection(connection_string).await,
+      BackendType::Postgres => self.try_postgres_connection(connection_string).await,
     }
   }
 
@@ -274,8 +274,8 @@ impl MultiTenantAuth {
   }
 
   /// Try to connect to PostgresSQL
-  #[cfg(feature = "postgresql")]
-  async fn try_postgresql_connection(&self, connection_string: &str) -> Result<(), AuthError> {
+  #[cfg(feature = "postgres")]
+  async fn try_postgres_connection(&self, connection_string: &str) -> Result<(), AuthError> {
     use asynq::backend::PostgresBroker;
 
     match PostgresBroker::new(connection_string).await {
@@ -284,8 +284,8 @@ impl MultiTenantAuth {
     }
   }
 
-  #[cfg(not(feature = "postgresql"))]
-  async fn try_postgresql_connection(&self, _connection_string: &str) -> Result<(), AuthError> {
+  #[cfg(not(feature = "postgres"))]
+  async fn try_postgres_connection(&self, _connection_string: &str) -> Result<(), AuthError> {
     Err(AuthError::BackendNotAvailable)
   }
 

@@ -51,8 +51,8 @@
 //!
 //! - Redis: 始终可用作为默认后端
 //! - Redis: Always available as the default backend
-//! - PostgreSQL: 需要启用 `postgresql` feature
-//! - PostgreSQL: Requires `postgresql` feature to be enabled
+//! - PostgreSQL: 需要启用 `postgres` feature
+//! - PostgreSQL: Requires `postgres` feature to be enabled
 //! - WebSocket: 需要启用 `websocket` feature
 //! - WebSocket: Requires `websocket` feature to be enabled
 //!
@@ -91,11 +91,11 @@
 //! }
 //! ```
 //!
-//! ### 使用 PostgresSQL 后端 (需要 `postgresql` feature)
-//! ### Using PostgresSQL Backend (requires `postgresql` feature)
+//! ### 使用 PostgresSQL 后端 (需要 `postgres` feature)
+//! ### Using PostgresSQL Backend (requires `postgres` feature)
 //!
 //! ```rust,no_run
-//! # #[cfg(feature = "postgresql")]
+//! # #[cfg(feature = "postgres")]
 //! # {
 //! use asynq::{client::Client,task::Task};
 //!

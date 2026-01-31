@@ -60,7 +60,7 @@ default = []
 cluster = ["asynq/cluster"]
 sentinel = ["asynq/sentinel"]
 # Enable PostgresSQL backend support (in addition to Redis)
-postgresql = ["asynq/postgresql"]
+postgres = ["asynq/postgres"]
 
 [dev-dependencies]
 tokio-test = "0.4"

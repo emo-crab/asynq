@@ -6,7 +6,7 @@ use crate::config::{MultiTenantAuth, TenantConfig};
 use crate::error::{Error, Result};
 use crate::handler::MessageHandler;
 use crate::message::{ClientMessage, ServerMessage};
-#[cfg(feature = "postgresql")]
+#[cfg(feature = "postgres")]
 use asynq::backend::PostgresBroker;
 use asynq::backend::RedisBroker;
 use asynq::backend::RedisConnectionType;
@@ -72,7 +72,7 @@ pub struct AppState {
 /// task queue communication. Supports multiple backends:
 /// - Memory (default, no external dependencies)
 /// - Redis (requires `redis` feature)
-/// - PostgresSQL (requires `postgresql` feature)
+/// - PostgresSQL (requires `postgres` feature)
 ///
 /// Supports three authentication modes:
 /// - No authentication (default)
@@ -139,7 +139,7 @@ impl AsynqServer {
   }
 
   /// Create a new AsynqServer with PostgresSQL backend
-  #[cfg(feature = "postgresql")]
+  #[cfg(feature = "postgres")]
   pub async fn with_postgres<A: Into<SocketAddr>>(addr: A, database_url: &str) -> Result<Self> {
     let broker = Arc::new(
       PostgresBroker::new(database_url)

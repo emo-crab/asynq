@@ -75,7 +75,7 @@ macros = ["asynq-macros"]
 cluster = ["redis/cluster-async"]
 sentinel = ["redis/sentinel"]
 tls = ["rustls", "redis/tls-rustls", "redis/tokio-rustls-comp", "redis/tls-rustls-webpki-roots", "redis/tls-rustls-insecure"]
-postgresql = ["sea-orm", "serde_json"]
+postgres = ["sea-orm", "serde_json"]
 websocket = ["tokio-tungstenite", "base64", "serde_json"]
 acl = []
 
@@ -128,17 +128,17 @@ required-features = ["macros"]
 [[example]]
 name = "postgres_producer"
 path = "examples/postgres_producer.rs"
-required-features = ["postgresql", "json"]
+required-features = ["postgres", "json"]
 
 [[example]]
 name = "postgres_consumer"
 path = "examples/postgres_consumer.rs"
-required-features = ["postgresql", "json"]
+required-features = ["postgres", "json"]
 
 [[example]]
 name = "postgres_scheduler_example"
 path = "examples/postgres_scheduler_example.rs"
-required-features = ["postgresql", "json"]
+required-features = ["postgres", "json"]
 
 [[example]]
 name = "websocket_producer"

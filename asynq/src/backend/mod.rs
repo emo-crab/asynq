@@ -16,7 +16,7 @@
 //! 如需使用其他后端，请直接使用具体类型：
 //! To use other backends, use the specific types directly:
 //!
-//! - PostgreSQL: `PostgresBroker`, `PostgresInspector` (需要 `postgresql` feature)
+//! - PostgreSQL: `PostgresBroker`, `PostgresInspector` (需要 `postgres` feature)
 //! - WebSocket: `WebSocketBroker`, `WebSocketInspector` (需要 `websocket` feature)
 //!
 //! ## 使用示例
@@ -29,9 +29,9 @@
 //! // Default uses Redis backend
 //! ```
 
-// PostgreSQL 后端 - 需要 postgresql feature
-// PostgreSQL backend - requires postgresql feature
-#[cfg(feature = "postgresql")]
+// PostgreSQL 后端 - 需要 postgres feature
+// PostgreSQL backend - requires postgres feature
+#[cfg(feature = "postgres")]
 pub mod pgdb;
 
 // WebSocket 后端 - 需要 websocket feature
@@ -49,11 +49,11 @@ mod rdb;
 // 重新导出 rdb 的公共类型（Redis 始终可用作为默认后端）
 pub use rdb::{RedisBroker, RedisConnectionType, RedisInspector};
 
-// Re-export types from pgdb when postgresql feature is enabled
-// 当启用 postgresql 特性时重新导出 pgdb 的类型
-#[cfg(feature = "postgresql")]
+// Re-export types from pgdb when postgres feature is enabled
+// 当启用 postgres 特性时重新导出 pgdb 的类型
+#[cfg(feature = "postgres")]
 pub use pgdb::PostgresBroker;
-#[cfg(feature = "postgresql")]
+#[cfg(feature = "postgres")]
 pub use pgdb::PostgresInspector;
 
 // Re-export types from wsdb when websocket feature is enabled
@@ -77,7 +77,7 @@ pub use wsdb::WebSocketInspector;
 /// 如需使用其他后端，请直接使用具体类型：
 /// To use other backends, use the specific types directly:
 ///
-/// - PostgreSQL: `PostgresBroker` (需要 `postgresql` feature)
+/// - PostgreSQL: `PostgresBroker` (需要 `postgres` feature)
 /// - WebSocket: `WebSocketBroker` (需要 `websocket` feature)
 pub type Broker = RedisBroker;
 
@@ -90,6 +90,6 @@ pub type Broker = RedisBroker;
 /// 如需使用其他后端，请直接使用具体类型：
 /// To use other backends, use the specific types directly:
 ///
-/// - PostgreSQL: `PostgresInspector` (需要 `postgresql` feature)
+/// - PostgreSQL: `PostgresInspector` (需要 `postgres` feature)
 /// - WebSocket: `WebSocketInspector` (需要 `websocket` feature)
 pub type Inspector = RedisInspector;

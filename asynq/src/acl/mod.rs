@@ -9,12 +9,12 @@
 
 mod redis_acl;
 
-#[cfg(feature = "postgresql")]
+#[cfg(feature = "postgres")]
 mod postgres_acl;
 
 pub use redis_acl::RedisAclManager;
 
-#[cfg(feature = "postgresql")]
+#[cfg(feature = "postgres")]
 pub use postgres_acl::PostgresAclManager;
 
 use crate::error::Result;
