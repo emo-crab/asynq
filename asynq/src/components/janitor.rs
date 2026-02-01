@@ -70,6 +70,7 @@ impl Janitor {
   /// 对应 Go 的 janitor.start()
   /// Corresponds to Go's janitor.start()
   pub fn start(self: Arc<Self>) -> JoinHandle<()> {
+    tracing::info!("starting janitor");
     tokio::spawn(async move {
       let mut interval = tokio::time::interval(self.config.interval);
       loop {

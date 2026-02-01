@@ -69,12 +69,9 @@ pub struct ServerConfig {
 
 impl Default for ServerConfig {
   fn default() -> Self {
-    let mut queues = HashMap::new();
-    queues.insert(DEFAULT_QUEUE_NAME.to_string(), 1);
-
     Self {
       concurrency: num_cpus::get(),
-      queues,
+      queues: HashMap::new(),
       strict_priority: false,
       task_check_interval: Duration::from_secs(1),
       delayed_task_check_interval: Duration::from_secs(5),
@@ -246,8 +243,8 @@ impl ServerConfig {
   /// 获取带 ACL 前缀的队列名称
   /// Get queue name with ACL prefix
   ///
-  /// 如果配置了租户，返回 `{tenant}:{queue}`，否则返回原始队列名
-  /// If tenant is configured, returns `{tenant}:{queue}`, otherwise returns original queue name
+  /// 如果配置了租户，返回 `{tenant:queue}`，否则返回原始队列名
+  /// If tenant is configured, returns `{tenant:queue}`, otherwise returns original queue name
   /// 注意：默认队列（DEFAULT_QUEUE_NAME）不添加前缀，这是所有租户共享的公共队列
   /// Note: Default queue (DEFAULT_QUEUE_NAME) is not prefixed, it's a shared public queue for all tenants
   pub fn get_queue_name_with_prefix(&self, queue: &str) -> String {

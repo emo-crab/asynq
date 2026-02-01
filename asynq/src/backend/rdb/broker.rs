@@ -5,7 +5,7 @@ use crate::base::keys;
 use crate::base::keys::TaskState;
 use crate::base::Broker;
 use crate::error::{Error, Result};
-use crate::proto::{ServerInfo, TaskMessage};
+use crate::proto::{ServerInfo, TaskMessage, WorkerInfo};
 use crate::task::{generate_task_id, Task, TaskInfo};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -811,14 +811,23 @@ impl Broker for RedisBroker {
   }
 
   /// 写入服务器状态 - Go: WriteServerState
-  async fn write_server_state(&self, server_info: &ServerInfo, ttl: Duration) -> Result<()> {
+  async fn write_server_state(
+    &self,
+    server_info: &ServerInfo,
+    workers: Vec<WorkerInfo>,
+    ttl: Duration,
+    tenant: Option<&str>,
+  ) -> Result<()> {
     let mut conn = self.get_async_connection().await?;
 
     // 使用 ServerInfo 中的信息构建键
     // Build keys using information from ServerInfo
-    let server_key =
-      keys::server_info_key(&server_info.host, server_info.pid, &server_info.server_id);
-    let workers_key = keys::workers_key(&server_info.host, server_info.pid, &server_info.server_id);
+    let (server_key, workers_key) = keys::server_and_workers_keys(
+      tenant,
+      &server_info.host,
+      server_info.pid,
+      &server_info.server_id,
+    );
 
     // 计算过期时间戳
     // Calculate expiration timestamp
@@ -842,44 +851,44 @@ impl Broker for RedisBroker {
     // Use Lua script to atomically write server state
     let server_info_bytes = server_info.encode_to_vec();
     let keys = vec![server_key, workers_key];
-    let string_args = vec![ttl.as_secs().to_string()];
-    let binary_args = vec![server_info_bytes];
+    let mut args = vec![
+      RedisArg::Int(ttl.as_secs() as i64),
+      RedisArg::Bytes(server_info_bytes),
+    ];
 
     // ARGV[1] = TTL in seconds
     // ARGV[2] = server info (encoded protobuf as binary)
     // ARGV[3+] = worker info (暂时为空，需要支持 WorkerInfo)
     // ARGV[3+] = worker info (currently empty, needs to support WorkerInfo)
-
+    for worker in workers {
+      let worker_info = worker.encode_to_vec();
+      args.push(RedisArg::Str(worker.task_id));
+      args.push(RedisArg::Bytes(worker_info));
+    }
     let _: String = self
       .script_manager
-      .eval_script_with_binary_args(
-        &mut conn,
-        "write_server_state",
-        &keys,
-        &string_args,
-        &binary_args,
-      )
+      .eval_script(&mut conn, "write_server_state", &keys, &args)
       .await?;
 
     Ok(())
   }
 
   /// 清除服务器状态 - Go: ClearServerState
-  async fn clear_server_state(&self, host: &str, pid: i32, server_id: &str) -> Result<()> {
+  async fn clear_server_state(
+    &self,
+    host: &str,
+    pid: i32,
+    server_id: &str,
+    tenant: Option<&str>,
+  ) -> Result<()> {
     let mut conn = self.get_async_connection().await?;
 
     // 生成键
     // Generate keys
-    let server_key = keys::server_info_key(host, pid, server_id);
-    let workers_key = keys::workers_key(host, pid, server_id);
-
-    // 构造完整的 server_id (hostname:pid:uuid 格式)
-    // Construct full server_id (hostname:pid:uuid format)
-    let full_server_id = format!("{host}:{pid}:{server_id}");
-
+    let (server_key, workers_key) = keys::server_and_workers_keys(tenant, host, pid, server_id);
     // 1. 从 AllServers ZSET 中删除服务器 (服务器跟踪)
     // Remove the server from AllServers ZSET (server tracking)
-    let _: () = conn.zrem(keys::ALL_SERVERS, &full_server_id).await?;
+    let _: () = conn.zrem(keys::ALL_SERVERS, &server_key).await?;
 
     // 2. 从 AllWorkers ZSET 中删除工作者键 (如果存在)
     // Remove the worker key from AllWorkers ZSET (if exists)
@@ -888,18 +897,9 @@ impl Broker for RedisBroker {
     // 3. 使用 Lua 脚本原子性地清除服务器状态
     // Use Lua script to atomically clear server state
     let keys = vec![server_key, workers_key];
-    let string_args: Vec<String> = vec![];
-    let binary_args: Vec<Vec<u8>> = vec![];
-
     let _: String = self
       .script_manager
-      .eval_script_with_binary_args(
-        &mut conn,
-        "clear_server_state",
-        &keys,
-        &string_args,
-        &binary_args,
-      )
+      .eval_script(&mut conn, "clear_server_state", &keys, &[])
       .await?;
 
     Ok(())

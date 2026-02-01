@@ -19,11 +19,7 @@ pub const SCHEDULER_EVENTS: &str = "asynq:scheduler:events";
 // 为了向后兼容，保留旧常量
 // For backward compatibility, keep old constants
 pub const QUEUE_PREFIX: &str = "asynq:";
-pub const ACTIVE_PREFIX: &str = "asynq:active:";
 pub const SCHEDULED_PREFIX: &str = "asynq:scheduled:";
-pub const RETRY_PREFIX: &str = "asynq:retry:";
-pub const ARCHIVED_PREFIX: &str = "asynq:archived:";
-pub const COMPLETED_PREFIX: &str = "asynq:completed:";
 pub const AGGREGATING_PREFIX: &str = "asynq:aggregating:";
 pub const SERVERS_PREFIX: &str = "asynq:servers:";
 pub const WORKERS_PREFIX: &str = "asynq:workers:";
@@ -239,10 +235,60 @@ pub fn server_info_key(hostname: &str, pid: i32, server_id: &str) -> String {
   format!("{SERVERS_PREFIX}{{{hostname}:{pid}:{server_id}}}")
 }
 
+/// 生成带租户隔离的服务器信息键
+/// Generate server info key with tenant isolation
+///
+/// 返回格式: `asynq:servers:{tenant:hostname:pid:server_id}`
+/// Returns format: `asynq:servers:{tenant:hostname:pid:server_id}`
+pub fn server_info_key_with_tenant(
+  tenant: &str,
+  hostname: &str,
+  pid: i32,
+  server_id: &str,
+) -> String {
+  format!("{SERVERS_PREFIX}{{{tenant}:{hostname}:{pid}:{server_id}}}")
+}
+
 /// 生成工作者键 - 对应 Go 的 WorkersKey
 /// Generate workers key - Corresponds to Go's WorkersKey
 pub fn workers_key(hostname: &str, pid: i32, server_id: &str) -> String {
   format!("{WORKERS_PREFIX}{{{hostname}:{pid}:{server_id}}}")
+}
+
+/// 生成带租户隔离的工作者键
+/// Generate workers key with tenant isolation
+///
+/// 返回格式: `asynq:workers:{tenant:hostname:pid:server_id}`
+/// Returns format: `asynq:workers:{tenant:hostname:pid:server_id}`
+pub fn workers_key_with_tenant(tenant: &str, hostname: &str, pid: i32, server_id: &str) -> String {
+  format!("{WORKERS_PREFIX}{{{tenant}:{hostname}:{pid}:{server_id}}}")
+}
+
+/// 生成服务器和工作者键对
+/// Generate server and workers key pair
+///
+/// 当提供租户时，返回带租户隔离的键格式
+/// When tenant is provided, returns tenant-isolated key format
+///
+/// 返回: (server_key, workers_key)
+/// Returns: (server_key, workers_key)
+pub fn server_and_workers_keys(
+  tenant: Option<&str>,
+  hostname: &str,
+  pid: i32,
+  server_id: &str,
+) -> (String, String) {
+  if let Some(t) = tenant {
+    (
+      server_info_key_with_tenant(t, hostname, pid, server_id),
+      workers_key_with_tenant(t, hostname, pid, server_id),
+    )
+  } else {
+    (
+      server_info_key(hostname, pid, server_id),
+      workers_key(hostname, pid, server_id),
+    )
+  }
 }
 
 /// 生成调度器条目键 - 对应 Go 的 SchedulerEntriesKey
@@ -301,10 +347,46 @@ pub fn server_info_key_full(hostname: &str, pid: i32, server_id: &str) -> String
   format!("{SERVERS_PREFIX}{{{hostname}:{pid}:{server_id}}}")
 }
 
+/// 完整的带租户隔离的服务器信息键生成函数
+/// Full server info key generation function with tenant isolation
+///
+/// 返回格式: `asynq:servers:{tenant:hostname:pid:server_id}`
+/// Returns format: `asynq:servers:{tenant:hostname:pid:server_id}`
+///
+/// 注意：这是 `server_info_key_with_tenant` 的别名，保留以便保持命名一致性
+/// Note: This is an alias for `server_info_key_with_tenant`, kept for naming consistency
+#[inline]
+pub fn server_info_key_full_with_tenant(
+  tenant: &str,
+  hostname: &str,
+  pid: i32,
+  server_id: &str,
+) -> String {
+  server_info_key_with_tenant(tenant, hostname, pid, server_id)
+}
+
 /// 完整的工作者键生成函数 - 对应 Go 的 WorkersKey
 /// Full workers key generation function - Corresponds to Go's WorkersKey
 pub fn workers_key_full(hostname: &str, pid: i32, server_id: &str) -> String {
   format!("{WORKERS_PREFIX}{{{hostname}:{pid}:{server_id}}}")
+}
+
+/// 完整的带租户隔离的工作者键生成函数
+/// Full workers key generation function with tenant isolation
+///
+/// 返回格式: `asynq:workers:{tenant:hostname:pid:server_id}`
+/// Returns format: `asynq:workers:{tenant:hostname:pid:server_id}`
+///
+/// 注意：这是 `workers_key_with_tenant` 的别名，保留以便保持命名一致性
+/// Note: This is an alias for `workers_key_with_tenant`, kept for naming consistency
+#[inline]
+pub fn workers_key_full_with_tenant(
+  tenant: &str,
+  hostname: &str,
+  pid: i32,
+  server_id: &str,
+) -> String {
+  workers_key_with_tenant(tenant, hostname, pid, server_id)
 }
 
 #[cfg(test)]
@@ -362,5 +444,71 @@ mod tests {
       keys::task_key("default", "task1"),
       "asynq:{default}:t:task1"
     );
+  }
+
+  #[test]
+  fn test_tenant_keys_generation() {
+    // 测试带租户隔离的服务器和工作者键
+    // Test server and worker keys with tenant isolation
+
+    // 测试服务器信息键（带租户）
+    // Test server info key with tenant
+    assert_eq!(
+      keys::server_info_key_with_tenant(
+        "tenant1",
+        "Arch",
+        6492,
+        "10b398de-d250-4bdf-b513-4b5f52247352"
+      ),
+      "asynq:servers:{tenant1:Arch:6492:10b398de-d250-4bdf-b513-4b5f52247352}"
+    );
+
+    // 测试工作者键（带租户）
+    // Test workers key with tenant
+    assert_eq!(
+      keys::workers_key_with_tenant(
+        "tenant1",
+        "Arch",
+        6492,
+        "10b398de-d250-4bdf-b513-4b5f52247352"
+      ),
+      "asynq:workers:{tenant1:Arch:6492:10b398de-d250-4bdf-b513-4b5f52247352}"
+    );
+
+    // 测试完整服务器信息键（带租户）
+    // Test full server info key with tenant
+    assert_eq!(
+      keys::server_info_key_full_with_tenant("tenant1", "localhost", 12345, "server1"),
+      "asynq:servers:{tenant1:localhost:12345:server1}"
+    );
+
+    // 测试完整工作者键（带租户）
+    // Test full workers key with tenant
+    assert_eq!(
+      keys::workers_key_full_with_tenant("tenant1", "localhost", 12345, "server1"),
+      "asynq:workers:{tenant1:localhost:12345:server1}"
+    );
+
+    // 测试不同租户的键隔离
+    // Test key isolation between different tenants
+    let tenant1_server_key = keys::server_info_key_with_tenant("tenant1", "host", 1234, "server1");
+    let tenant2_server_key = keys::server_info_key_with_tenant("tenant2", "host", 1234, "server1");
+    assert_ne!(tenant1_server_key, tenant2_server_key);
+    assert!(tenant1_server_key.contains("tenant1"));
+    assert!(tenant2_server_key.contains("tenant2"));
+
+    // 测试 server_and_workers_keys 辅助函数
+    // Test server_and_workers_keys helper function
+    let (server_key, workers_key) =
+      keys::server_and_workers_keys(Some("tenant1"), "host", 1234, "server1");
+    assert_eq!(server_key, "asynq:servers:{tenant1:host:1234:server1}");
+    assert_eq!(workers_key, "asynq:workers:{tenant1:host:1234:server1}");
+
+    // 测试无租户的 server_and_workers_keys
+    // Test server_and_workers_keys without tenant
+    let (server_key_no_tenant, workers_key_no_tenant) =
+      keys::server_and_workers_keys(None, "host", 1234, "server1");
+    assert_eq!(server_key_no_tenant, "asynq:servers:{host:1234:server1}");
+    assert_eq!(workers_key_no_tenant, "asynq:workers:{host:1234:server1}");
   }
 }

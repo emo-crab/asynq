@@ -1582,67 +1582,6 @@ impl ScriptManager {
   pub fn get_script_sha(&self, name: &str) -> Option<&String> {
     self.script_sha1.get(name)
   }
-
-  /// 执行脚本（支持二进制参数）
-  pub async fn eval_script_with_binary_args<T>(
-    &self,
-    conn: &mut RedisConnection,
-    script_name: &str,
-    keys: &[String],
-    string_args: &[String],
-    binary_args: &[Vec<u8>],
-  ) -> Result<T>
-  where
-    T: redis::FromRedisValue,
-  {
-    // 首先尝试使用 EVALSHA 如果脚本已加载
-    if let Some(sha) = self.get_script_sha(script_name) {
-      let mut cmd = redis::cmd("EVALSHA");
-      cmd.arg(sha).arg(keys.len()).arg(keys);
-
-      // 添加字符串参数
-      for arg in string_args {
-        cmd.arg(arg);
-      }
-
-      // 添加二进制参数
-      for arg in binary_args {
-        cmd.arg(arg);
-      }
-
-      match cmd.query_async::<T>(conn).await {
-        Ok(result) => return Ok(result),
-        Err(e) if e.to_string().contains("NOSCRIPT") => {
-          // 脚本被清理了，继续使用 EVAL
-        }
-        Err(e) => return Err(e.into()),
-      }
-    }
-
-    // 如果脚本未加载或 EVALSHA 失败，使用 EVAL
-    let script = match script_name {
-      "write_server_state" => scripts::WRITE_SERVER_STATE,
-      "clear_server_state" => scripts::CLEAR_SERVER_STATE,
-      _ => return Err(Error::other(format!("Script not loaded: {script_name}"))),
-    };
-
-    let mut cmd = redis::cmd("EVAL");
-    cmd.arg(script).arg(keys.len()).arg(keys);
-
-    // 添加字符串参数
-    for arg in string_args {
-      cmd.arg(arg);
-    }
-
-    // 添加二进制参数
-    for arg in binary_args {
-      cmd.arg(arg);
-    }
-
-    let result: T = cmd.query_async(conn).await?;
-    Ok(result)
-  }
-
   /// 执行脚本
   pub async fn eval_script<T>(
     &self,
