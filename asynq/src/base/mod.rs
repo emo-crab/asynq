@@ -5,7 +5,7 @@
 //! Defines the abstraction layer for interacting with Redis
 
 use crate::error::Result;
-use crate::proto::{ServerInfo, TaskMessage};
+use crate::proto::{ServerInfo, TaskMessage, WorkerInfo};
 use crate::task::{Task, TaskInfo};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
@@ -160,11 +160,29 @@ pub trait Broker: Send + Sync {
 
   /// 写入服务器状态 - Go: WriteServerState
   /// Write server state - Go: WriteServerState
-  async fn write_server_state(&self, server_info: &ServerInfo, ttl: Duration) -> Result<()>;
+  ///
+  /// 当提供 `tenant` 参数时，使用带租户隔离的 Redis 键格式
+  /// When `tenant` parameter is provided, uses tenant-isolated Redis key format
+  async fn write_server_state(
+    &self,
+    server_info: &ServerInfo,
+    workers: Vec<WorkerInfo>,
+    ttl: Duration,
+    tenant: Option<&str>,
+  ) -> Result<()>;
 
   /// 清除服务器状态 - Go: ClearServerState
   /// Clear server state - Go: ClearServerState
-  async fn clear_server_state(&self, host: &str, pid: i32, server_id: &str) -> Result<()>;
+  ///
+  /// 当提供 `tenant` 参数时，使用带租户隔离的 Redis 键格式
+  /// When `tenant` parameter is provided, uses tenant-isolated Redis key format
+  async fn clear_server_state(
+    &self,
+    host: &str,
+    pid: i32,
+    server_id: &str,
+    tenant: Option<&str>,
+  ) -> Result<()>;
 
   // Cancelation related methods
   // 取消相关方法

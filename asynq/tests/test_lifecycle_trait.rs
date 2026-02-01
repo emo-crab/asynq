@@ -14,7 +14,6 @@ use asynq::components::recoverer::{Recoverer, RecovererConfig};
 use asynq::components::subscriber::{Subscriber, SubscriberConfig};
 use asynq::components::ComponentLifecycle;
 use std::collections::HashMap;
-use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 
@@ -56,20 +55,23 @@ async fn test_lifecycle_trait_usage() {
     //   config_provider,
     // )),
     // Heartbeat
-    Arc::new(Heartbeat::new(
-      broker.clone(),
-      Duration::from_secs(5),
-      HeartbeatMeta {
-        host: "localhost".to_string(),
-        pid: 1234,
-        server_uuid: "test-server".to_string(),
-        concurrency: 10,
-        queues: HashMap::from([("default".to_string(), 1)]),
-        strict_priority: false,
-        started: SystemTime::now(),
-      },
-      Arc::new(AtomicUsize::new(0)),
-    )),
+    {
+      let (heartbeat, _sender) = Heartbeat::new(
+        broker.clone(),
+        Duration::from_secs(5),
+        HeartbeatMeta {
+          host: "localhost".to_string(),
+          pid: 1234,
+          server_uuid: "test-server".to_string(),
+          concurrency: 10,
+          queues: HashMap::from([("default".to_string(), 1)]),
+          strict_priority: false,
+          started: SystemTime::now(),
+          acl_tenant: None,
+        },
+      );
+      Arc::new(heartbeat) as Arc<dyn ComponentLifecycle>
+    },
   ];
 
   // 启动所有组件

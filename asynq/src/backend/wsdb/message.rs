@@ -80,6 +80,26 @@ pub enum ClientMessage {
   /// Delete an aggregation set
   #[serde(rename = "delete_aggregation_set")]
   DeleteAggregationSet(DeleteAggregationSetRequest),
+
+  /// List tasks with expired leases
+  #[serde(rename = "list_lease_expired")]
+  ListLeaseExpired(ListLeaseExpiredRequest),
+
+  /// Extend lease for a task
+  #[serde(rename = "extend_lease")]
+  ExtendLease(ExtendLeaseRequest),
+
+  /// Write server state
+  #[serde(rename = "write_server_state")]
+  WriteServerState(WriteServerStateRequest),
+
+  /// Clear server state
+  #[serde(rename = "clear_server_state")]
+  ClearServerState(ClearServerStateRequest),
+
+  /// Write task result
+  #[serde(rename = "write_result")]
+  WriteResult(WriteResultRequest),
 }
 
 /// Response message from server to client
@@ -121,6 +141,10 @@ pub enum ServerMessage {
   /// Aggregation set (list of tasks) response
   #[serde(rename = "aggregation_set")]
   AggregationSet(Vec<TaskMessageResponse>),
+
+  /// Lease expired tasks response
+  #[serde(rename = "lease_expired_tasks")]
+  LeaseExpiredTasks(Vec<TaskMessageResponse>),
 }
 
 /// Request to enqueue a task
@@ -319,4 +343,90 @@ pub struct TaskMessageResponse {
   pub deadline: i64,
   /// Group key
   pub group_key: String,
+}
+
+/// Request to list tasks with expired leases
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ListLeaseExpiredRequest {
+  /// Cutoff timestamp (Unix timestamp)
+  pub cutoff: i64,
+  /// Queue names to check
+  pub queues: Vec<String>,
+}
+
+/// Request to extend lease for a task
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ExtendLeaseRequest {
+  /// Queue name
+  pub queue: String,
+  /// Task ID
+  pub task_id: String,
+  /// Lease duration in seconds
+  pub lease_duration_seconds: u64,
+}
+
+/// Request to write server state
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WriteServerStateRequest {
+  /// Server host
+  pub host: String,
+  /// Server process ID
+  pub pid: i32,
+  /// Server ID
+  pub server_id: String,
+  /// Concurrency level
+  pub concurrency: i32,
+  /// Queues configuration (queue name -> priority)
+  pub queues: HashMap<String, i32>,
+  /// Whether to use strict priority
+  pub strict_priority: bool,
+  /// Server status (active, stopped)
+  pub status: String,
+  /// Number of active workers
+  pub active_worker_count: i32,
+  /// TTL in seconds
+  pub ttl_seconds: u64,
+  /// Worker information
+  pub workers: Vec<WorkerInfoData>,
+}
+
+/// Worker info data for write_server_state
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkerInfoData {
+  /// Worker host
+  pub host: String,
+  /// Worker process ID
+  pub pid: i32,
+  /// Server ID
+  pub server_id: String,
+  /// Task ID being processed
+  pub task_id: String,
+  /// Task type being processed
+  pub task_type: String,
+  /// Task payload (base64 encoded)
+  pub task_payload: String,
+  /// Queue name
+  pub queue: String,
+}
+
+/// Request to clear server state
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClearServerStateRequest {
+  /// Server host
+  pub host: String,
+  /// Server process ID
+  pub pid: i32,
+  /// Server ID
+  pub server_id: String,
+}
+
+/// Request to write task result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WriteResultRequest {
+  /// Queue name
+  pub queue: String,
+  /// Task ID
+  pub task_id: String,
+  /// Result data (base64 encoded)
+  pub result: String,
 }

@@ -60,7 +60,7 @@ async fn test_postgres_server_registration() -> Result<(), Box<dyn std::error::E
   println!("📝 Writing server state to PostgresSQL...");
   // Test write_server_state (should register server)
   broker
-    .write_server_state(&server_info, Duration::from_secs(300))
+    .write_server_state(&server_info, vec![], Duration::from_secs(300), None)
     .await?;
 
   println!("✅ Server state written successfully");
@@ -91,7 +91,7 @@ async fn test_postgres_server_registration() -> Result<(), Box<dyn std::error::E
   // Test cleanup
   println!("🧹 Cleaning up server state...");
   broker
-    .clear_server_state(hostname, pid, &server_uuid)
+    .clear_server_state(hostname, pid, &server_uuid, None)
     .await?;
 
   // Verify server is removed

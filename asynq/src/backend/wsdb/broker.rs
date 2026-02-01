@@ -4,16 +4,18 @@
 
 use crate::backend::wsdb::message::{
   AddToGroupRequest, AddToGroupUniqueRequest, AggregationCheckRequest, ArchiveRequest,
-  ClientMessage, DeleteAggregationSetRequest, DequeueRequest, EnqueueUniqueRequest,
-  ListGroupsRequest, ReadAggregationSetRequest, RetryRequest, ScheduleRequest,
-  ScheduleUniqueRequest, ServerMessage,
+  ClearServerStateRequest, ClientMessage, DeleteAggregationSetRequest, DequeueRequest,
+  EnqueueUniqueRequest, ExtendLeaseRequest, ListGroupsRequest, ListLeaseExpiredRequest,
+  ReadAggregationSetRequest, RetryRequest, ScheduleRequest, ScheduleUniqueRequest, ServerMessage,
+  WorkerInfoData, WriteResultRequest, WriteServerStateRequest,
 };
 use crate::backend::wsdb::{ws_broker::CLOSE_FRAME_TIMEOUT_MS, WebSocketBroker};
 use crate::base::Broker;
 use crate::error::{Error, Result};
-use crate::proto::{ServerInfo, TaskMessage};
+use crate::proto::{ServerInfo, TaskMessage, WorkerInfo};
 use crate::task::{Task, TaskInfo};
 use async_trait::async_trait;
+use base64::prelude::*;
 use chrono::{DateTime, Utc};
 use std::time::Duration;
 
@@ -307,33 +309,113 @@ impl Broker for WebSocketBroker {
     Ok(0)
   }
 
-  /// List lease expired tasks - Not yet implemented
+  /// List lease expired tasks
   async fn list_lease_expired(
     &self,
-    _cutoff: DateTime<Utc>,
-    _queues: &[String],
+    cutoff: DateTime<Utc>,
+    queues: &[String],
   ) -> Result<Vec<TaskMessage>> {
-    Ok(Vec::new())
+    let req = ListLeaseExpiredRequest {
+      cutoff: cutoff.timestamp(),
+      queues: queues.to_vec(),
+    };
+    let resp = self
+      .send_and_receive(ClientMessage::ListLeaseExpired(req))
+      .await?;
+    match resp {
+      ServerMessage::LeaseExpiredTasks(tasks) => {
+        let mut result = Vec::new();
+        for task_resp in tasks {
+          result.push(self.response_to_task_message(&task_resp)?);
+        }
+        Ok(result)
+      }
+      ServerMessage::Error { message } => Err(Error::broker(message)),
+      _ => Err(Error::invalid_message("Unexpected response")),
+    }
   }
 
-  /// Extend lease - Server handles this
-  async fn extend_lease(
+  /// Extend lease for a task
+  async fn extend_lease(&self, queue: &str, task_id: &str, lease_duration: Duration) -> Result<()> {
+    let req = ExtendLeaseRequest {
+      queue: queue.to_string(),
+      task_id: task_id.to_string(),
+      lease_duration_seconds: lease_duration.as_secs(),
+    };
+    let resp = self
+      .send_and_receive(ClientMessage::ExtendLease(req))
+      .await?;
+    match resp {
+      ServerMessage::Success => Ok(()),
+      ServerMessage::Error { message } => Err(Error::broker(message)),
+      _ => Err(Error::invalid_message("Unexpected response")),
+    }
+  }
+
+  /// Write server state
+  async fn write_server_state(
     &self,
-    _queue: &str,
-    _task_id: &str,
-    _lease_duration: Duration,
+    server_info: &ServerInfo,
+    workers: Vec<WorkerInfo>,
+    ttl: Duration,
+    _tenant: Option<&str>,
   ) -> Result<()> {
-    Ok(())
+    let worker_data: Vec<WorkerInfoData> = workers
+      .into_iter()
+      .map(|w| WorkerInfoData {
+        host: w.host.clone(),
+        pid: w.pid,
+        server_id: w.server_id.clone(),
+        task_id: w.task_id.clone(),
+        task_type: w.task_type.clone(),
+        task_payload: BASE64_STANDARD.encode(&w.task_payload),
+        queue: w.queue.clone(),
+      })
+      .collect();
+
+    let req = WriteServerStateRequest {
+      host: server_info.host.clone(),
+      pid: server_info.pid,
+      server_id: server_info.server_id.clone(),
+      concurrency: server_info.concurrency,
+      queues: server_info.queues.clone(),
+      strict_priority: server_info.strict_priority,
+      status: server_info.status.clone(),
+      active_worker_count: server_info.active_worker_count,
+      ttl_seconds: ttl.as_secs(),
+      workers: worker_data,
+    };
+    let resp = self
+      .send_and_receive(ClientMessage::WriteServerState(req))
+      .await?;
+    match resp {
+      ServerMessage::Success => Ok(()),
+      ServerMessage::Error { message } => Err(Error::broker(message)),
+      _ => Err(Error::invalid_message("Unexpected response")),
+    }
   }
 
-  /// Write server state - Not applicable for WebSocket client
-  async fn write_server_state(&self, _server_info: &ServerInfo, _ttl: Duration) -> Result<()> {
-    Ok(())
-  }
-
-  /// Clear server state - Not applicable for WebSocket client
-  async fn clear_server_state(&self, _host: &str, _pid: i32, _server_id: &str) -> Result<()> {
-    Ok(())
+  /// Clear server state
+  async fn clear_server_state(
+    &self,
+    host: &str,
+    pid: i32,
+    server_id: &str,
+    _tenant: Option<&str>,
+  ) -> Result<()> {
+    let req = ClearServerStateRequest {
+      host: host.to_string(),
+      pid,
+      server_id: server_id.to_string(),
+    };
+    let resp = self
+      .send_and_receive(ClientMessage::ClearServerState(req))
+      .await?;
+    match resp {
+      ServerMessage::Success => Ok(()),
+      ServerMessage::Error { message } => Err(Error::broker(message)),
+      _ => Err(Error::invalid_message("Unexpected response")),
+    }
   }
 
   /// Subscribe to cancellation events
@@ -378,9 +460,21 @@ impl Broker for WebSocketBroker {
     }
   }
 
-  /// Write result - Not yet implemented
-  async fn write_result(&self, _queue: &str, _task_id: &str, _result: &[u8]) -> Result<()> {
-    Ok(())
+  /// Write task result
+  async fn write_result(&self, queue: &str, task_id: &str, result: &[u8]) -> Result<()> {
+    let req = WriteResultRequest {
+      queue: queue.to_string(),
+      task_id: task_id.to_string(),
+      result: BASE64_STANDARD.encode(result),
+    };
+    let resp = self
+      .send_and_receive(ClientMessage::WriteResult(req))
+      .await?;
+    match resp {
+      ServerMessage::Success => Ok(()),
+      ServerMessage::Error { message } => Err(Error::broker(message)),
+      _ => Err(Error::invalid_message("Unexpected response")),
+    }
   }
 }
 

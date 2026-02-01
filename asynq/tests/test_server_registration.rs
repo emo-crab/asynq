@@ -49,7 +49,7 @@ async fn test_server_registration() -> Result<(), Box<dyn std::error::Error>> {
 
   // Test write_server_state (should register server)
   broker
-    .write_server_state(&server_info, Duration::from_secs(300))
+    .write_server_state(&server_info, vec![], Duration::from_secs(300), None)
     .await?;
 
   // Test get_servers (should return our registered server)
@@ -87,7 +87,7 @@ async fn test_server_registration() -> Result<(), Box<dyn std::error::Error>> {
 
   // Test cleanup
   broker
-    .clear_server_state(hostname, pid, &server_uuid)
+    .clear_server_state(hostname, pid, &server_uuid, None)
     .await?;
 
   // Verify server is removed

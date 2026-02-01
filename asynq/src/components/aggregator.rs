@@ -166,6 +166,7 @@ impl Aggregator {
   /// 对应 Go 的 aggregator.start()
   /// Corresponds to Go's aggregator.start()
   pub fn start(self: Arc<Self>) -> JoinHandle<()> {
+    tracing::info!("starting aggregator");
     tokio::spawn(async move {
       let mut interval = tokio::time::interval(self.config.interval);
       loop {

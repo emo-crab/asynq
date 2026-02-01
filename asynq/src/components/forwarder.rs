@@ -69,6 +69,7 @@ impl Forwarder {
   /// 对应 Go 的 forwarder.start()
   /// Corresponds to Go's forwarder.start()
   pub fn start(self: Arc<Self>) -> JoinHandle<()> {
+    tracing::info!("starting forwarder");
     tokio::spawn(async move {
       let mut interval = tokio::time::interval(self.config.interval);
       loop {

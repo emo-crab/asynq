@@ -72,6 +72,7 @@ impl Recoverer {
   /// 对应 Go 的 recoverer.start()
   /// Corresponds to Go's recoverer.start()
   pub fn start(self: Arc<Self>) -> JoinHandle<()> {
+    tracing::info!("starting recoverer");
     tokio::spawn(async move {
       let mut interval = tokio::time::interval(self.config.interval);
       loop {

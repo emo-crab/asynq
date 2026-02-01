@@ -942,7 +942,13 @@ impl Broker for PostgresBroker {
 
   /// 写入服务器状态。
   /// Write server state.
-  async fn write_server_state(&self, server_info: &ServerInfo, ttl: Duration) -> Result<()> {
+  async fn write_server_state(
+    &self,
+    server_info: &ServerInfo,
+    _worker: Vec<WorkerInfo>,
+    ttl: Duration,
+    _tenant: Option<&str>,
+  ) -> Result<()> {
     let server_key = format!(
       "{}:{}:{}",
       server_info.host, server_info.pid, server_info.server_id
@@ -992,7 +998,13 @@ impl Broker for PostgresBroker {
 
   /// 清除服务器状态。
   /// Clear server state.
-  async fn clear_server_state(&self, host: &str, pid: i32, server_id: &str) -> Result<()> {
+  async fn clear_server_state(
+    &self,
+    host: &str,
+    pid: i32,
+    server_id: &str,
+    _tenant: Option<&str>,
+  ) -> Result<()> {
     let server_key = format!("{host}:{pid}:{server_id}");
 
     // Clear all workers for this server

@@ -42,6 +42,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(exists) => {
           if exists {
             println!("   User '{}' already exists", node_config.username);
+            manager
+              .delete_tenant_user(&acl_config.node_config.username)
+              .await?;
+            match manager.create_tenant_user(&acl_config).await {
+              Ok(_) => println!("   ✅ Created user '{}'", node_config.username),
+              Err(e) => println!("   ❌ Failed to create user: {e}"),
+            }
           } else {
             println!("   User '{}' does not exist", node_config.username);
             // 创建租户用户（需要管理员权限）
@@ -78,15 +85,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Err(e) => {
       println!("   ⚠️  Could not connect to Redis: {e}");
       println!("   Make sure Redis is running at: {redis_url}");
-      println!("\n   Showing ACL command that would be generated:");
-
-      // 即使没有连接，也可以显示配置信息
-      // Even without connection, we can show configuration info
-      println!("   ACL SETUSER {} on +@all -@dangerous +keys +info|memory +info|clients -select +select|{} >*** {:?}",
-        acl_config.node_config.username,
-        acl_config.node_config.db,
-        acl_config.node_config.asynq_key_pattern()
-      );
     }
   }
   Ok(())

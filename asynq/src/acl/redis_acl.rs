@@ -73,37 +73,27 @@ impl RedisAclManager {
   /// 生成 ACL 规则列表
   /// Generate ACL rules list
   fn build_acl_rules(&self, config: &AclConfig) -> Vec<Rule> {
-    let mut rules = Vec::new();
-
-    // 基本权限: on, +@all, -@dangerous, +keys, +info|memory, +info|clients
-    // Basic permissions: on, +@all, -@dangerous, +keys, +info|memory, +info|clients
-    rules.push(Rule::On);
-    rules.push(Rule::AllCommands);
-    rules.push(Rule::RemoveCategory("dangerous".to_string()));
-    rules.push(Rule::AddCommand("keys".to_string()));
-    rules.push(Rule::RemoveCommand("info".to_string()));
-    // 数据库限制: -select, +select|<db>
-    // Database restrictions: -select, +select|<db>
-    rules.push(Rule::RemoveCommand("select".to_string()));
-    // 密码
-    // Password
-    rules.push(Rule::AddPass(config.node_config.password.clone()));
-
-    // 添加默认队列
-    // Add default queue pattern - uses hash tag {DEFAULT_QUEUE_NAME} for Redis cluster routing
-    rules.push(Rule::Pattern(format!("asynq:{{{}}}:*", DEFAULT_QUEUE_NAME)));
-
-    // 添加租户特定的键模式
-    // Add tenant-specific key patterns
-    // 从 "~asynq:{username:*" 格式提取模式部分（去掉前导的 ~）
-    rules.push(config.node_config.asynq_key_pattern());
-
-    // 添加默认的键模式
-    // Add default key patterns
-    for pattern in AclConfig::default_key_patterns() {
-      rules.push(pattern);
-    }
-
+    let mut rules = vec![
+      // Basic permissions: on, +@all, -@dangerous, +keys, -info
+      Rule::On,
+      Rule::ResetChannels,
+      Rule::AllCommands,
+      Rule::RemoveCategory("dangerous".to_string()),
+      Rule::RemoveCategory("admin".to_string()),
+      Rule::RemoveCommand("keys".to_string()),
+      Rule::RemoveCommand("info".to_string()),
+      // Database restrictions: -select
+      Rule::RemoveCommand("select".to_string()),
+      // Password
+      Rule::AddPass(config.node_config.password.clone()),
+      // Add default queue pattern - uses hashtag {DEFAULT_QUEUE_NAME} for Redis cluster routing
+      Rule::Pattern(format!("asynq:{{{}}}:*", DEFAULT_QUEUE_NAME)),
+      // Add tenant-specific key patterns
+      config.node_config.asynq_key_pattern(),
+    ];
+    rules.extend(AclConfig::default_key_patterns(
+      &config.node_config.username,
+    ));
     // 添加只写键
     // Add write-only keys
     for key in &config.write_only_keys {

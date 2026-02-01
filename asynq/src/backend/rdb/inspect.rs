@@ -990,7 +990,8 @@ impl RedisBroker {
 
     // 使用 clear_server_state 来正确地注销服务器
     // Use clear_server_state to correctly unregister the server
-    self.clear_server_state(hostname, pid, uuid).await
+    // Note: This is an administrative action, so no tenant isolation is applied
+    self.clear_server_state(hostname, pid, uuid, None).await
   }
 
   /// 心跳检测。

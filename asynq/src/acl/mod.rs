@@ -156,16 +156,29 @@ impl AclConfig {
 
   /// 获取默认的键模式列表
   /// Get default key pattern list
-  pub fn default_key_patterns() -> Vec<Rule> {
+  pub fn default_key_patterns(tenant: &str) -> Vec<Rule> {
     vec![
-      Rule::Pattern("asynq:queues".to_string()),
-      Rule::Pattern("asynq:servers:*".to_string()),
-      Rule::Pattern("asynq:servers".to_string()),
-      Rule::Pattern("asynq:workers".to_string()),
-      Rule::Pattern("asynq:workers:*".to_string()),
-      Rule::Pattern("asynq:schedulers".to_string()),
-      Rule::Pattern("asynq:schedulers:*".to_string()),
-      Rule::Other("&asynq:cancel".to_string()),
+      // Add default key patterns
+      Rule::Pattern(crate::base::keys::ALL_QUEUES.to_string()),
+      Rule::Pattern(format!(
+        "{}{{{}:*",
+        crate::base::keys::SERVERS_PREFIX,
+        tenant
+      )),
+      Rule::Pattern(crate::base::keys::ALL_SERVERS.to_string()),
+      Rule::Pattern(crate::base::keys::ALL_WORKERS.to_string()),
+      Rule::Pattern(format!(
+        "{}{{{}:*",
+        crate::base::keys::WORKERS_PREFIX,
+        tenant
+      )),
+      Rule::Pattern(crate::base::keys::ALL_SCHEDULERS.to_string()),
+      Rule::Pattern(format!(
+        "{}{{{}:*",
+        crate::base::keys::SCHEDULED_PREFIX,
+        tenant
+      )),
+      Rule::Channel(crate::base::keys::CANCEL_CHANNEL.to_string()),
     ]
   }
 }

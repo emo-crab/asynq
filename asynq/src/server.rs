@@ -7,7 +7,7 @@
 use crate::backend::RedisBroker;
 use crate::backend::RedisConnectionType;
 use crate::base::Broker;
-use crate::components::heartbeat::{Heartbeat, HeartbeatMeta};
+use crate::components::heartbeat::{Heartbeat, HeartbeatMeta, WorkerEventSender};
 use crate::components::processor::{Processor, ProcessorParams};
 use crate::components::subscriber::SubscriberConfig;
 use crate::components::ComponentLifecycle;
@@ -17,7 +17,6 @@ use crate::inspector::InspectorTrait;
 use crate::inspector::RedisInspector;
 use crate::task::Task;
 use async_trait::async_trait;
-use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::signal;
@@ -119,9 +118,9 @@ pub struct Server {
   host: String,
   pid: i32,
   server_uuid: String,
-  // 新增：活跃 worker 计数
-  // New: Active worker count
-  active_workers: Arc<AtomicUsize>,
+  // Worker 事件发送器（用于 Processor 发送给 Heartbeat，支持多生产者）
+  // Worker event sender (for Processor to send to Heartbeat, supports multi-producer)
+  worker_event_sender: Option<WorkerEventSender>,
   // 处理器
   // Processor
   processor: Option<Processor>,
@@ -186,7 +185,7 @@ impl Server {
       host,
       pid,
       server_uuid,
-      active_workers: Arc::new(AtomicUsize::new(0)),
+      worker_event_sender: None,
       processor: None,
       components: Vec::new(),
       group_aggregator: None,
@@ -256,6 +255,7 @@ impl Server {
 
     // 创建处理器并启动
     // Create and start processor
+    let worker_event_sender = self.worker_event_sender.take();
     let processor_params = ProcessorParams {
       broker: Arc::clone(&self.broker),
       inspector: Arc::clone(&self.inspector),
@@ -264,7 +264,7 @@ impl Server {
       strict_priority: self.config.strict_priority,
       task_check_interval: self.config.task_check_interval,
       shutdown_timeout: self.config.shutdown_timeout,
-      active_workers: Arc::clone(&self.active_workers),
+      worker_event_sender,
     };
 
     let mut processor = Processor::new(processor_params);
@@ -299,20 +299,6 @@ impl Server {
     // 等待服务器停止信号
     // Wait for server stop signal
     self.wait_for_signal().await;
-
-    // 停止处理器
-    // Stop processor
-    if let Some(processor) = self.processor.as_mut() {
-      processor.shutdown().await;
-    }
-
-    // 停止新组件
-    // Stop new components
-    for (component, handle) in self.components.drain(..) {
-      component.shutdown();
-      let _ = tokio::time::timeout(Duration::from_secs(5), handle).await;
-    }
-
     Ok(())
   }
 
@@ -349,25 +335,27 @@ impl Server {
       return Ok(());
     }
     self.state = ServerState::Closed;
-
-    // 停止处理器（如果还没停止）
-    // Stop processor (if not already stopped)
-    if let Some(processor) = self.processor.as_mut() {
-      processor.shutdown().await;
-    }
-
     // 停止新组件（如果还在运行）
     // Stop new components (if still running)
     for (component, handle) in self.components.drain(..) {
       component.shutdown();
       let _ = tokio::time::timeout(Duration::from_secs(5), handle).await;
     }
-
+    // 停止处理器（如果还没停止）
+    // Stop processor (if not already stopped)
+    if let Some(processor) = self.processor.as_mut() {
+      processor.shutdown().await;
+    }
     // 主动清理服务器状态
     // Actively clean up server state
     if let Err(e) = self
       .broker
-      .clear_server_state(&self.host, self.pid, &self.server_uuid)
+      .clear_server_state(
+        &self.host,
+        self.pid,
+        &self.server_uuid,
+        self.config.acl_tenant.as_deref(),
+      )
       .await
     {
       tracing::warn!(
@@ -413,7 +401,12 @@ impl Server {
 
     self
       .broker
-      .write_server_state(&server_info, Duration::from_secs(3600))
+      .write_server_state(
+        &server_info,
+        vec![],
+        Duration::from_secs(3600),
+        self.config.acl_tenant.as_deref(),
+      )
       .await
   }
 
@@ -428,13 +421,17 @@ impl Server {
       queues: self.config.get_queues_with_prefix(),
       strict_priority: self.config.strict_priority,
       started: std::time::SystemTime::now(),
+      acl_tenant: self.config.acl_tenant.clone(),
     };
-    let hb = Arc::new(Heartbeat::new(
+    let (heartbeat, worker_event_sender) = Heartbeat::new(
       Arc::clone(&self.broker),
       self.config.heartbeat_interval,
       meta,
-      Arc::clone(&self.active_workers),
-    ));
+    );
+    // 保存 worker 事件发送器供 Processor 使用（支持多生产者）
+    // Save worker event sender for Processor to use (supports multi-producer)
+    self.worker_event_sender = Some(worker_event_sender);
+    let hb = Arc::new(heartbeat);
     let hb_handle = hb.clone().start();
     self
       .components
@@ -613,10 +610,14 @@ impl Drop for Server {
     let host = self.host.clone();
     let pid = self.pid;
     let uuid = self.server_uuid.clone();
+    let tenant = self.config.acl_tenant.clone();
     let broker = Arc::clone(&self.broker);
     if let Ok(rt) = tokio::runtime::Handle::try_current() {
       rt.spawn(async move {
-        if let Err(e) = broker.clear_server_state(&host, pid, &uuid).await {
+        if let Err(e) = broker
+          .clear_server_state(&host, pid, &uuid, tenant.as_deref())
+          .await
+        {
           tracing::warn!(
             "(Drop) Failed to clear server state {}:{}:{}: {}",
             host,

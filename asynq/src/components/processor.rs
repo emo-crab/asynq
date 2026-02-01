@@ -117,7 +117,9 @@ pub struct ProcessorParams {
   pub strict_priority: bool,
   pub task_check_interval: Duration,
   pub shutdown_timeout: Duration,
-  pub active_workers: Arc<AtomicUsize>,
+  /// Worker 事件发送器（发送给 Heartbeat，支持多生产者）
+  /// Worker event sender (send to Heartbeat, supports multi-producer)
+  pub worker_event_sender: Option<crate::components::heartbeat::WorkerEventSender>,
 }
 
 /// 任务取消追踪结构
@@ -238,6 +240,10 @@ pub struct Processor {
   /// 对应 Go asynq 的 cancelations *base.Cancellations
   /// Corresponds to Go asynq's cancelations *base.Cancellations
   cancellations: CancellationMap,
+
+  // Worker 事件发送器（发送给 Heartbeat，支持多生产者）
+  // Worker event sender (send to Heartbeat, supports multi-producer)
+  worker_event_sender: Option<crate::components::heartbeat::WorkerEventSender>,
 }
 
 impl Processor {
@@ -267,8 +273,9 @@ impl Processor {
       quit_rx: Some(quit_rx),
       abort_tx: Some(abort_tx),
       handle: None,
-      active_workers: params.active_workers,
+      active_workers: Arc::new(AtomicUsize::new(0)),
       cancellations: CancellationMap::new(),
+      worker_event_sender: params.worker_event_sender,
     }
   }
 
@@ -298,6 +305,7 @@ impl Processor {
     let task_check_interval = self.task_check_interval;
     let active_workers = Arc::clone(&self.active_workers);
     let cancelations = self.cancellations.clone();
+    let worker_event_sender = self.worker_event_sender.clone();
     if let Some(mut quit_rx) = self.quit_rx.take() {
       let handle = tokio::spawn(async move {
         loop {
@@ -341,11 +349,32 @@ impl Processor {
               let inspector = Arc::clone(&inspector);
               let active_workers = Arc::clone(&active_workers);
               let cancelations = cancelations.clone();
+              let worker_event_sender = worker_event_sender.clone();
 
               // 在新的任务中处理
               // Process in a new task
               tokio::spawn(async move {
                 let _permit = permit; // 持有许可直到任务完成
+
+                let task_id = task_msg.id.clone();
+
+                // 发送 worker 开始事件到 Heartbeat（对应 Go 的 h.starting <- w）
+                // Send worker starting event to Heartbeat (corresponds to Go's h.starting <- w)
+                if let Some(ref sender) = worker_event_sender {
+                  let worker_info = crate::components::heartbeat::WorkerInfoEntry {
+                    msg: task_msg.clone(),
+                    started: std::time::SystemTime::now(),
+                    deadline: if task_msg.deadline > 0 {
+                      std::time::UNIX_EPOCH
+                        + std::time::Duration::from_secs(task_msg.deadline as u64)
+                    } else {
+                      std::time::SystemTime::now() + std::time::Duration::from_secs(3600)
+                    },
+                  };
+                  if let Err(e) = sender.send_started(worker_info).await {
+                    tracing::warn!("Failed to send worker starting event: {}", e);
+                  }
+                }
 
                 // 创建任务，包含头部信息
                 // Create task with headers to preserve workflow path and other metadata
@@ -357,6 +386,13 @@ impl Processor {
                   Ok(task) => task,
                   Err(e) => {
                     tracing::error!("Failed to create task: {}", e);
+                    // 发送 worker 完成事件（即使失败也需要发送）
+                    // Send worker finished event (needs to send even on failure)
+                    if let Some(ref sender) = worker_event_sender {
+                      if let Err(e) = sender.send_finished(task_id.clone()).await {
+                        tracing::warn!("Failed to send worker finished event: {}", e);
+                      }
+                    }
                     active_workers.fetch_sub(1, Ordering::Relaxed);
                     return;
                   }
@@ -376,7 +412,6 @@ impl Processor {
                 // 创建取消令牌
                 // Create cancellation token
                 let cancel_token = CancellationToken::new();
-                let task_id = task_msg.id.clone();
 
                 // 注册取消令牌
                 // Register cancellation token
@@ -459,6 +494,14 @@ impl Processor {
                         tracing::error!("Failed to archive task: {}", e);
                       }
                     }
+                  }
+                }
+
+                // 发送 worker 完成事件到 Heartbeat（对应 Go 的 h.finished <- msg）
+                // Send worker finished event to Heartbeat (corresponds to Go's h.finished <- msg)
+                if let Some(ref sender) = worker_event_sender {
+                  if let Err(e) = sender.send_finished(task_id.clone()).await {
+                    tracing::warn!("Failed to send worker finished event: {}", e);
                   }
                 }
 

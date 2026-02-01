@@ -79,6 +79,7 @@ impl Healthcheck {
   /// 对应 Go 的 healthcheck.start()
   /// Corresponds to Go's healthcheck.start()
   pub fn start(self: Arc<Self>) -> JoinHandle<()> {
+    tracing::info!("starting healthcheck");
     tokio::spawn(async move {
       let mut interval = tokio::time::interval(self.config.interval);
       loop {
