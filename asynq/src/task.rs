@@ -76,6 +76,14 @@ impl ResultWriter {
   }
 }
 
+#[derive(Clone)]
+pub enum TaskPayloadContentType {
+  Bytes,
+  Headers,
+  #[cfg(feature = "json")]
+  Json,
+}
+
 /// 表示要执行的工作单元的任务
 /// Represents a task as a unit of work to be executed
 ///
@@ -98,6 +106,8 @@ pub struct Task {
   /// 任务负载数据
   /// Task payload data
   pub payload: Vec<u8>,
+  /// Task payload content type
+  pub payload_content_type: TaskPayloadContentType,
   /// 任务头信息
   /// Task headers
   pub headers: HashMap<String, String>,
@@ -116,12 +126,22 @@ pub struct Task {
 }
 impl Debug for Task {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("Task")
+    let mut ds = f.debug_struct("Task");
+    let mut ds = ds
       .field("task_type", &self.task_type)
-      .field("payload", &self.payload)
       .field("headers", &self.headers)
-      .field("options", &self.options)
-      .finish()
+      .field("options", &self.options);
+    ds = match self.payload_content_type {
+      #[cfg(feature = "json")]
+      TaskPayloadContentType::Json => {
+        match serde_json::from_slice::<serde_json::Value>(&self.payload) {
+          Ok(value) => ds.field("payload", &value),
+          Err(_e) => ds.field("payload", &self.payload),
+        }
+      }
+      _ => ds.field("payload", &self.payload),
+    };
+    ds.finish()
   }
 }
 impl Task {
@@ -138,6 +158,7 @@ impl Task {
     Ok(Self {
       task_type: task_type.to_string(),
       payload: payload.to_vec(),
+      payload_content_type: TaskPayloadContentType::Bytes,
       headers: Default::default(),
       options: TaskOptions::default(),
       result_writer: None,
@@ -151,6 +172,7 @@ impl Task {
   ) -> Result<Self> {
     let mut task = Self::new(task_type, payload)?;
     task.headers = headers;
+    task.payload_content_type = TaskPayloadContentType::Headers;
     Ok(task)
   }
   #[cfg(feature = "json")]
@@ -158,7 +180,9 @@ impl Task {
   /// Create a new task with JSON payload
   pub fn new_with_json<T: AsRef<str>, P: Serialize>(task_type: T, payload: &P) -> Result<Self> {
     let json_payload = serde_json::to_vec(payload)?;
-    Self::new(task_type, &json_payload)
+    let mut task = Self::new(task_type, &json_payload)?;
+    task.payload_content_type = TaskPayloadContentType::Json;
+    Ok(task)
   }
 
   /// 设置任务选项
