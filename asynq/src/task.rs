@@ -79,7 +79,6 @@ impl ResultWriter {
 #[derive(Clone)]
 pub enum TaskPayloadContentType {
   Bytes,
-  Headers,
   #[cfg(feature = "json")]
   Json,
 }
@@ -172,7 +171,6 @@ impl Task {
   ) -> Result<Self> {
     let mut task = Self::new(task_type, payload)?;
     task.headers = headers;
-    task.payload_content_type = TaskPayloadContentType::Headers;
     Ok(task)
   }
   #[cfg(feature = "json")]
