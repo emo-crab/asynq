@@ -59,7 +59,7 @@ futures = "0.3"
 futures-util = "0.3"
 hostname = "0.4"
 num_cpus = "1.0"
-rand = "0.9"
+rand = "0.10"
 cron = "0.15.0"
 phf = { version = "0.13.1", features = ["macros"] }
 # PostgresSQL support (optional)
