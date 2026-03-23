@@ -6,7 +6,7 @@ use sea_orm::entity::prelude::*;
 /// 调度器条目实体模型
 /// Scheduler entries entity model
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "scheduler_entries")]
+#[sea_orm(table_name = "asynq_scheduler_entries")]
 pub struct Model {
   /// 条目 ID (scheduler_id:entry_id)
   /// Entry ID (scheduler_id:entry_id)

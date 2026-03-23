@@ -17,7 +17,7 @@ use sea_orm::entity::prelude::*;
 /// 所有使用 Stats 实体的代码都应该检查并应用租户过滤，否则可能导致数据泄漏。
 /// All code using Stats entity should check and apply tenant filtering, otherwise data leakage may occur.
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "stats")]
+#[sea_orm(table_name = "asynq_stats")]
 pub struct Model {
   #[sea_orm(primary_key, auto_increment = false)]
   pub queue: String,

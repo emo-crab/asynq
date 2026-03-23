@@ -17,7 +17,7 @@ pub enum ServerStatus {
 /// 服务器实体模型
 /// Server entity model
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "servers")]
+#[sea_orm(table_name = "asynq_servers")]
 pub struct Model {
   #[sea_orm(primary_key, auto_increment = false)]
   pub id: String,

@@ -19,7 +19,7 @@ pub enum WorkerStatus {
 /// 工作者实体模型
 /// Worker entity model
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "workers")]
+#[sea_orm(table_name = "asynq_workers")]
 pub struct Model {
   #[sea_orm(primary_key, auto_increment = false)]
   pub id: String,

@@ -6,7 +6,7 @@ use sea_orm::entity::prelude::*;
 /// 队列实体模型
 /// Queue entity model
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "queues")]
+#[sea_orm(table_name = "asynq_queues")]
 pub struct Model {
   #[sea_orm(primary_key, auto_increment = false)]
   pub name: String,

@@ -28,7 +28,7 @@ pub enum TaskState {
 /// 任务实体模型
 /// Task entity model
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "tasks")]
+#[sea_orm(table_name = "asynq_tasks")]
 pub struct Model {
   #[sea_orm(primary_key, auto_increment = false)]
   pub id: String,

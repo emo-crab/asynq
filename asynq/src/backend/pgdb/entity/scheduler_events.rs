@@ -6,7 +6,7 @@ use sea_orm::entity::prelude::*;
 /// 调度器事件实体模型
 /// Scheduler events entity model
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel)]
-#[sea_orm(table_name = "scheduler_events")]
+#[sea_orm(table_name = "asynq_scheduler_events")]
 pub struct Model {
   /// 主键 ID
   /// Primary key ID
