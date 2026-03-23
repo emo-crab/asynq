@@ -211,11 +211,15 @@ pub trait Broker: Send + Sync {
 pub trait SchedulerBroker: Send + Sync {
   /// 批量写入 scheduler entries
   /// Batch write scheduler entries
+  ///
+  /// 当提供 `tenant` 参数时，使用带租户隔离的存储
+  /// When `tenant` parameter is provided, uses tenant-isolated storage
   async fn write_scheduler_entries(
     &self,
     entries: &[crate::proto::SchedulerEntry],
     scheduler_id: &str,
     ttl_secs: u64,
+    tenant: Option<&str>,
   ) -> Result<()>;
 
   /// 记录调度事件
@@ -239,7 +243,10 @@ pub trait SchedulerBroker: Send + Sync {
 
   /// 删除 scheduler entries 数据
   /// Delete scheduler entries data
-  async fn clear_scheduler_entries(&self, scheduler_id: &str) -> Result<()>;
+  ///
+  /// 当提供 `tenant` 参数时，使用带租户隔离的存储
+  /// When `tenant` parameter is provided, uses tenant-isolated storage
+  async fn clear_scheduler_entries(&self, scheduler_id: &str, tenant: Option<&str>) -> Result<()>;
 }
 
 /// 服务器状态

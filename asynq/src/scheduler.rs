@@ -153,6 +153,9 @@ pub struct Scheduler {
   handles: SchedulerHandles,
   /// 心跳间隔
   heartbeat_interval: Duration,
+  /// ACL 租户名称（用于多租户隔离）
+  /// ACL tenant name (for multi-tenant isolation)
+  acl_tenant: Option<String>,
 }
 
 impl Scheduler {
@@ -161,20 +164,32 @@ impl Scheduler {
     client: Arc<Client>,
     heartbeat_interval: Option<Duration>,
   ) -> anyhow::Result<Self> {
-    let id = format!(
+    Self::new_with_tenant(client, heartbeat_interval, None).await
+  }
+
+  /// 初始化 Scheduler，带租户配置
+  /// Initialize Scheduler with tenant configuration
+  pub async fn new_with_tenant(
+    client: Arc<Client>,
+    heartbeat_interval: Option<Duration>,
+    acl_tenant: Option<String>,
+  ) -> anyhow::Result<Self> {
+    let base_id = format!(
       "{}:{}:{}",
       hostname::get().unwrap_or_default().to_string_lossy(),
       std::process::id(),
       Uuid::new_v4()
     );
+
     Ok(Self {
       client,
-      id,
+      id: base_id,
       tasks: Arc::new(RwLock::new(HashMap::new())),
       running: Arc::new(AtomicBool::new(false)),
       notify: Arc::new(Notify::new()),
       handles: Arc::new(tokio::sync::Mutex::new(None)),
       heartbeat_interval: heartbeat_interval.unwrap_or(Duration::from_secs(10)),
+      acl_tenant,
     })
   }
 
@@ -312,6 +327,7 @@ impl Scheduler {
     let client = self.client.clone();
     let scheduler_id = self.id.clone();
     let heartbeat_interval = self.heartbeat_interval;
+    let acl_tenant = self.acl_tenant.clone();
     tokio::spawn(async move {
       // Get unified SchedulerBroker interface
       let scheduler_broker = client.get_scheduler_broker();
@@ -346,8 +362,8 @@ impl Scheduler {
               }
             }
 
-            // Write using unified SchedulerBroker interface
-            let _ = scheduler_broker.write_scheduler_entries(&all_entries, &scheduler_id, (heartbeat_interval * 2).as_secs()).await;
+            // Write using unified SchedulerBroker interface, passing tenant for isolation
+            let _ = scheduler_broker.write_scheduler_entries(&all_entries, &scheduler_id, (heartbeat_interval * 2).as_secs(), acl_tenant.as_deref()).await;
           }
           _ = async {
             while running.load(Ordering::Relaxed) {
@@ -355,7 +371,7 @@ impl Scheduler {
             }
           } => {
             // 清理后端
-            let _ = scheduler_broker.clear_scheduler_entries(&scheduler_id).await;
+            let _ = scheduler_broker.clear_scheduler_entries(&scheduler_id, acl_tenant.as_deref()).await;
             break;
           }
         }
@@ -416,7 +432,9 @@ impl Scheduler {
 
     // 清理后端中的 entry
     let scheduler_broker = self.client.get_scheduler_broker();
-    let _ = scheduler_broker.clear_scheduler_entries(&self.id).await;
+    let _ = scheduler_broker
+      .clear_scheduler_entries(&self.id, self.acl_tenant.as_deref())
+      .await;
   }
 
   /// 生成与 Go 版一致的调度选项字符串
@@ -543,5 +561,58 @@ mod tests {
     assert_eq!(task.name, "test:task");
     assert_eq!(task.queue, "default");
     assert_eq!(task.options.queue, "default");
+  }
+
+  #[tokio::test]
+  #[ignore] // Requires Redis to be running
+  async fn test_scheduler_with_tenant() {
+    use crate::backend::RedisConnectionType;
+    use crate::client::Client;
+
+    let redis_connection_config = RedisConnectionType::single("redis://localhost:6379").unwrap();
+    let client = Arc::new(Client::new(redis_connection_config).await.unwrap());
+
+    // Test scheduler without tenant
+    let scheduler_no_tenant = Scheduler::new(client.clone(), None).await.unwrap();
+    assert_eq!(scheduler_no_tenant.acl_tenant, None);
+
+    // Test scheduler with tenant
+    let scheduler_with_tenant =
+      Scheduler::new_with_tenant(client.clone(), None, Some("tenant1".to_string()))
+        .await
+        .unwrap();
+
+    assert_eq!(
+      scheduler_with_tenant.acl_tenant,
+      Some("tenant1".to_string())
+    );
+    // The scheduler id is a plain base id; tenant isolation is done in the broker key.
+    assert!(!scheduler_with_tenant.id.starts_with("tenant1:"));
+  }
+
+  #[tokio::test]
+  #[ignore] // Requires Redis to be running
+  async fn test_scheduler_tenant_isolation() {
+    use crate::backend::RedisConnectionType;
+    use crate::client::Client;
+
+    let redis_connection_config = RedisConnectionType::single("redis://localhost:6379").unwrap();
+    let client = Arc::new(Client::new(redis_connection_config).await.unwrap());
+
+    // Create schedulers for different tenants
+    let scheduler_tenant1 =
+      Scheduler::new_with_tenant(client.clone(), None, Some("tenant1".to_string()))
+        .await
+        .unwrap();
+
+    let scheduler_tenant2 =
+      Scheduler::new_with_tenant(client.clone(), None, Some("tenant2".to_string()))
+        .await
+        .unwrap();
+
+    // IDs are different (different UUIDs); tenant isolation is in the keys, not the id.
+    assert_ne!(scheduler_tenant1.id, scheduler_tenant2.id);
+    assert_eq!(scheduler_tenant1.acl_tenant, Some("tenant1".to_string()));
+    assert_eq!(scheduler_tenant2.acl_tenant, Some("tenant2".to_string()));
   }
 }

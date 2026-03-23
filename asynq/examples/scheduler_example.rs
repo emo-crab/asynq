@@ -22,7 +22,9 @@ impl asynq::components::periodic_task_manager::PeriodicTaskConfigProvider for Si
 async fn main() {
   use asynq::scheduler::Scheduler;
 
-  let redis_url = "redis://127.0.0.1:6379";
+  // let redis_url = "redis://127.0.0.1:6379";
+  let redis_url = std::env::var("REDIS_URL")
+    .unwrap_or_else(|_| "redis://tenant1:secure_pass123@localhost:6379".to_string());
   let redis_config = asynq::backend::RedisConnectionType::single(redis_url).unwrap();
 
   // 创建 Client 和 Scheduler
@@ -32,7 +34,11 @@ async fn main() {
       .await
       .unwrap(),
   );
-  let scheduler = std::sync::Arc::new(Scheduler::new(client.clone(), None).await.unwrap());
+  let scheduler = std::sync::Arc::new(
+    Scheduler::new_with_tenant(client.clone(), None, Some("tenant1".to_string()))
+      .await
+      .unwrap(),
+  );
 
   // 创建配置提供者
   // Create config provider

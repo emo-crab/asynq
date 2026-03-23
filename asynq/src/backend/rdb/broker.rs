@@ -974,8 +974,9 @@ impl crate::base::SchedulerBroker for RedisBroker {
     entries: &[crate::proto::SchedulerEntry],
     scheduler_id: &str,
     ttl_secs: u64,
+    tenant: Option<&str>,
   ) -> Result<()> {
-    RedisBroker::write_scheduler_entries(self, entries, scheduler_id, ttl_secs).await
+    RedisBroker::write_scheduler_entries(self, entries, scheduler_id, ttl_secs, tenant).await
   }
 
   /// 记录调度事件，兼容 Go 版 asynq
@@ -1005,7 +1006,7 @@ impl crate::base::SchedulerBroker for RedisBroker {
 
   /// 删除 scheduler entries 数据，兼容 Go 版 asynq
   /// Delete scheduler entries data, compatible with Go version asynq
-  async fn clear_scheduler_entries(&self, scheduler_id: &str) -> Result<()> {
-    RedisBroker::clear_scheduler_entries(self, scheduler_id).await
+  async fn clear_scheduler_entries(&self, scheduler_id: &str, tenant: Option<&str>) -> Result<()> {
+    RedisBroker::clear_scheduler_entries(self, scheduler_id, tenant).await
   }
 }

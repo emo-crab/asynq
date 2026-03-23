@@ -80,84 +80,29 @@ impl PostgresBroker {
     let schema = Schema::new(backend);
 
     // Create tasks table
-    let stmt = schema.create_table_from_entity(Tasks);
-    let _ = self.db.execute(backend.build(&stmt)).await;
+    self.db.execute(backend.build(schema.create_table_from_entity(Tasks).if_not_exists())).await?;
 
     // Create queues table
-    let stmt = schema.create_table_from_entity(Queues);
-    let _ = self.db.execute(backend.build(&stmt)).await;
+    self.db.execute(backend.build(schema.create_table_from_entity(Queues).if_not_exists())).await?;
 
     // Create servers table
-    let stmt = schema.create_table_from_entity(Servers);
-    let _ = self.db.execute(backend.build(&stmt)).await;
+    self.db.execute(backend.build(schema.create_table_from_entity(Servers).if_not_exists())).await?;
 
     // Create workers table
-    let stmt = schema.create_table_from_entity(Workers);
-    let _ = self.db.execute(backend.build(&stmt)).await;
+    self.db.execute(backend.build(schema.create_table_from_entity(Workers).if_not_exists())).await?;
 
     // Create schedulers table
-    let stmt = schema.create_table_from_entity(Schedulers);
-    let _ = self.db.execute(backend.build(&stmt)).await;
+    self.db.execute(backend.build(schema.create_table_from_entity(Schedulers).if_not_exists())).await?;
 
     // Create scheduler_entries table
-    let stmt = schema.create_table_from_entity(SchedulerEntries);
-    let _ = self.db.execute(backend.build(&stmt)).await;
+    self.db.execute(backend.build(schema.create_table_from_entity(SchedulerEntries).if_not_exists())).await?;
 
     // Create scheduler_events table
-    let stmt = schema.create_table_from_entity(SchedulerEvents);
-    let _ = self.db.execute(backend.build(&stmt)).await;
+    self.db.execute(backend.build(schema.create_table_from_entity(SchedulerEvents).if_not_exists())).await?;
 
     // Create stats table
-    let stmt = schema.create_table_from_entity(Stats);
-    let _ = self.db.execute(backend.build(&stmt)).await;
-
-    // Create indexes using raw SQL (SeaORM doesn't have index creation API in schema)
-    let backend = self.db.get_database_backend();
-    let index_sql = r#"
-      CREATE INDEX IF NOT EXISTS idx_tasks_queue_state ON tasks(queue, state);
-      CREATE INDEX IF NOT EXISTS idx_tasks_process_at ON tasks(process_at);
-      CREATE INDEX IF NOT EXISTS idx_tasks_unique_key ON tasks(unique_key) WHERE unique_key IS NOT NULL;
-      CREATE INDEX IF NOT EXISTS idx_tasks_group_key ON tasks(queue, group_key) WHERE group_key IS NOT NULL;
-      CREATE INDEX IF NOT EXISTS idx_tasks_lease_expires_at ON tasks(lease_expires_at) WHERE state = 'active';
-      CREATE INDEX IF NOT EXISTS idx_tasks_tenant_id ON tasks(tenant_id) WHERE tenant_id IS NOT NULL;
-      CREATE INDEX IF NOT EXISTS idx_tasks_tenant_queue_state ON tasks(tenant_id, queue, state) WHERE tenant_id IS NOT NULL;
-      CREATE INDEX IF NOT EXISTS idx_queues_tenant_id ON queues(tenant_id) WHERE tenant_id IS NOT NULL;
-      CREATE INDEX IF NOT EXISTS idx_servers_tenant_id ON servers(tenant_id) WHERE tenant_id IS NOT NULL;
-      CREATE INDEX IF NOT EXISTS idx_workers_tenant_id ON workers(tenant_id) WHERE tenant_id IS NOT NULL;
-      CREATE INDEX IF NOT EXISTS idx_schedulers_tenant_id ON schedulers(tenant_id) WHERE tenant_id IS NOT NULL;
-      CREATE INDEX IF NOT EXISTS idx_scheduler_entries_scheduler_id ON scheduler_entries(scheduler_id);
-      CREATE INDEX IF NOT EXISTS idx_scheduler_entries_expires_at ON scheduler_entries(expires_at);
-      CREATE INDEX IF NOT EXISTS idx_scheduler_entries_tenant_id ON scheduler_entries(tenant_id) WHERE tenant_id IS NOT NULL;
-      CREATE INDEX IF NOT EXISTS idx_scheduler_events_task_id ON scheduler_events(task_id);
-      CREATE INDEX IF NOT EXISTS idx_scheduler_events_enqueue_time ON scheduler_events(enqueue_time DESC);
-      CREATE INDEX IF NOT EXISTS idx_scheduler_events_tenant_id ON scheduler_events(tenant_id) WHERE tenant_id IS NOT NULL;
-      CREATE INDEX IF NOT EXISTS idx_stats_tenant_id ON stats(tenant_id) WHERE tenant_id IS NOT NULL;
-    "#;
-    let _ = self
-      .db
-      .execute(sea_orm::Statement::from_string(backend, index_sql))
-      .await;
-
+    self.db.execute(backend.build(schema.create_table_from_entity(Stats).if_not_exists())).await?;
     Ok(())
-  }
-
-  /// 将任务消息编码为字节（已弃用，保留用于兼容）
-  /// Encode task message to bytes (deprecated, kept for compatibility)
-  #[allow(dead_code)]
-  pub(crate) fn encode_task_message(&self, msg: &TaskMessage) -> Result<Vec<u8>> {
-    let mut buf = Vec::new();
-    msg.encode(&mut buf)?;
-    Ok(buf)
-  }
-
-  /// 从字节解码任务消息（已弃用，保留用于兼容）
-  /// Decode task message from bytes (deprecated, kept for compatibility)
-  #[allow(dead_code)]
-  pub fn decode_task_message(&self, data: &[u8]) -> Result<TaskMessage> {
-    match TaskMessage::decode(data) {
-      Ok(msg) => Ok(msg),
-      Err(decode_err) => Err(Error::ProtoDecode(decode_err)),
-    }
   }
 
   /// 从数据库任务模型重建 TaskMessage
@@ -263,23 +208,27 @@ impl PostgresBroker {
 
   /// 批量写入 scheduler entries，兼容 Go 版 asynq
   /// Batch write scheduler entries, compatible with Go version asynq
-  #[cfg(feature = "postgres")]
   pub async fn write_scheduler_entries(
     &self,
     entries: &[SchedulerEntry],
     scheduler_id: &str,
     ttl_secs: u64,
+    tenant: Option<&str>,
   ) -> Result<()> {
     use crate::backend::pgdb::entity::scheduler_entries;
     use chrono::Duration;
 
     let expires_at = chrono::Utc::now() + Duration::seconds(ttl_secs as i64);
 
+    // Determine the effective tenant: prefer the broker's own tenant_id, fall back to the
+    // scheduler-supplied tenant parameter for multi-tenant isolation.
+    let effective_tenant = self.tenant_id.as_deref().or(tenant);
+
     // Delete old entries for this scheduler
     let mut delete_query = SchedulerEntries::delete_many()
       .filter(scheduler_entries::Column::SchedulerId.eq(scheduler_id));
 
-    if let Some(tenant_id) = &self.tenant_id {
+    if let Some(tenant_id) = effective_tenant {
       delete_query = delete_query.filter(scheduler_entries::Column::TenantId.eq(tenant_id));
     }
 
@@ -309,7 +258,7 @@ impl PostgresBroker {
         next_enqueue_time: Set(next_enqueue_time),
         prev_enqueue_time: Set(prev_enqueue_time),
         expires_at: Set(expires_at.into()),
-        tenant_id: Set(self.tenant_id.clone()),
+        tenant_id: Set(effective_tenant.map(|t| t.to_string())),
       };
 
       let _ = new_entry.insert(&self.db).await;
@@ -475,13 +424,17 @@ impl PostgresBroker {
   /// 删除 scheduler entries 数据，兼容 Go 版 asynq
   /// Delete scheduler entries data, compatible with Go version asynq
   #[cfg(feature = "postgres")]
-  pub async fn clear_scheduler_entries(&self, scheduler_id: &str) -> Result<()> {
+  pub async fn clear_scheduler_entries(&self, scheduler_id: &str, tenant: Option<&str>) -> Result<()> {
     use crate::backend::pgdb::entity::scheduler_entries;
+
+    // Determine the effective tenant: prefer the broker's own tenant_id, fall back to the
+    // scheduler-supplied tenant parameter for multi-tenant isolation.
+    let effective_tenant = self.tenant_id.as_deref().or(tenant);
 
     let mut delete_query = SchedulerEntries::delete_many()
       .filter(scheduler_entries::Column::SchedulerId.eq(scheduler_id));
 
-    if let Some(tenant_id) = &self.tenant_id {
+    if let Some(tenant_id) = effective_tenant {
       delete_query = delete_query.filter(scheduler_entries::Column::TenantId.eq(tenant_id));
     }
 

@@ -492,6 +492,7 @@ impl crate::base::SchedulerBroker for WebSocketBroker {
     _entries: &[crate::proto::SchedulerEntry],
     _scheduler_id: &str,
     _ttl_secs: u64,
+    _tenant: Option<&str>,
   ) -> Result<()> {
     // WebSocket 后端通常不支持调度器持久化
     // WebSocket backend typically doesn't support scheduler persistence
@@ -533,7 +534,7 @@ impl crate::base::SchedulerBroker for WebSocketBroker {
 
   /// 删除 scheduler entries 数据
   /// Delete scheduler entries data
-  async fn clear_scheduler_entries(&self, _scheduler_id: &str) -> Result<()> {
+  async fn clear_scheduler_entries(&self, _scheduler_id: &str, _tenant: Option<&str>) -> Result<()> {
     // WebSocket 后端通常不需要清理
     // WebSocket backend typically doesn't need cleanup
     Ok(())

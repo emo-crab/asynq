@@ -1,0 +1,15 @@
+[[language]]
+name = "rust"
+language-servers = ["rust-analyzer", "typos"]
+
+[language-server.rust-analyzer]
+config.rust-analyzer.check.command = "clippy"
+config.rust-analyzer.cargo.allFeatures = true
+
+[language-server.typos]
+# typos-lsp must be on your PATH, or otherwise change this to an absolute path to typos-lsp
+command = "typos-lsp"
+# Logging level of the language server. Defaults to error.
+# Run with helix -v to output LSP logs to the editor log (:log-open)
+environment = { "RUST_LOG" = "error" }
+config.diagnosticSeverity = "Hint"

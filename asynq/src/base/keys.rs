@@ -297,6 +297,15 @@ pub fn scheduler_entries_key(scheduler_id: &str) -> String {
   format!("{ALL_SCHEDULERS}:{{{scheduler_id}}}")
 }
 
+/// 生成带租户隔离的调度器条目键
+/// Generate scheduler entries key with tenant isolation
+///
+/// 返回格式: `asynq:schedulers:{tenant:scheduler_id}`
+/// Returns format: `asynq:schedulers:{tenant:scheduler_id}`
+pub fn scheduler_entries_key_with_tenant(tenant: &str, scheduler_id: &str) -> String {
+  format!("{ALL_SCHEDULERS}:{{{tenant}:{scheduler_id}}}")
+}
+
 /// 生成调度器历史键 - 对应 Go 的 SchedulerHistoryKey
 /// Generate scheduler history key - Corresponds to Go's SchedulerHistoryKey
 pub fn scheduler_history_key(entry_id: &str) -> String {
@@ -510,5 +519,36 @@ mod tests {
       keys::server_and_workers_keys(None, "host", 1234, "server1");
     assert_eq!(server_key_no_tenant, "asynq:servers:{host:1234:server1}");
     assert_eq!(workers_key_no_tenant, "asynq:workers:{host:1234:server1}");
+  }
+
+  #[test]
+  fn test_scheduler_entries_key() {
+    // Test scheduler entries key without tenant
+    assert_eq!(
+      keys::scheduler_entries_key("arch:51547:b7ae5325-3c4a-491a-bd29-25ce9fcc00e9"),
+      "asynq:schedulers:{arch:51547:b7ae5325-3c4a-491a-bd29-25ce9fcc00e9}"
+    );
+
+    // Test scheduler entries key with tenant via scheduler_entries_key_with_tenant
+    assert_eq!(
+      keys::scheduler_entries_key_with_tenant(
+        "tenant1",
+        "arch:51547:b7ae5325-3c4a-491a-bd29-25ce9fcc00e9"
+      ),
+      "asynq:schedulers:{tenant1:arch:51547:b7ae5325-3c4a-491a-bd29-25ce9fcc00e9}"
+    );
+
+    // Test different tenants produce different keys
+    let tenant1_key =
+      keys::scheduler_entries_key_with_tenant("tenant1", "host:1234:uuid1");
+    let tenant2_key =
+      keys::scheduler_entries_key_with_tenant("tenant2", "host:1234:uuid1");
+    assert_ne!(tenant1_key, tenant2_key);
+    assert!(tenant1_key.contains("tenant1"));
+    assert!(tenant2_key.contains("tenant2"));
+
+    // Same scheduler_id without tenant produces a different (non-tenant) key
+    let no_tenant_key = keys::scheduler_entries_key("host:1234:uuid1");
+    assert_ne!(no_tenant_key, tenant1_key);
   }
 }

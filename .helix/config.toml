@@ -1,0 +1,3 @@
+[editor]
+auto-format = true
+workspace-lsp-roots = ["."]

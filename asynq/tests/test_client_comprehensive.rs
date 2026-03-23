@@ -15,6 +15,13 @@ async fn create_test_client() -> asynq::error::Result<Client> {
   Client::new(redis_config).await
 }
 
+// Helper to create a test inspector
+async fn create_test_inspector() -> asynq::error::Result<Inspector> {
+  let redis_config = RedisConnectionType::single("redis://localhost:6379")
+      .expect("Redis should be available for tests");
+  Inspector::new(redis_config).await
+}
+
 // Helper to create a test task
 fn create_test_task(task_type: &str, payload: &[u8]) -> Task {
   Task::new(task_type, payload).expect("Task creation should succeed")
@@ -24,6 +31,7 @@ fn create_test_task(task_type: &str, payload: &[u8]) -> Task {
 mod client_comprehensive_tests {
   use super::*;
   use asynq::backend::option::RetryPolicy;
+  use asynq::inspector::InspectorTrait;
 
   /// Test client enqueue with ProcessAt option (mirrors Go TestClientEnqueueWithProcessAtOption)
   #[tokio::test]
@@ -277,8 +285,9 @@ mod client_comprehensive_tests {
     let client = create_test_client()
       .await
       .expect("Client creation should succeed");
-
+    let inspector = create_test_inspector().await.expect("Inspector");
     let task_id = "conflicting_id";
+    inspector.delete_all_pending_tasks("default").await.expect("Clean pending tasks");
     let task1 = create_test_task("conflict1", b"payload1").with_task_id(task_id);
     let task2 = create_test_task("conflict2", b"payload2").with_task_id(task_id);
 

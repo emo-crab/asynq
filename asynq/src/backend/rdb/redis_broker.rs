@@ -277,6 +277,7 @@ impl RedisBroker {
     entries: &[SchedulerEntry],
     scheduler_id: &str,
     ttl_secs: u64,
+    tenant: Option<&str>,
   ) -> Result<()> {
     let mut args: Vec<RedisArg> = Vec::new();
     args.push(RedisArg::Int(ttl_secs as i64));
@@ -287,7 +288,12 @@ impl RedisBroker {
         .map_err(|e| Error::other(format!("prost encode error: {e}")))?;
       args.push(RedisArg::Bytes(buf));
     }
-    let key = keys::scheduler_entries_key(scheduler_id);
+    // 根据租户生成隔离的 key
+    // Generate a tenant-isolated key when a tenant is provided
+    let key = match tenant {
+      Some(t) => keys::scheduler_entries_key_with_tenant(t, scheduler_id),
+      None => keys::scheduler_entries_key(scheduler_id),
+    };
     let mut conn = self.get_async_connection().await?;
     let _: () = self
       .script_manager
@@ -370,8 +376,13 @@ impl RedisBroker {
 
   /// 删除 scheduler entries 数据，兼容 Go 版 asynq
   /// Delete scheduler entries data, compatible with Go version asynq
-  pub async fn clear_scheduler_entries(&self, scheduler_id: &str) -> Result<()> {
-    let key = keys::scheduler_entries_key(scheduler_id);
+  pub async fn clear_scheduler_entries(&self, scheduler_id: &str, tenant: Option<&str>) -> Result<()> {
+    // 根据租户生成隔离的 key
+    // Generate a tenant-isolated key when a tenant is provided
+    let key = match tenant {
+      Some(t) => keys::scheduler_entries_key_with_tenant(t, scheduler_id),
+      None => keys::scheduler_entries_key(scheduler_id),
+    };
     let zset_key = keys::ALL_SCHEDULERS;
     let mut conn = self.get_async_connection().await?;
     // ZREM 全局调度器 ZSET

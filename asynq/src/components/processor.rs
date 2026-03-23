@@ -73,7 +73,7 @@
 //!   strict_priority: false,
 //!   task_check_interval: Duration::from_secs(1),
 //!   shutdown_timeout: Duration::from_secs(30),
-//!   active_workers: Arc::new(AtomicUsize::new(0)),
+//!   worker_event_sender:None,
 //! };
 //!
 //! let mut processor = Processor::new(params);

@@ -69,9 +69,11 @@ pub struct ServerConfig {
 
 impl Default for ServerConfig {
   fn default() -> Self {
+    let mut queues = HashMap::new();
+    queues.insert(DEFAULT_QUEUE_NAME.to_string(), 1);
     Self {
       concurrency: num_cpus::get(),
-      queues: HashMap::new(),
+      queues,
       strict_priority: false,
       task_check_interval: Duration::from_secs(1),
       delayed_task_check_interval: Duration::from_secs(5),
