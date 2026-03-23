@@ -427,7 +427,7 @@ impl RetryPolicy {
 
         if *jitter {
           // 添加 ±25% 的随机抖动
-          use rand::Rng;
+          use rand::RngExt;
           let mut rng = rand::rng();
           let jitter_factor = rng.random_range(0.75..=1.25);
           delay *= jitter_factor;
