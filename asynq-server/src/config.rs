@@ -278,7 +278,11 @@ impl MultiTenantAuth {
   async fn try_postgres_connection(&self, connection_string: &str) -> Result<(), AuthError> {
     use asynq::backend::PostgresBroker;
 
-    match PostgresBroker::new(connection_string).await {
+    match PostgresBroker::builder()
+      .database_url(connection_string)
+      .build()
+      .await
+    {
       Ok(_broker) => Ok(()),
       Err(_) => Err(AuthError::ConnectionFailed),
     }

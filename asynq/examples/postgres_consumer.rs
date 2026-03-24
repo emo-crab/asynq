@@ -198,7 +198,12 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
   println!("🔗 Using PostgresSQL URL: {database_url}");
 
   // 创建 PostgresSQL 经纪人
-  let broker = std::sync::Arc::new(PostgresBroker::new(&database_url).await?);
+  let broker = std::sync::Arc::new(
+    PostgresBroker::builder()
+      .database_url(&database_url)
+      .build()
+      .await?,
+  );
   println!("✅ Connected to PostgresSQL");
 
   // 配置队列优先级

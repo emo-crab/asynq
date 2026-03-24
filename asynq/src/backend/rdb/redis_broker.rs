@@ -376,7 +376,11 @@ impl RedisBroker {
 
   /// 删除 scheduler entries 数据，兼容 Go 版 asynq
   /// Delete scheduler entries data, compatible with Go version asynq
-  pub async fn clear_scheduler_entries(&self, scheduler_id: &str, tenant: Option<&str>) -> Result<()> {
+  pub async fn clear_scheduler_entries(
+    &self,
+    scheduler_id: &str,
+    tenant: Option<&str>,
+  ) -> Result<()> {
     // 根据租户生成隔离的 key
     // Generate a tenant-isolated key when a tenant is provided
     let key = match tenant {

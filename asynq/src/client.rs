@@ -104,7 +104,12 @@ impl Client {
   pub async fn new_with_postgres_config(database_url: &str, config: ClientConfig) -> Result<Self> {
     // 创建PostgresBroker实例
     // Create PostgresBroker instance
-    let broker = Arc::new(PostgresBroker::new(database_url).await?);
+    let broker = Arc::new(
+      PostgresBroker::builder()
+        .database_url(database_url)
+        .build()
+        .await?,
+    );
     Ok(Self {
       broker: ClientBroker::Postgres(broker),
       config,

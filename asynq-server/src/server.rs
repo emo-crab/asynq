@@ -142,7 +142,9 @@ impl AsynqServer {
   #[cfg(feature = "postgres")]
   pub async fn with_postgres<A: Into<SocketAddr>>(addr: A, database_url: &str) -> Result<Self> {
     let broker = Arc::new(
-      PostgresBroker::new(database_url)
+      PostgresBroker::builder()
+        .database_url(database_url)
+        .build()
         .await
         .map_err(|e| Error::server(format!("Failed to connect to PostgresSQL: {}", e)))?,
     );

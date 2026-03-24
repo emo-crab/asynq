@@ -58,7 +58,28 @@ pub struct Model {
   pub tenant_id: Option<String>,
 }
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+  #[sea_orm(
+    belongs_to = "super::queues::Entity",
+    from = "Column::Queue",
+    to = "super::queues::Column::Name"
+  )]
+  Queue,
+  #[sea_orm(has_many = "super::workers::Entity")]
+  Workers,
+}
+
+impl Related<super::queues::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::Queue.def()
+  }
+}
+
+impl Related<super::workers::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::Workers.def()
+  }
+}
 
 impl ActiveModelBehavior for ActiveModel {}
 

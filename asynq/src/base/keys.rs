@@ -539,10 +539,8 @@ mod tests {
     );
 
     // Test different tenants produce different keys
-    let tenant1_key =
-      keys::scheduler_entries_key_with_tenant("tenant1", "host:1234:uuid1");
-    let tenant2_key =
-      keys::scheduler_entries_key_with_tenant("tenant2", "host:1234:uuid1");
+    let tenant1_key = keys::scheduler_entries_key_with_tenant("tenant1", "host:1234:uuid1");
+    let tenant2_key = keys::scheduler_entries_key_with_tenant("tenant2", "host:1234:uuid1");
     assert_ne!(tenant1_key, tenant2_key);
     assert!(tenant1_key.contains("tenant1"));
     assert!(tenant2_key.contains("tenant2"));

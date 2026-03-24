@@ -26,7 +26,11 @@ async fn test_postgres_server_registration() -> Result<(), Box<dyn std::error::E
   let database_url =
     std::env::var("DATABASE_URL").unwrap_or_else(|_| TEST_DATABASE_URL.to_string());
 
-  let broker = match PostgresBroker::new(&database_url).await {
+  let broker = match PostgresBroker::builder()
+    .database_url(&database_url)
+    .build()
+    .await
+  {
     Ok(b) => Arc::new(b),
     Err(e) => {
       println!("Skipping test - PostgresSQL not available: {}", e);
@@ -121,7 +125,11 @@ async fn test_postgres_worker_registration() -> Result<(), Box<dyn std::error::E
   let database_url =
     std::env::var("DATABASE_URL").unwrap_or_else(|_| TEST_DATABASE_URL.to_string());
 
-  let broker = match PostgresBroker::new(&database_url).await {
+  let broker = match PostgresBroker::builder()
+    .database_url(&database_url)
+    .build()
+    .await
+  {
     Ok(b) => Arc::new(b),
     Err(e) => {
       println!("Skipping test - PostgresSQL not available: {}", e);

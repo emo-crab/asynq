@@ -18,6 +18,98 @@ use sea_orm::{
 };
 use uuid::Uuid;
 
+enum PostgresBrokerSource {
+  DatabaseUrl(String),
+  Connection(DatabaseConnection),
+}
+
+/// PostgresSQL Broker builder
+///
+/// Unified factory entry for creating `PostgresBroker` instances.
+pub struct PostgresBrokerBuilder {
+  source: Option<PostgresBrokerSource>,
+  tenant_id: Option<String>,
+  max_connections: Option<u32>,
+  init_schema: bool,
+}
+
+impl PostgresBrokerBuilder {
+  fn new() -> Self {
+    Self {
+      source: None,
+      tenant_id: None,
+      max_connections: Some(10),
+      init_schema: true,
+    }
+  }
+
+  /// Set database URL as broker source.
+  pub fn database_url(mut self, database_url: impl Into<String>) -> Self {
+    self.source = Some(PostgresBrokerSource::DatabaseUrl(database_url.into()));
+    self
+  }
+
+  /// Set an existing SeaORM database connection as broker source.
+  pub fn connection(mut self, db: DatabaseConnection) -> Self {
+    self.source = Some(PostgresBrokerSource::Connection(db));
+    self
+  }
+
+  /// Set tenant id for multi-tenant isolation.
+  pub fn tenant_id(mut self, tenant_id: impl Into<String>) -> Self {
+    self.tenant_id = Some(tenant_id.into());
+    self
+  }
+
+  /// Set optional tenant id for multi-tenant isolation.
+  pub fn tenant_id_opt(mut self, tenant_id: Option<String>) -> Self {
+    self.tenant_id = tenant_id;
+    self
+  }
+
+  /// Set maximum database connections used when connecting from URL.
+  pub fn max_connections(mut self, max_connections: u32) -> Self {
+    self.max_connections = Some(max_connections);
+    self
+  }
+
+  /// Control whether schema initialization runs during build.
+  pub fn init_schema(mut self, init_schema: bool) -> Self {
+    self.init_schema = init_schema;
+    self
+  }
+
+  /// Build a PostgresBroker from configured source and options.
+  pub async fn build(self) -> Result<PostgresBroker> {
+    let db = match self.source {
+      Some(PostgresBrokerSource::DatabaseUrl(url)) => {
+        let max_connections = self.max_connections.unwrap_or(10);
+        let opt = ConnectOptions::new(url)
+          .max_connections(max_connections)
+          .to_owned();
+        Database::connect(opt).await?
+      }
+      Some(PostgresBrokerSource::Connection(db)) => db,
+      None => {
+        return Err(Error::other(
+          "PostgresBrokerBuilder source is not configured; call database_url(...) or connection(...)",
+        ));
+      }
+    };
+
+    let broker = PostgresBroker {
+      db,
+      tenant_id: self.tenant_id,
+    };
+
+    if self.init_schema {
+      broker.init_schema().await?;
+    }
+
+    Ok(broker)
+  }
+}
+
 /// PostgresSQL 经纪人实现
 /// PostgresSQL broker implementation
 pub struct PostgresBroker {
@@ -28,37 +120,10 @@ pub struct PostgresBroker {
 }
 
 impl PostgresBroker {
-  /// 从连接字符串创建新的 PostgresSQL 经纪人实例
-  /// Create a new PostgresSQL broker instance from connection string
-  pub async fn new(database_url: &str) -> Result<Self> {
-    Self::new_with_tenant(database_url, None).await
-  }
-
-  /// 从连接字符串创建新的带租户的 PostgresSQL 经纪人实例
-  /// Create a new PostgresSQL broker instance from connection string with tenant
-  pub async fn new_with_tenant(database_url: &str, tenant_id: Option<String>) -> Result<Self> {
-    let opt = ConnectOptions::new(database_url)
-      .max_connections(10)
-      .to_owned();
-    let db = Database::connect(opt).await?;
-    let broker = Self { db, tenant_id };
-    broker.init_schema().await?;
-    Ok(broker)
-  }
-
-  /// 从现有数据库连接创建 PostgresSQL 经纪人实例
-  /// Create a PostgresSQL broker instance from an existing database connection
-  pub fn from_connection(db: DatabaseConnection) -> Self {
-    Self {
-      db,
-      tenant_id: None,
-    }
-  }
-
-  /// 从现有数据库连接创建带租户的 PostgresSQL 经纪人实例
-  /// Create a PostgresSQL broker instance from an existing database connection with tenant
-  pub fn from_connection_with_tenant(db: DatabaseConnection, tenant_id: Option<String>) -> Self {
-    Self { db, tenant_id }
+  /// PostgresSQL 经纪人的统一创建入口
+  /// Unified factory entry for PostgresSQL broker creation
+  pub fn builder() -> PostgresBrokerBuilder {
+    PostgresBrokerBuilder::new()
   }
 
   /// 获取数据库连接
@@ -78,30 +143,65 @@ impl PostgresBroker {
   pub async fn init_schema(&self) -> Result<()> {
     let backend = self.db.get_database_backend();
     let schema = Schema::new(backend);
+    // Create queues table
+    self
+      .db
+      .execute(backend.build(schema.create_table_from_entity(Queues).if_not_exists()))
+      .await?;
 
     // Create tasks table
-    self.db.execute(backend.build(schema.create_table_from_entity(Tasks).if_not_exists())).await?;
-
-    // Create queues table
-    self.db.execute(backend.build(schema.create_table_from_entity(Queues).if_not_exists())).await?;
+    self
+      .db
+      .execute(backend.build(schema.create_table_from_entity(Tasks).if_not_exists()))
+      .await?;
 
     // Create servers table
-    self.db.execute(backend.build(schema.create_table_from_entity(Servers).if_not_exists())).await?;
+    self
+      .db
+      .execute(backend.build(schema.create_table_from_entity(Servers).if_not_exists()))
+      .await?;
 
     // Create workers table
-    self.db.execute(backend.build(schema.create_table_from_entity(Workers).if_not_exists())).await?;
+    self
+      .db
+      .execute(backend.build(schema.create_table_from_entity(Workers).if_not_exists()))
+      .await?;
 
     // Create schedulers table
-    self.db.execute(backend.build(schema.create_table_from_entity(Schedulers).if_not_exists())).await?;
+    self
+      .db
+      .execute(backend.build(schema.create_table_from_entity(Schedulers).if_not_exists()))
+      .await?;
 
     // Create scheduler_entries table
-    self.db.execute(backend.build(schema.create_table_from_entity(SchedulerEntries).if_not_exists())).await?;
+    self
+      .db
+      .execute(
+        backend.build(
+          schema
+            .create_table_from_entity(SchedulerEntries)
+            .if_not_exists(),
+        ),
+      )
+      .await?;
 
     // Create scheduler_events table
-    self.db.execute(backend.build(schema.create_table_from_entity(SchedulerEvents).if_not_exists())).await?;
+    self
+      .db
+      .execute(
+        backend.build(
+          schema
+            .create_table_from_entity(SchedulerEvents)
+            .if_not_exists(),
+        ),
+      )
+      .await?;
 
     // Create stats table
-    self.db.execute(backend.build(schema.create_table_from_entity(Stats).if_not_exists())).await?;
+    self
+      .db
+      .execute(backend.build(schema.create_table_from_entity(Stats).if_not_exists()))
+      .await?;
     Ok(())
   }
 
@@ -309,9 +409,9 @@ impl PostgresBroker {
       sea_orm::Statement::from_sql_and_values(
         self.db.get_database_backend(),
         r#"
-          DELETE FROM scheduler_events
+          DELETE FROM asynq_scheduler_events
           WHERE tenant_id = $1 AND id NOT IN (
-            SELECT id FROM scheduler_events
+            SELECT id FROM asynq_scheduler_events
             WHERE tenant_id = $1
             ORDER BY enqueue_time DESC 
             LIMIT 1000
@@ -323,10 +423,10 @@ impl PostgresBroker {
       sea_orm::Statement::from_sql_and_values(
         self.db.get_database_backend(),
         r#"
-          DELETE FROM scheduler_events
+          DELETE FROM asynq_scheduler_events
           WHERE id NOT IN (
-            SELECT id FROM scheduler_events
-            ORDER BY enqueue_time DESC 
+            SELECT id FROM asynq_scheduler_events
+            ORDER BY enqueue_time DESC
             LIMIT 1000
           )
         "#,
@@ -424,7 +524,11 @@ impl PostgresBroker {
   /// 删除 scheduler entries 数据，兼容 Go 版 asynq
   /// Delete scheduler entries data, compatible with Go version asynq
   #[cfg(feature = "postgres")]
-  pub async fn clear_scheduler_entries(&self, scheduler_id: &str, tenant: Option<&str>) -> Result<()> {
+  pub async fn clear_scheduler_entries(
+    &self,
+    scheduler_id: &str,
+    tenant: Option<&str>,
+  ) -> Result<()> {
     use crate::backend::pgdb::entity::scheduler_entries;
 
     // Determine the effective tenant: prefer the broker's own tenant_id, fall back to the
