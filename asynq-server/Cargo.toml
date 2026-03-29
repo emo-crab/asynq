@@ -23,6 +23,14 @@ path = "src/main.rs"
 # Core asynq library (Redis is always included as the default backend)
 asynq = { path = "../asynq" }
 
+# OpenAPI documentation
+utoipa = { version = "5", features = ["axum_extras", "uuid", "chrono"] }
+utoipa-swagger-ui = { version = "9", features = ["axum"] }
+
+# UI - Dioxus SSR rendering (optional, enabled with "ui" feature)
+dioxus = { version = "0.6", features = ["ssr"], optional = true }
+dioxus-ssr = { version = "0.6", optional = true }
+
 # Web framework
 axum = { version = "0.8", features = ["ws"] }
 tower = "0.5"
@@ -61,6 +69,8 @@ cluster = ["asynq/cluster"]
 sentinel = ["asynq/sentinel"]
 # Enable PostgresSQL backend support (in addition to Redis)
 postgres = ["asynq/postgres"]
+# Enable Web UI dashboard (Dioxus SSR)
+ui = ["dioxus", "dioxus-ssr"]
 
 [dev-dependencies]
 tokio-test = "0.4"

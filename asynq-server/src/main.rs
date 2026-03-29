@@ -19,11 +19,16 @@ async fn main() -> anyhow::Result<()> {
   let socket = std::net::SocketAddr::from_str(&addr)?;
   info!("Starting asynq-server on {}", addr);
   let redis_url = std::env::var("REDIS_URL")
-    .unwrap_or_else(|_| "redis://tenant1:secure_pass123@localhost:6379".to_string());
+    .unwrap_or_else(|_| "redis://localhost:6379".to_string());
   println!("🔗 Using Redis URL: {redis_url}");
   let redis_config = asynq::backend::RedisConnectionType::single(redis_url.clone())?;
-  let broker = asynq::backend::RedisBroker::new(redis_config).await?;
-  let mut server = AsynqServer::with_broker(socket, std::sync::Arc::new(broker));
+  let broker = std::sync::Arc::new(asynq::backend::RedisBroker::new(redis_config).await?);
+
+  // Create inspector from the same broker connection (used by web UI and REST API)
+  let inspector = std::sync::Arc::new(asynq::backend::RedisInspector::from_broker(broker.clone()));
+
+  let mut server = AsynqServer::with_broker(socket, broker).with_inspector(inspector);
+
   // Check for backend-based multi-tenant authentication
   if let (Ok(backend_type), Ok(backend_template)) = (
     std::env::var("ASYNQ_BACKEND_TYPE"),

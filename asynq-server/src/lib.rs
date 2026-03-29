@@ -69,6 +69,9 @@ pub mod error;
 pub mod handler;
 pub mod message;
 pub mod server;
+pub mod api;
+#[cfg(feature = "ui")]
+pub mod ui;
 
 pub use config::{AuthError, BackendType, MultiTenantAuth, TenantConfig};
 pub use error::{Error, Result};

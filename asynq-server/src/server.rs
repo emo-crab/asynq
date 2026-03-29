@@ -12,6 +12,7 @@ use asynq::backend::RedisBroker;
 use asynq::backend::RedisConnectionType;
 use asynq::base::Broker;
 use asynq::components::forwarder::{Forwarder, ForwarderConfig};
+use asynq::inspector::InspectorTrait;
 use axum::{
   extract::{
     ws::{Message, WebSocket, WebSocketUpgrade},
@@ -20,7 +21,7 @@ use axum::{
   http::{header, StatusCode},
   middleware::{self, Next},
   response::{IntoResponse, Response},
-  routing::get,
+  routing::{delete, get, post},
   Router,
 };
 use base64::prelude::*;
@@ -32,6 +33,8 @@ use tokio::task_local;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info, warn};
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 // Task-local variable for storing current tenant information
 task_local! {
@@ -64,6 +67,8 @@ pub struct AppState {
   pub cancel_tx: broadcast::Sender<String>,
   /// Authentication mode (None, Single, or Multi)
   pub auth_mode: AuthMode,
+  /// Inspector for queue/task inspection (used by the web UI and REST API)
+  pub inspector: Option<Arc<dyn InspectorTrait>>,
 }
 
 /// Asynq Server
@@ -79,6 +84,9 @@ pub struct AppState {
 /// - Single-tenant authentication (backward compatible)
 /// - Multi-tenant authentication (isolates tasks per tenant)
 ///
+/// When built with the `ui` feature, the server also serves a web dashboard
+/// at `/ui/` for monitoring and managing queues and tasks.
+///
 /// Note: WebSocket backend is NOT supported to avoid circular dependency.
 pub struct AsynqServer {
   /// Server address
@@ -87,6 +95,8 @@ pub struct AsynqServer {
   broker: Arc<dyn Broker>,
   /// Authentication mode
   auth_mode: AuthMode,
+  /// Inspector for the web UI and REST API (optional)
+  inspector: Option<Arc<dyn InspectorTrait>>,
 }
 impl AsynqServer {
   /// Create a new AsynqServer with a custom broker
@@ -98,7 +108,18 @@ impl AsynqServer {
       addr: addr.into(),
       broker,
       auth_mode: AuthMode::None,
+      inspector: None,
     }
+  }
+
+  /// Attach an inspector to this server
+  ///
+  /// The inspector is used by the web UI (when built with the `ui` feature) and
+  /// the REST API to query queue and task information. When `with_redis` is used,
+  /// an inspector is created automatically from the same Redis connection.
+  pub fn with_inspector(mut self, inspector: Arc<dyn InspectorTrait>) -> Self {
+    self.inspector = Some(inspector);
+    self
   }
 
   /// Set HTTP Basic authentication for this server (single-tenant mode)
@@ -131,10 +152,12 @@ impl AsynqServer {
         .await
         .map_err(|e| Error::server(format!("Failed to connect to Redis: {}", e)))?,
     );
+    let inspector = Arc::new(asynq::backend::RedisInspector::from_broker(broker.clone()));
     Ok(Self {
       addr: addr.into(),
       broker,
       auth_mode: AuthMode::None,
+      inspector: Some(inspector),
     })
   }
 
@@ -152,6 +175,7 @@ impl AsynqServer {
       addr: addr.into(),
       broker,
       auth_mode: AuthMode::None,
+      inspector: None,
     })
   }
 
@@ -168,6 +192,7 @@ impl AsynqServer {
       handler: MessageHandler::new(self.broker.clone()),
       cancel_tx: cancel_tx.clone(),
       auth_mode: self.auth_mode,
+      inspector: self.inspector,
     });
 
     // Start the cancellation forwarder
@@ -193,13 +218,90 @@ impl AsynqServer {
     let forwarder_handle = forwarder.clone().start();
     info!("Task forwarder started for scheduled task processing");
 
-    let app = Router::new()
+    // Build REST API router
+    let api_router = Router::new()
+      .route("/queues", get(crate::api::list_queues))
+      .route("/queues/{queue}", get(crate::api::get_queue))
+      .route(
+        "/queues/{queue}/tasks",
+        get(crate::api::list_tasks).delete(crate::api::bulk_delete_tasks),
+      )
+      .route(
+        "/queues/{queue}/tasks/{task_id}",
+        delete(crate::api::delete_task),
+      )
+      .route(
+        "/queues/{queue}/tasks/{task_id}/run",
+        post(crate::api::run_task),
+      )
+      .route(
+        "/queues/{queue}/tasks/{task_id}/archive",
+        post(crate::api::archive_task),
+      )
+      .route("/queues/{queue}/pause", post(crate::api::pause_queue))
+      .route("/queues/{queue}/resume", post(crate::api::resume_queue))
+      .route(
+        "/queues/{queue}/tasks/requeue",
+        post(crate::api::requeue_tasks),
+      );
+
+    // Build main app router – `mut` is needed when the `ui` feature is enabled
+    // to allow attaching the UI sub-router after initial construction.
+    #[cfg_attr(not(feature = "ui"), allow(unused_mut))]
+    let mut app = Router::new()
       .route("/ws", get(websocket_handler))
       .route_layer(middleware::from_fn_with_state(
         state.clone(),
         auth_middleware,
       ))
       .route("/health", get(health_handler))
+      .nest("/api", api_router);
+
+    // Mount the web UI if the `ui` feature is enabled
+    #[cfg(feature = "ui")]
+    {
+      use crate::ui;
+      let ui_router = Router::new()
+        .route("/", get(ui::dashboard_handler))
+        .route("/servers", get(ui::servers_handler))
+        .route("/cron", get(ui::cron_handler))
+        .route("/queues/{queue}", get(ui::queue_detail_handler))
+        .route("/queues/{queue}/tasks", get(ui::tasks_handler))
+        .route("/queues/{queue}/pause", post(ui::ui_pause_queue))
+        .route("/queues/{queue}/resume", post(ui::ui_resume_queue))
+        .route(
+          "/queues/{queue}/tasks/{task_id}/delete",
+          post(ui::ui_delete_task),
+        )
+        .route(
+          "/queues/{queue}/tasks/{task_id}/run",
+          post(ui::ui_run_task),
+        )
+        .route(
+          "/queues/{queue}/tasks/{task_id}/archive",
+          post(ui::ui_archive_task),
+        )
+        .route(
+          "/queues/{queue}/tasks/bulk-delete",
+          post(ui::ui_bulk_delete),
+        )
+        .route(
+          "/queues/{queue}/tasks/requeue",
+          post(ui::ui_requeue_tasks),
+        );
+
+      app = app.nest("/ui/", ui_router);
+      info!("Web UI dashboard available at /ui/");
+    }
+
+    // Mount Swagger UI for interactive API documentation
+    app = app.merge(
+      SwaggerUi::new("/swagger-ui")
+        .url("/api-docs/openapi.json", crate::api::ApiDoc::openapi()),
+    );
+    info!("Swagger UI available at /swagger-ui/");
+
+    let app = app
       .layer(CorsLayer::permissive())
       .layer(TraceLayer::new_for_http())
       .with_state(state);
