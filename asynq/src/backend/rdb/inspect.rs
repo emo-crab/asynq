@@ -12,6 +12,18 @@ use redis::AsyncCommands;
 use std::str::FromStr;
 use std::time::Duration;
 
+/// Extract the base queue name from a Redis key that uses the pattern
+/// `asynq:{<queue_name>}:...`. Returns None if the pattern is not found.
+fn extract_queue_name_from_key(key: &str) -> Option<String> {
+  if let Some(start) = key.find('{') {
+    if let Some(rel_end) = key[start + 1..].find('}') {
+      let end = start + 1 + rel_end;
+      return Some(key[start + 1..end].to_string());
+    }
+  }
+  None
+}
+
 impl RedisBroker {
   /// 获取所有队列名称
   /// Get all queue names
@@ -661,8 +673,8 @@ impl RedisBroker {
     // Build daily statistics (simplified version - actual implementation may require more complex logic)
     let daily_stats = Vec::new(); // TODO: 可以添加基于日期的统计信息
 
-    Ok(QueueStats {
-      name: queue.to_string(),
+    Ok(crate::task::QueueStats::new(
+      queue.to_string(),
       active,
       pending,
       scheduled,
@@ -671,7 +683,7 @@ impl RedisBroker {
       completed,
       aggregating,
       daily_stats,
-    })
+    ))
   }
 
   /// 获取队列信息。
@@ -740,10 +752,8 @@ impl RedisBroker {
     for queue_key in queue_keys {
       // 从键名中提取队列名
       // Extract queue name from key
-      if let Some(queue_name) =
-        queue_key.strip_prefix(&format!("{}{}", keys::QUEUE_PREFIX, keys::QUEUE_START))
-      {
-        let stats = self.get_queue_stats(queue_name).await?;
+      if let Some(base_name) = extract_queue_name_from_key(&queue_key) {
+        let stats = self.get_queue_stats(&base_name).await?;
         all_stats.push(stats);
       }
     }
@@ -766,14 +776,9 @@ impl RedisBroker {
     for key in queue_keys {
       // 从键名中提取队列名
       // Extract queue name from key
-      if let Some(after_prefix) =
-        key.strip_prefix(&format!("{}{}", keys::QUEUE_PREFIX, keys::QUEUE_START))
-      {
-        if let Some(queue_name) = after_prefix.split(':').next() {
-          let queue_name = queue_name.trim_end_matches(keys::QUEUE_END);
-          if !queue_name.is_empty() {
-            queues.insert(queue_name.to_string());
-          }
+      if let Some(base_name) = extract_queue_name_from_key(&key) {
+        if !base_name.is_empty() {
+          queues.insert(base_name);
         }
       }
     }
@@ -1426,4 +1431,5 @@ impl RedisBroker {
 
     Ok(())
   }
+
 }

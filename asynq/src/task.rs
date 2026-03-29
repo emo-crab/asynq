@@ -509,6 +509,44 @@ pub struct QueueStats {
   pub daily_stats: Vec<DailyStats>,
 }
 
+impl QueueStats {
+  /// Create a new QueueStats and normalize the queue name so that
+  /// callers don't have to worry about trailing Redis key suffixes
+  /// like `}:pending` or `}:t:<id>`. If the name contains a brace pair
+  /// like `asynq:{tenant:queue}:pending`, the text inside `{}` is used.
+  #[allow(clippy::too_many_arguments)]
+  pub fn new<N: Into<String>>(name: N, active: i64, pending: i64, scheduled: i64, retry: i64, archived: i64, completed: i64, aggregating: i64, daily_stats: Vec<DailyStats>) -> Self {
+    let mut n = name.into();
+    // If the name contains the pattern '}:', trim everything from that index onwards
+    if let Some(idx) = n.find("}:") {
+      n = n[..idx].to_string();
+    }
+    // If the name contains '{' and '}', extract the content inside
+    if let Some(start) = n.find('{') {
+      if let Some(rel_end) = n[start + 1..].find('}') {
+        let end = start + 1 + rel_end;
+        n = n[start + 1..end].to_string();
+      }
+    }
+    // Also trim any remaining trailing '}' if present
+    if n.ends_with('}') {
+      n = n.trim_end_matches('}').to_string();
+    }
+
+    QueueStats {
+      name: n,
+      active,
+      pending,
+      scheduled,
+      retry,
+      archived,
+      completed,
+      aggregating,
+      daily_stats,
+    }
+  }
+}
+
 /// 每日统计信息
 /// Daily statistics information
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
