@@ -29,7 +29,7 @@ utoipa-swagger-ui = { version = "9", features = ["axum"] }
 
 # UI - Dioxus SSR rendering (optional, enabled with "ui" feature)
 dioxus = { version = "0.6", features = ["ssr"], optional = true }
-dioxus-ssr = { version = "0.6", optional = true }
+dioxus-ssr = { version = "0.7", optional = true }
 
 # Web framework
 axum = { version = "0.8", features = ["ws"] }
