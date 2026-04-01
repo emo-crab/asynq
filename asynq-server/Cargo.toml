@@ -40,7 +40,7 @@ tower-http = { version = "0.6", features = ["cors", "trace"] }
 tokio = { version = "1.0", features = ["rt", "macros", "signal", "rt-multi-thread", "sync", "time"] }
 
 # WebSocket
-tokio-tungstenite = "0.28"
+tokio-tungstenite = "0.29"
 futures-util = "0.3"
 
 # Serialization
