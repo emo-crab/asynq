@@ -21,6 +21,7 @@ use crate::backend::wsdb::WebSocketBroker;
 
 /// 客户端后端类型
 /// Client backend type
+#[derive(Clone)]
 enum ClientBroker {
   /// Redis 后端
   /// Redis backend
@@ -63,6 +64,7 @@ impl ClientBroker {
 
 /// Asynq 客户端，负责将任务排队
 /// Asynq client, responsible for enqueuing tasks
+#[derive(Clone)]
 pub struct Client {
   broker: ClientBroker,
   #[allow(dead_code)]
