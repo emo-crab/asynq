@@ -27,12 +27,14 @@ pub enum Error {
   #[error("SeaORM database error: {0}")]
   SeaOrm(#[from] sea_orm::DbErr),
 
-  #[cfg(feature = "json")]
   /// 序列化错误
   /// Serialization error
   #[error("Serialization error: {0}")]
-  Serialization(#[from] serde_json::Error),
-
+  Serialization(String),
+  /// 反序列化错误
+  /// Deserialization error
+  #[error("Deserialization error: {0}")]
+  Deserialization(String),
   /// Protocol Buffer 编码错误
   /// Protocol buffer encoding error
   #[error("Protocol buffer encoding error: {0}")]
@@ -132,6 +134,11 @@ pub enum Error {
   /// Broker error
   #[error("Broker error: {0}")]
   Broker(String),
+
+  /// 跳过重试错误
+  /// Skip retry error
+  #[error(transparent)]
+  SkipRetry(#[from] SkipRetryError),
 }
 
 impl Error {
@@ -209,10 +216,10 @@ impl Error {
       Error::NotSupported(_) => {}
       Error::InvalidMessage(_) => {}
       Error::Broker(_) => {}
+      Error::SkipRetry(_) => {}
       #[cfg(feature = "postgres")]
       Error::SeaOrm(_) => {}
-      #[cfg(feature = "json")]
-      Error::Serialization(_) => {}
+      Error::Serialization(_) | Error::Deserialization(_) => {}
     }
     false
   }

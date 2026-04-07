@@ -157,8 +157,15 @@ impl Task {
   /// 使用 JSON 负载创建新任务
   /// Create a new task with JSON payload
   pub fn new_with_json<T: AsRef<str>, P: Serialize>(task_type: T, payload: &P) -> Result<Self> {
-    let json_payload = serde_json::to_vec(payload)?;
+    let json_payload = serde_json::to_vec(payload).map_err(|e| Error::Serialization(e.to_string()))?;
     Self::new(task_type, &json_payload)
+  }
+  #[cfg(feature = "msgpack")]
+  pub fn new_with_msgpack<T: AsRef<str>, P: Serialize>(task_type: T, payload: &P) -> Result<Self> {
+    use rmp_serde::Serializer;
+    let mut task_payload = Vec::new();
+    payload.serialize(&mut Serializer::new(&mut task_payload)).map_err(|e| Error::Serialization(e.to_string()))?;
+    Self::new(task_type, &task_payload)
   }
 
   /// 设置任务选项
@@ -319,7 +326,11 @@ impl Task {
   /// 获取任务负载作为 JSON
   /// Get task payload as JSON
   pub fn get_payload_with_json<T: for<'de> Deserialize<'de>>(&self) -> Result<T> {
-    serde_json::from_slice(&self.payload).map_err(Into::into)
+    serde_json::from_slice(&self.payload).map_err(|e|Error::Deserialization(e.to_string()))
+  }
+  #[cfg(feature = "msgpack")]
+  pub fn get_payload_with_msgpack<T: for<'de> Deserialize<'de>>(&self) -> Result<T> {
+    rmp_serde::from_slice(&self.payload).map_err(|e|Error::Deserialization(e.to_string()))
   }
 }
 
@@ -515,7 +526,17 @@ impl QueueStats {
   /// like `}:pending` or `}:t:<id>`. If the name contains a brace pair
   /// like `asynq:{tenant:queue}:pending`, the text inside `{}` is used.
   #[allow(clippy::too_many_arguments)]
-  pub fn new<N: Into<String>>(name: N, active: i64, pending: i64, scheduled: i64, retry: i64, archived: i64, completed: i64, aggregating: i64, daily_stats: Vec<DailyStats>) -> Self {
+  pub fn new<N: Into<String>>(
+    name: N,
+    active: i64,
+    pending: i64,
+    scheduled: i64,
+    retry: i64,
+    archived: i64,
+    completed: i64,
+    aggregating: i64,
+    daily_stats: Vec<DailyStats>,
+  ) -> Self {
     let mut n = name.into();
     // If the name contains the pattern '}:', trim everything from that index onwards
     if let Some(idx) = n.find("}:") {

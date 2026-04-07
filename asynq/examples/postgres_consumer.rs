@@ -31,7 +31,8 @@ fn aggregate_tasks(group: &str, tasks: Vec<asynq::task::Task>) -> Result<asynq::
   }
 
   println!("   ✅ Created aggregated task with combined payload");
-  let data = serde_json::to_vec(&combined_payload)?;
+  let data =
+    serde_json::to_vec(&combined_payload).map_err(|e| Error::Serialization(e.to_string()))?;
   // 创建聚合后的任务
   // Create the aggregated task
   asynq::task::Task::new("batch:process", &data)

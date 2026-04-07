@@ -476,7 +476,7 @@ impl Processor {
                   Err(e) => {
                     // 任务失败，决定重试还是归档
                     // Task failed, decide retry or archive
-                    if task_msg.retried < task_msg.retry {
+                    if should_retry_task(&task_msg, &e) {
                       // 计算重试延迟
                       // Calculate retry delay
                       let retry_delay =
@@ -690,9 +690,16 @@ fn calculate_retry_delay(
   }
 }
 
+/// 判断任务失败后是否应重试
+/// Determine whether a failed task should be retried
+fn should_retry_task(task_msg: &crate::proto::TaskMessage, err: &Error) -> bool {
+  task_msg.retried < task_msg.retry && !matches!(err, Error::SkipRetry(_))
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
+  use crate::error::SkipRetryError;
 
   #[test]
   fn test_normalize_queues() {
@@ -740,6 +747,40 @@ mod tests {
     let ordered = vec!["high".to_string(), "default".to_string(), "low".to_string()];
     let result = get_queues(&queues, Some(&ordered));
     assert_eq!(result, ordered);
+  }
+
+  #[test]
+  fn test_should_retry_task_normal_error() {
+    let task_msg = crate::proto::TaskMessage {
+      retried: 0,
+      retry: 5,
+      ..Default::default()
+    };
+
+    assert!(should_retry_task(&task_msg, &Error::other("failed")));
+  }
+
+  #[test]
+  fn test_should_retry_task_skip_retry_error() {
+    let task_msg = crate::proto::TaskMessage {
+      retried: 0,
+      retry: 5,
+      ..Default::default()
+    };
+    let skip_retry = Error::from(SkipRetryError::new(std::io::Error::other("invalid payload")));
+
+    assert!(!should_retry_task(&task_msg, &skip_retry));
+  }
+
+  #[test]
+  fn test_should_retry_task_reached_limit() {
+    let task_msg = crate::proto::TaskMessage {
+      retried: 3,
+      retry: 3,
+      ..Default::default()
+    };
+
+    assert!(!should_retry_task(&task_msg, &Error::other("failed")));
   }
 
   #[test]
