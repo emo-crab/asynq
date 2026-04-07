@@ -225,7 +225,19 @@ pub async fn list_queues(State(state): State<Arc<AppState>>) -> impl IntoRespons
       }
 
       let mut responses: Vec<QueueStatsResponse> = Vec::new();
-      for (queue_name, AggCounts { active, pending, scheduled, retry, archived, completed, aggregating }) in agg {
+      for (
+        queue_name,
+        AggCounts {
+          active,
+          pending,
+          scheduled,
+          retry,
+          archived,
+          completed,
+          aggregating,
+        },
+      ) in agg
+      {
         let info = inspector.get_queue_info(&queue_name).await.ok();
         let paused = info.as_ref().map(|i| i.paused).unwrap_or(false);
         let latency_msec = info
@@ -260,8 +272,8 @@ pub async fn list_queues(State(state): State<Arc<AppState>>) -> impl IntoRespons
         });
       }
 
-       let body = QueueListResponse { queues: responses };
-       (StatusCode::OK, Json(serde_json::to_value(body).unwrap()))
+      let body = QueueListResponse { queues: responses };
+      (StatusCode::OK, Json(serde_json::to_value(body).unwrap()))
     }
     Err(e) => (
       StatusCode::INTERNAL_SERVER_ERROR,
@@ -372,10 +384,7 @@ pub async fn list_tasks(
     page: params.page.max(0),
   };
 
-  match inspector
-    .list_tasks(&queue, task_state, pagination)
-    .await
-  {
+  match inspector.list_tasks(&queue, task_state, pagination).await {
     Ok(tasks) => {
       let responses: Vec<TaskInfoResponse> = tasks
         .into_iter()
@@ -562,7 +571,9 @@ pub async fn bulk_delete_tasks(
     _ => {
       return (
         StatusCode::BAD_REQUEST,
-        Json(serde_json::json!({ "error": "Invalid state. Use: archived, retry, scheduled, pending" })),
+        Json(
+          serde_json::json!({ "error": "Invalid state. Use: archived, retry, scheduled, pending" }),
+        ),
       );
     }
   };
@@ -688,9 +699,7 @@ pub async fn requeue_tasks(
     _ => {
       return (
         StatusCode::BAD_REQUEST,
-        Json(
-          serde_json::json!({ "error": "Invalid state. Use: archived, retry, scheduled" }),
-        ),
+        Json(serde_json::json!({ "error": "Invalid state. Use: archived, retry, scheduled" })),
       );
     }
   };

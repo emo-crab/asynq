@@ -1431,5 +1431,4 @@ impl RedisBroker {
 
     Ok(())
   }
-
 }

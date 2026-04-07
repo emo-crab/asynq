@@ -1,6 +1,7 @@
 //! 任务实体
 //! Task entity
 
+use crate::task::{HeaderMap, IntoHeaders, ToHashMap};
 use sea_orm::entity::prelude::*;
 use std::collections::HashMap;
 use tracing::warn;
@@ -84,29 +85,31 @@ impl Related<super::workers::Entity> for Entity {
 impl ActiveModelBehavior for ActiveModel {}
 
 impl Model {
-  /// 将 headers JSON 字符串解析为 HashMap
-  /// Parse headers JSON string to HashMap
-  pub fn parse_headers(&self) -> HashMap<String, String> {
+  /// 将 headers JSON 字符串解析为 HeaderMap
+  /// Parse headers JSON string to HeaderMap
+  pub fn parse_headers(&self) -> HeaderMap {
     match &self.headers {
-      Some(h) => match serde_json::from_value(h.clone()) {
-        Ok(headers) => headers,
+      Some(h) => match serde_json::from_value::<HashMap<String, String>>(h.clone()) {
+        Ok(headers) => headers.into_headers(),
         Err(e) => {
           warn!(
             task_id = %self.id,
             error = %e,
             "Failed to parse task headers JSON, returning empty headers"
           );
-          HashMap::new()
+          HeaderMap::new()
         }
       },
-      None => HashMap::new(),
+      None => HeaderMap::new(),
     }
   }
 }
 
-/// 将 HashMap 序列化为 JSON 字符串
-/// Serialize HashMap to JSON string
-pub fn serialize_headers(headers: &HashMap<String, String>) -> Option<serde_json::Value> {
+/// 将 HeaderMap 序列化为 JSON 字符串
+/// Serialize HeaderMap to JSON string
+pub fn serialize_headers<H: IntoHeaders>(headers: H) -> Option<serde_json::Value> {
+  let headers = headers.into_headers();
+  let headers = headers.to_hashmap();
   if headers.is_empty() {
     None
   } else {

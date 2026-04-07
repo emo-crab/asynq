@@ -767,7 +767,9 @@ mod tests {
       retry: 5,
       ..Default::default()
     };
-    let skip_retry = Error::from(SkipRetryError::new(std::io::Error::other("invalid payload")));
+    let skip_retry = Error::from(SkipRetryError::new(std::io::Error::other(
+      "invalid payload",
+    )));
 
     assert!(!should_retry_task(&task_msg, &skip_retry));
   }

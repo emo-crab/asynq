@@ -10,7 +10,7 @@ use crate::backend::pgdb::entity::{
 use crate::base::constants::DEFAULT_QUEUE_NAME;
 use crate::error::{Error, Result};
 use crate::proto::{SchedulerEnqueueEvent, SchedulerEntry, TaskMessage};
-use crate::task::Task;
+use crate::task::{Task, ToHashMap};
 use prost::Message;
 use sea_orm::{
   ActiveModelTrait, ColumnTrait, ConnectOptions, ConnectionTrait, Database, DatabaseConnection,
@@ -214,7 +214,7 @@ impl PostgresBroker {
     TaskMessage {
       r#type: task.task_type.clone(),
       payload: task.payload.clone(),
-      headers: task.parse_headers(),
+      headers: task.parse_headers().to_hashmap(),
       id: task.id.clone(),
       queue: task.queue.clone(),
       retry: task.retry,
@@ -254,7 +254,7 @@ impl PostgresBroker {
     TaskMessage {
       r#type: task.task_type.clone(),
       payload: task.payload.clone(),
-      headers: task.headers.clone(),
+      headers: task.resolved_headers(),
       id: task
         .options
         .task_id

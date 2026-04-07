@@ -18,8 +18,8 @@ async fn main() -> anyhow::Result<()> {
   let addr = std::env::var("ASYNQ_SERVER_ADDR").unwrap_or_else(|_| "127.0.0.1:8080".to_string());
   let socket = std::net::SocketAddr::from_str(&addr)?;
   info!("Starting asynq-server on {}", addr);
-  let redis_url = std::env::var("REDIS_URL")
-    .unwrap_or_else(|_| "redis://localhost:6379".to_string());
+  let redis_url =
+    std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
   println!("🔗 Using Redis URL: {redis_url}");
   let redis_config = asynq::backend::RedisConnectionType::single(redis_url.clone())?;
   let broker = std::sync::Arc::new(asynq::backend::RedisBroker::new(redis_config).await?);

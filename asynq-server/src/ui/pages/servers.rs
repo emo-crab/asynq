@@ -39,11 +39,7 @@ fn render_servers(servers: Vec<ServerInfo>) -> Html<String> {
   let rows: Vec<ServerRow> = servers
     .iter()
     .map(|s| {
-      let mut queue_list: Vec<String> = s
-        .queues
-        .iter()
-        .map(|(q, p)| format!("{q}:{p}"))
-        .collect();
+      let mut queue_list: Vec<String> = s.queues.iter().map(|(q, p)| format!("{q}:{p}")).collect();
       queue_list.sort();
       let queues = queue_list.join(", ");
       let started_at = s

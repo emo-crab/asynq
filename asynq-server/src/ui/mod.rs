@@ -35,20 +35,20 @@
 //! - `POST /ui/queues/:queue/tasks/bulk-delete` – Bulk delete tasks by state
 //! - `POST /ui/queues/:queue/tasks/requeue` – Requeue tasks by state
 
-pub(crate) mod styles;
-pub(crate) mod helpers;
-pub(crate) mod components;
-pub(crate) mod pages;
 pub(crate) mod actions;
+pub(crate) mod components;
+pub(crate) mod helpers;
+pub(crate) mod pages;
+pub(crate) mod styles;
 
 // Re-export page handlers so that server.rs can reference them as `ui::*`
 // without knowing the internal submodule structure.
-pub use pages::dashboard::dashboard_handler;
-pub use pages::queue_detail::queue_detail_handler;
-pub use pages::tasks::{tasks_handler, TasksQuery};
-pub use pages::servers::servers_handler;
-pub use pages::cron::cron_handler;
 pub use actions::{
   ui_archive_task, ui_bulk_delete, ui_delete_task, ui_pause_queue, ui_requeue_tasks,
   ui_resume_queue, ui_run_task, BulkStateQuery,
 };
+pub use pages::cron::cron_handler;
+pub use pages::dashboard::dashboard_handler;
+pub use pages::queue_detail::queue_detail_handler;
+pub use pages::servers::servers_handler;
+pub use pages::tasks::{tasks_handler, TasksQuery};

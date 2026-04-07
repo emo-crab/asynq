@@ -7,8 +7,8 @@ use axum::{
   response::{Html, IntoResponse},
 };
 use dioxus::prelude::*;
-use std::sync::Arc;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use crate::ui::components::NavBar;
 use crate::ui::helpers::{inspector_unavailable, make_page};

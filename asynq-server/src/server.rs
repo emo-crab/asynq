@@ -273,10 +273,7 @@ impl AsynqServer {
           "/queues/{queue}/tasks/{task_id}/delete",
           post(ui::ui_delete_task),
         )
-        .route(
-          "/queues/{queue}/tasks/{task_id}/run",
-          post(ui::ui_run_task),
-        )
+        .route("/queues/{queue}/tasks/{task_id}/run", post(ui::ui_run_task))
         .route(
           "/queues/{queue}/tasks/{task_id}/archive",
           post(ui::ui_archive_task),
@@ -285,10 +282,7 @@ impl AsynqServer {
           "/queues/{queue}/tasks/bulk-delete",
           post(ui::ui_bulk_delete),
         )
-        .route(
-          "/queues/{queue}/tasks/requeue",
-          post(ui::ui_requeue_tasks),
-        );
+        .route("/queues/{queue}/tasks/requeue", post(ui::ui_requeue_tasks));
 
       app = app.nest("/ui/", ui_router);
       info!("Web UI dashboard available at /ui/");
@@ -296,8 +290,7 @@ impl AsynqServer {
 
     // Mount Swagger UI for interactive API documentation
     app = app.merge(
-      SwaggerUi::new("/swagger-ui")
-        .url("/api-docs/openapi.json", crate::api::ApiDoc::openapi()),
+      SwaggerUi::new("/swagger-ui").url("/api-docs/openapi.json", crate::api::ApiDoc::openapi()),
     );
     info!("Swagger UI available at /swagger-ui/");
 

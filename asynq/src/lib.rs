@@ -159,7 +159,6 @@ pub mod scheduler;
 pub mod serve_mux;
 pub mod server;
 pub mod task;
-
 // Re-export macros when the feature is enabled
 #[cfg(feature = "macros")]
 pub use asynq_macros::{

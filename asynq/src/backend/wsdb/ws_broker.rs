@@ -8,7 +8,7 @@ use crate::backend::wsdb::message::{
 use crate::base::keys::TaskState;
 use crate::error::{Error, Result};
 use crate::proto::TaskMessage;
-use crate::task::{Task, TaskInfo};
+use crate::task::{HeaderMap, Task, TaskInfo, ToHashMap};
 use base64::prelude::*;
 use futures_util::{SinkExt, StreamExt};
 use std::sync::Arc;
@@ -220,7 +220,7 @@ impl WebSocketBroker {
     EnqueueRequest {
       task_type: task.task_type.clone(),
       payload: BASE64_STANDARD.encode(&task.payload),
-      headers: task.headers.clone(),
+      headers: task.resolved_header_map(),
       queue: if task.options.queue.is_empty() {
         None
       } else {
@@ -252,7 +252,7 @@ impl WebSocketBroker {
       queue: resp.queue.clone(),
       r#type: resp.task_type.clone(),
       payload,
-      headers: resp.headers.clone(),
+      headers: resp.headers.to_hashmap(),
       retry: resp.retry,
       retried: resp.retried,
       error_msg: resp.error_msg.clone(),
@@ -282,7 +282,7 @@ impl WebSocketBroker {
           queue: info.queue,
           task_type: info.task_type,
           payload: Vec::new(),
-          headers: std::collections::HashMap::new(),
+          headers: HeaderMap::new(),
           state,
           max_retry: 0,
           retried: 0,

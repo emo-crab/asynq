@@ -2,9 +2,9 @@
 //!
 //! This module mirrors the message protocol used by asynq-server.
 
+use crate::task::HeaderMap;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
 /// Request message from client to server
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
@@ -156,7 +156,8 @@ pub struct EnqueueRequest {
   pub payload: String,
   /// Task headers
   #[serde(default)]
-  pub headers: HashMap<String, String>,
+  #[serde(with = "http_serde::header_map")]
+  pub headers: HeaderMap,
   /// Queue name (optional, defaults to "default")
   pub queue: Option<String>,
   /// Maximum retry attempts
@@ -330,7 +331,8 @@ pub struct TaskMessageResponse {
   /// Task payload (base64 encoded)
   pub payload: String,
   /// Task headers
-  pub headers: HashMap<String, String>,
+  #[serde(with = "http_serde::header_map")]
+  pub headers: HeaderMap,
   /// Maximum retry attempts
   pub retry: i32,
   /// Number of times retried

@@ -10,9 +10,21 @@ use dioxus::prelude::*;
 /// - `"cron"` – Scheduled tasks (定时任务) page
 #[component]
 pub(crate) fn NavBar(active: String) -> Element {
-  let queues_class = if active.as_str() == "queues" { "nav-link active" } else { "nav-link" };
-  let servers_class = if active.as_str() == "servers" { "nav-link active" } else { "nav-link" };
-  let cron_class = if active.as_str() == "cron" { "nav-link active" } else { "nav-link" };
+  let queues_class = if active.as_str() == "queues" {
+    "nav-link active"
+  } else {
+    "nav-link"
+  };
+  let servers_class = if active.as_str() == "servers" {
+    "nav-link active"
+  } else {
+    "nav-link"
+  };
+  let cron_class = if active.as_str() == "cron" {
+    "nav-link active"
+  } else {
+    "nav-link"
+  };
   rsx! {
     nav {
       span { class: "brand",

@@ -14,7 +14,7 @@ use crate::message::{
 use crate::server::CURRENT_TENANT;
 use asynq::base::Broker;
 use asynq::proto::TaskMessage;
-use asynq::task::Task;
+use asynq::task::{IntoHeaders, Task};
 use base64::prelude::*;
 use chrono::{DateTime, Utc};
 use std::sync::Arc;
@@ -211,10 +211,7 @@ impl MessageHandler {
       task = task.with_task_id(task_id);
     }
 
-    // Add headers
-    for (key, value) in &req.headers {
-      task.headers.insert(key.clone(), value.clone());
-    }
+    task = task.with_headers(&req.headers);
 
     Ok(task)
   }
@@ -244,7 +241,7 @@ impl MessageHandler {
       queue: msg.queue.clone(),
       task_type: msg.r#type.clone(),
       payload: BASE64_STANDARD.encode(&msg.payload),
-      headers: msg.headers.clone(),
+      headers: msg.headers.clone().into_headers(),
       retry: msg.retry,
       retried: msg.retried,
       error_msg: msg.error_msg.clone(),
