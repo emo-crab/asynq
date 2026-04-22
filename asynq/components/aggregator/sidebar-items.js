@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["Aggregator","AggregatorConfig","GroupAggregatorFunc"],"trait":["GroupAggregator"]};
