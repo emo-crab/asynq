@@ -250,7 +250,7 @@ impl Default for TaskOptions {
       task_id: None,
       queue: DEFAULT_QUEUE_NAME.to_string(),
       max_retry: DEFAULT_MAX_RETRY,
-      timeout: None,
+      timeout: Some(Duration::from_secs(1800)), // 默认超时30分钟
       deadline: None,
       unique_ttl: None,
       process_at: None,
@@ -292,7 +292,16 @@ pub enum RetryPolicy {
   /// 自定义延迟函数（重试次数 -> 延迟时间）
   Custom(fn(i32) -> Duration),
 }
-
+impl Default for RetryPolicy {
+  fn default() -> Self {
+    RetryPolicy::Exponential {
+      base_delay: Duration::from_secs(1),   // 基础延迟
+      max_delay: Duration::from_secs(3600), // 建议设置合理上限（如1小时）
+      multiplier: 2.0,                      // 固定乘数
+      jitter: false,                        // 无抖动
+    }
+  }
+}
 impl PartialEq for RetryPolicy {
   fn eq(&self, other: &Self) -> bool {
     use RetryPolicy::*;

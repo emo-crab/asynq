@@ -4,7 +4,7 @@ use std::time::Duration;
 pub const DEFAULT_QUEUE_NAME: &str = "default";
 
 /// 默认最大重试次数
-pub const DEFAULT_MAX_RETRY: i32 = 3;
+pub const DEFAULT_MAX_RETRY: i32 = 30;
 pub const DEFAULT_MAX_ARCHIVE_SIZE: i64 = 10240;
 pub const DEFAULT_ARCHIVED_EXPIRATION_IN_DAYS: i64 = 90;
 /// 默认任务超时时间
