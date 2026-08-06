@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["OptionType","OptionTypeParseError","RateLimitType","RetryPolicy"],"struct":["RateLimit","TaskOptions"]};

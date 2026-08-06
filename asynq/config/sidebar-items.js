@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["default_retry_delay"],"struct":["ClientConfig","ServerConfig"],"type":["ErrorHandlerFunc","HealthCheckFunc","RetryDelayFunc"]};
