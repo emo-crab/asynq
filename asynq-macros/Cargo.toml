@@ -13,7 +13,7 @@ repository = "https://github.com/emo-crab/asynq"
 proc-macro = true
 
 [dependencies]
-syn = { version = "2.0", features = ["full", "parsing"] }
+syn = { version = "3.0", features = ["full", "parsing"] }
 quote = "1.0"
 proc-macro2 = "1.0"
 
