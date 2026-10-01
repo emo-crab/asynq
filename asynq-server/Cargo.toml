@@ -25,7 +25,7 @@ asynq = { path = "../asynq" }
 
 # OpenAPI documentation
 utoipa = { version = "5", features = ["axum_extras", "uuid", "chrono"] }
-utoipa-swagger-ui = { version = "9", features = ["axum"] }
+utoipa-swagger-ui = { version = "10", features = ["axum"] }
 
 # UI - Dioxus SSR rendering (optional, enabled with "ui" feature)
 dioxus = { version = "0.7", features = ["ssr"], optional = true }
