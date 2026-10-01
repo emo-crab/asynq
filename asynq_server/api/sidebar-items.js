@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["archive_task","bulk_delete_tasks","delete_task","get_queue","list_queues","list_tasks","pause_queue","requeue_tasks","resume_queue","run_task"],"struct":["ApiDoc","ApiError","BulkDeleteQuery","QueueListResponse","QueueStatsResponse","RequeueQuery","SuccessResponse","TaskInfoResponse","TaskListQuery","TaskListResponse"]};
